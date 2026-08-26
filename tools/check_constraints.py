@@ -23,6 +23,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # The pin NAMES, from info.yaml, whose paths must be declared asynchronous, and
 # the direction the constraint has to take.
 ASYNC_FROM = {"FAB_A", "FAB_B", "OBS_SEL"}
+
+# Ports that are not in the info.yaml pinout but are legitimately asynchronous.
+# ena is Tiny Tapeout's project-select line and is static while the project is
+# in use. rst_n is deliberately absent: reset recovery and removal are real
+# checks that the safety controller depends on.
+ASYNC_EXTRA_PORTS = {"ena"}
 ASYNC_TO = {"FAB_OUT", "OBS_OUT", "LOAD_MON"}
 
 # Pin names that must stay in the timed set. These come from registers and the
@@ -93,7 +99,13 @@ def main() -> int:
 
     # Nothing may be declared asynchronous that is not on the list above. An
     # extra false path is how a real timing problem gets waived by accident.
-    allowed = {port_for(n) for n in ASYNC_FROM} | {port_for(n) for n in ASYNC_TO}
+    allowed = ({port_for(n) for n in ASYNC_FROM}
+               | {port_for(n) for n in ASYNC_TO}
+               | ASYNC_EXTRA_PORTS)
+    if "rst_n" in froms or "rst_n" in tos:
+        problems.append(
+            "rst_n is declared asynchronous; reset recovery and removal are "
+            "real checks and the safety controller depends on them")
     for p in sorted(froms | tos):
         if p not in allowed:
             problems.append(

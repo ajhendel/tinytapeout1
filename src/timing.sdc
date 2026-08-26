@@ -72,6 +72,17 @@ set_false_path -from [get_ports {ui_in[4]}]
 set_false_path -from [get_ports {ui_in[5]}]
 # OBS_SEL only steers the observation multiplexer that feeds a scope pin.
 set_false_path -from [get_ports {ui_in[6]}]
+# ena is Tiny Tapeout's project-select line. The mux asserts it when this
+# project is selected and it is static for the whole time the project is in use,
+# so it is not a signal that has to settle within a clock. It reaches the fabric
+# because it gates ARM, which gates inert, which gates every drive enable, and
+# that is exactly the safety chain we want it in. After the fabric's own ports
+# were declared asynchronous this was the single remaining violator in the whole
+# design, at -4.53 ns and only at the slow corner.
+#
+# rst_n is deliberately NOT here. It looks similar and is not: reset recovery
+# and removal are real checks and the safety controller depends on them.
+set_false_path -from [get_ports {ena}]
 # The three fabric observables, all of which go to pins.
 set_false_path -to [get_ports {uo_out[2]}]
 set_false_path -to [get_ports {uo_out[3]}]

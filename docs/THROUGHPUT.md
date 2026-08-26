@@ -75,10 +75,13 @@ at 64 sites. It costs nothing in safety because the check still gates the load.
 Do this before cutting sites, and cut sites before touching the calibration
 strip.
 
-### Still outstanding
+### Tiles
 
-Cells are not area. Tiles come from the LibreLane run in Tiny Tapeout's CI. That
-number, and the utilization it implies, goes in docs/AREA_GATE.md.
+Settled 2026-08-26 by a completed LibreLane run. 8 sites on 2x2 tiles uses
+25,263 um2 of standard cells at 34.8 percent utilization, DRC and LVS clean.
+Projecting to 64 sites wants about 17 tiles, and the largest Tiny Tapeout tile
+geometry is 8x2, which is 16. **64 sites does not fit.** The recommendation is 32
+sites on 6x2. Full working and the alternatives are in docs/AREA_GATE.md.
 
 ---
 

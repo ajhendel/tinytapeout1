@@ -80,8 +80,13 @@ tests and 17 harness tests pass in CI.
 - Marginal area measured at 99.5 cells per site against a 40 to 80 estimate,
   projecting 7,200 cells at 64 sites. docs/THROUGHPUT.md is corrected and names
   the saving to take first if area runs short.
-- **Still open: tiles.** The LibreLane run has to finish and its utilization has
-  to go into docs/AREA_GATE.md. That is the one WP2 deliverable not yet in hand.
+- **WP2 CLOSED.** The LibreLane run completed: DRC 0, LVS 0, hold clean, setup
+  clean at tt and ff. 8 sites on 2x2 tiles is 25,263 um2 of standard cells at
+  34.8 percent utilization. The verdict is in docs/AREA_GATE.md and it changes
+  the plan: **64 sites does not fit**, wanting about 17 tiles against a maximum
+  of 16, and the recommendation is 32 sites on 6x2. That is roughly 840 EUR of
+  tiles against the 300 to 450 EUR sketched in PLAN.md section 6, so it is a
+  budget decision for Andrew rather than a design decision.
 
 **WP3 items 1 and 2 done in simulation.** harness/ implements the genome, the
 validator, the operators, the search, the results database and two devices. The
@@ -97,7 +102,22 @@ along the way; see the commit for a7d494b.
 
 **WP4 and WP5 not started.**
 
-### Next action
-Read docs/AREA_GATE.md for the tile verdict, then decide the site count for
-tapeout one. After that, WP3 item 8 (evaluate the Bitstream Evolution toolkit)
-is desk work that needs no hardware and should happen before WP4.
+**WP3 item 8 CLOSED**, see docs/BITSTREAM_EVOLUTION_EVAL.md. Adapt two things,
+do not adopt the core, do not link against it (they are GPL-3.0 and this repo is
+Apache-2.0). Their intrinsic loop runs at about one evaluation per second against
+the 60 to 300 we need, which is inherent to reflashing a bitstream rather than a
+defect, and it is one of the few concrete advantages of our approach that has
+nothing to do with electrical realization.
+
+### Next action, in order
+1. **Andrew decides the site count**, which is really a budget decision. See
+   docs/AREA_GATE.md. 32 sites on 6x2 is the recommendation.
+2. **Andrew orders an iCE40 board.** docs/FPGA_PILOT.md names the exact parts and
+   recommends the iCEstick, because the published replications target it and we
+   inherit their working configuration. Six of the eight WP3 items are blocked on
+   this and none of them are blocked on anything else.
+3. **Andrew confirms the SKY26c deadline and pricing** in the calculator at
+   app.tinytapeout.com. docs/TT_LOGISTICS.md has what is known without a login.
+4. Then WP4, which must re-run the area gate once block P, block C and the TDC
+   exist, because the numbers in docs/AREA_GATE.md bound the fabric and the
+   calibration strip and nothing else.
