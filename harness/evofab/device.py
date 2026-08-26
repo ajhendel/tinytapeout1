@@ -270,3 +270,113 @@ class IcarusDevice(Device):
                 crc_ok=bool(crc_ok),
                 notes="rtl simulation, timing has no electrical meaning"))
         return trials
+
+
+class SerialDevice(Device):
+    """Talks to a real board over the framed link in docs/LINK_PROTOCOL.md.
+
+    The same class serves the iCE40 pilot, the FPGA control arm and the RP2040
+    driving the fabricated chip, because all three speak the same link and all
+    three do their scoring on their own side of it.
+
+    `port` is anything with `write(bytes)` and `read(n)`, so a pyserial Serial,
+    a socket wrapper, or the loopback stub in harness/tests. Keeping the
+    transport out of this class is what lets the protocol be tested without
+    hardware, which is the only way it can be right before the hardware exists.
+    """
+
+    device_id = "serial"
+
+    def __init__(self, port, n_sites: int, device_id: str | None = None,
+                 timeout_s: float = 5.0):
+        from . import link
+
+        self._link = link
+        self.port = port
+        self.n_sites = n_sites
+        self.timeout_s = timeout_s
+        self._buf = bytearray()
+        self._n = 0
+        if device_id:
+            self.device_id = device_id
+
+        self._send(link.HELLO)
+        msg_type, payload = self._recv(link.HELLO_ACK)
+        self.firmware_version = payload.split(b"\x00")[0].decode(errors="replace")
+
+    # ------------------------------------------------------------ transport
+    def _send(self, msg_type: int, payload: bytes = b"") -> None:
+        self.port.write(self._link.encode(msg_type, payload))
+
+    def _recv(self, expect: int) -> tuple[int, bytes]:
+        import time as _time
+        deadline = _time.perf_counter() + self.timeout_s
+        while True:
+            for msg_type, payload in self._link.decode_stream(self._buf):
+                if msg_type == self._link.FAULT:
+                    raise RuntimeError(
+                        f"device reported FAULT: {payload!r}; the batch is "
+                        f"discarded rather than partially accepted")
+                if msg_type == expect:
+                    return msg_type, payload
+                # Anything else is out of order. Dropping it silently would let
+                # a stale reply be mistaken for the current one.
+                raise RuntimeError(
+                    f"expected message type {expect:#04x}, got {msg_type:#04x}")
+            if _time.perf_counter() > deadline:
+                raise TimeoutError(
+                    f"no {expect:#04x} within {self.timeout_s}s; the whole batch "
+                    f"is retried, never partially accepted")
+            chunk = self.port.read(4096)
+            if chunk:
+                self._buf.extend(chunk)
+
+    # ------------------------------------------------------------ evaluation
+    def evaluate(self, genome: Genome) -> Trial:
+        return self.evaluate_many([genome])[0]
+
+    def evaluate_many(self, genomes: Sequence[Genome]) -> list[Trial]:
+        for g in genomes:
+            g.validate()
+            if g.n_sites != self.n_sites:
+                raise ValueError(
+                    f"device has {self.n_sites} sites, genome has {g.n_sites}")
+
+        t0 = time.perf_counter()
+        self._send(self._link.RUN_BATCH,
+                   self._link.encode_run_batch([g.bits_msb_first() for g in genomes]))
+        _, payload = self._recv(self._link.BATCH_RESULT)
+        records = self._link.decode_batch_result(payload)
+        elapsed = time.perf_counter() - t0
+
+        if len(records) != len(genomes):
+            raise RuntimeError(
+                f"device returned {len(records)} results for {len(genomes)} "
+                f"genomes; a partial batch is refused, not truncated")
+
+        per = elapsed / max(1, len(genomes))
+        trials = []
+        for g, r in zip(genomes, records):
+            self._n += 1
+            trials.append(Trial(
+                config_hash=g.config_hash(),
+                # Fitness crosses the wire as an integer numerator. The firmware
+                # has no business choosing a float representation, and an
+                # integer is exactly reproducible when the trial is re-analysed.
+                fitness=r.fitness_num / 1000.0,
+                components={"fitness_num": float(r.fitness_num),
+                            "freq_count": float(r.freq_count),
+                            "trans_count": float(r.trans_count)},
+                device_id=self.device_id,
+                firmware_version=self.firmware_version,
+                trial_index=r.trial_index,
+                wall_time_s=per,
+                temperature_proxy=float(r.temp_proxy),
+                tripped=r.tripped,
+                crc_ok=r.crc_ok))
+        return trials
+
+    def close(self) -> None:
+        close = getattr(self.port, "close", None)
+        if close:
+            close()
