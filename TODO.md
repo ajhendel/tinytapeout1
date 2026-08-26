@@ -9,7 +9,7 @@ Gate: nothing in phase 2 (RTL) starts until items 1–4 are done, because each c
 5. [ ] **Order FPGA board** (~$50) + confirm bench inventory (scope? frequency counter?) for the TDC anchoring plan.
 6. [x] **Site design doc** (done 2026-08-26: the design IS src/fabric_site.v with the rationale in its header; docs/info.md is the readable version) — pin down the per-site config word (function/drive/load/sabotage/route bits), the feedback-edge topology (feed-forward columns + enumerated feedback edges), and the safety controller's limit registers.
 7. [ ] **Physics patch design doc** — oscillator count, coupling ladder (parallel tristate drivers), phase readout method, MAX-CUT instance encoding, and the p-bit sampling mode.
-8. [ ] **Pre-registration scaffold** — predictions/ directory layout + the rule that its contents are committed before the shuttle deadline and never edited after (append-only corrections).
+8. [x] **Pre-registration scaffold** (done 2026-08-26: predictions/README.md carries the rule and the fixed list of quantities) — predictions/ directory layout + the rule that its contents are committed before the shuttle deadline and never edited after (append-only corrections).
 
 Standing rules for this repo
 - American English. Full absolute paths when telling Andrew where things are.
