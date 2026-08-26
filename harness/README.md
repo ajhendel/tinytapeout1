@@ -18,6 +18,14 @@ enforced by the type system rather than by discipline.
 - `evofab/search.py` is the outer loop. It never sees an input vector.
 - `evofab/store.py` is the results database, with the reproducibility metadata
   the design review asked for on every single row.
+- `evofab/link.py` is the host to firmware framing, specified in
+  docs/LINK_PROTOCOL.md. It never recomputes a scan CRC, because a host or
+  firmware that did would destroy the property that a corrupt frame cannot reach
+  the fabric.
+- `evofab/holdout.py` enforces the holdout discipline from PLAN.md section 2.
+  The guard sits on the DEVICE, not inside the search loop, because a check
+  inside the search is a check that a second search, or a one-off script someone
+  writes at midnight, will not have.
 
 ## Devices
 
