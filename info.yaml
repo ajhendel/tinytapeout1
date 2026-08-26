@@ -1,0 +1,55 @@
+# Tiny Tapeout project information
+project:
+  title:        "Evolvable electrical-realization fabric"
+  author:       "Andrew Hendel"
+  discord:      ""
+  description:  "A fabric whose configuration selects the electrical realization of logic (drive variant, node loading, inserted fault, feedback), plus a fixed calibration strip"
+  language:     "Verilog"
+  clock_hz:     50000000
+
+  # How many tiles your design occupies? A single tile is about 167x108 uM.
+  tiles: "2x2"
+
+  top_module:  "tt_um_ajhendel_evofab"
+
+  source_files:
+    - "cells.v"
+    - "fabric_site.v"
+    - "calib_macro.v"
+    - "scan_config.v"
+    - "freq_counter.v"
+    - "project.v"
+
+pinout:
+  # Inputs
+  ui[0]: "SCAN_EN"
+  ui[1]: "SCAN_IN"
+  ui[2]: "LOAD"
+  ui[3]: "ARM"
+  ui[4]: "FAB_A"
+  ui[5]: "FAB_B"
+  ui[6]: "OBS_SEL"
+  ui[7]: "CNT_HOLD"
+
+  # Outputs
+  uo[0]: "SCAN_OUT"
+  uo[1]: "CRC_OK"
+  uo[2]: "FAB_OUT"
+  uo[3]: "OBS_OUT"
+  uo[4]: "MEAS_BUSY"
+  uo[5]: "TRIPPED"
+  uo[6]: "LOAD_MON"
+  uo[7]: "INERT"
+
+  # Bidirectional pins
+  uio[0]: "RDATA0"
+  uio[1]: "RDATA1"
+  uio[2]: "RDATA2"
+  uio[3]: "RDATA3"
+  uio[4]: "RDATA4"
+  uio[5]: "RDATA5"
+  uio[6]: "RDATA6"
+  uio[7]: "RDATA7"
+
+# Do not change!
+yaml_version: 6
