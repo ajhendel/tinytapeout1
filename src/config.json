@@ -55,6 +55,14 @@
   "//": "conventionally avoided.",
   "ERROR_ON_SYNTH_CHECKS": false,
 
+  "//": "Our own timing constraints. The fabric is a deep configurable",
+  "//": "combinational network whose delay is the MEASURAND, so it sits in no",
+  "//": "clocked path and must not be timed as one. src/timing.sdc declares",
+  "//": "exactly which ports are asynchronous and why, and leaves the scan",
+  "//": "chain, CRC, safety controller and counters timed normally.",
+  "PNR_SDC_FILE": "dir::timing.sdc",
+  "SIGNOFF_SDC_FILE": "dir::timing.sdc",
+
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
   "//": "!!! DO NOT CHANGE ANYTHING BELOW THIS POINT !!!",
   "//": "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
