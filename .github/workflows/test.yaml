@@ -31,6 +31,12 @@ jobs:
           # make will return success even if the test fails, so check for failure in the results.xml
           ! grep failure results.xml
 
+      - name: Constraint check (timing.sdc still points at the fabric pins)
+        shell: bash
+        run: |
+          pip install pyyaml
+          python3 tools/check_constraints.py
+
       - name: Harness tests (genome, operators, and Python model vs RTL)
         shell: bash
         run: |

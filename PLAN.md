@@ -65,8 +65,8 @@ Claims hygiene: every novelty sentence must cite the closed enumeration row in d
 
 ## 7. Risks
 
-- Area estimate optimistic (routing/config overhead) → phase 0 trial P&R gates everything.
-- OpenLane fights combinational feedback → hand-instantiated cells + keep attributes; precedent exists (TT ring-oscillator projects).
+- ~~Area estimate optimistic~~ → **MEASURED 2026-08-26.** The estimate of 40 to 80 cells per site was optimistic, at 99.5 measured, and the miss was entirely in the infrastructure the estimate did not count: shadow-plus-live double buffering at 24 flops per site, and a CRC tree that grew with the payload. Making the CRC serial and the limit tests bit tests brought it to 69.75 cells per site and 5,113 cells projected at 64 sites. See docs/THROUGHPUT.md.
+- ~~OpenLane fights combinational feedback~~ → **SETTLED 2026-08-26 by the trial place and route, and it was the wrong worry.** The flow did not object to the combinational feedback edge at all; the loop runs through liberty blackbox cells, so yosys's check cannot see through it, and the design routed, passed DRC and passed LVS with the loop present. `keep` and `dont_touch` survived; all four drive variants and every calibration ring cell are in the final netlist. What the flow actually objected to was (a) multiple drivers on the tri-state nets, which is the fabric working as designed and is now handled by `ERROR_ON_SYNTH_CHECKS` plus our own `tools/check_netlist.py`, and (b) timing the fabric's combinational chain as if it were a clocked path, which is now handled by `src/timing.sdc` declaring the measurand asynchronous. Both are recorded in docs/AREA_GATE.md.
 - Physics patch phase dynamics too weak/too synchronized through digital coupling → tristate-strength coupling ladder is the mitigation; worst case the patch degrades to a TRNG/temporal-classifier study, still publishable.
 - Shuttle slip / lead time (~months to silicon) → FPGA control arm fills the wait by design.
 - Someone already did a sky130 characterization chip → confirmed 2026-08-26, four of them (docs/PRIOR_ART.md row 8). Block A claims nothing, cites them, and the paper leans on B and P.
