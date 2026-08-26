@@ -31,6 +31,18 @@ jobs:
           # make will return success even if the test fails, so check for failure in the results.xml
           ! grep failure results.xml
 
+      - name: Install yosys for the structural netlist check
+        shell: bash
+        run: sudo apt-get install -y yosys
+
+      - name: Structural netlist check
+        shell: bash
+        run: |
+          # The flow's own multiple-driver check is disabled in src/config.json
+          # because this design has deliberate tri-state buses. This replaces it.
+          tools/area_sweep.sh build/area
+          python3 tools/check_netlist.py build/area/n8.json --sites 8
+
       - name: Test Summary
         uses: test-summary/action@v2.4
         with:
