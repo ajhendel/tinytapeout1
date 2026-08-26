@@ -48,4 +48,56 @@ predictions/ directory: Liberty-, extraction-, and SPICE-level predictions with 
 WP1 and WP2 complete, WP3 items 1–3 running with real numbers written back into docs/, and a one-page status update in this file's Status section below. If a verdict from WP2 or WP3 contradicts PLAN.md, update PLAN.md in the same commit and say so plainly rather than making the plan look right.
 
 ## Status
-- 2026-08-26: repo created, plan written, no implementation yet. Next action is WP1.
+
+### 2026-08-26, implementation session
+
+**WP1 CLOSED.** docs/PRIOR_ART.md rows 1, 2, 3, 8 and 9 are CLOSED, rows 4 to 7
+PARTIAL with queries logged. The Tiny Tapeout index was enumerated in full, all
+27 shuttles and 4,572 projects, reproducibly via `tools/tt_index_sweep.py` with
+the raw evidence committed under docs/sweeps/. Two findings changed the plan and
+PLAN.md was corrected in the same commit.
+- WobblyBits on TTSKY26a is an open sky130 Ising and Boltzmann p-bit sampler
+  with an SPI-loadable coupling matrix. That kills the row 4 p-bit claim for
+  tapeout one outright and narrows row 3 to continuous-time phase dynamics with
+  an on-die digital control mode for comparison.
+- Zero of 4,572 projects match any evolvable-hardware keyword, so rows 1 and 2
+  survive. Row 2's strength depends entirely on the search-against-the-die
+  qualifier, which is now recorded as load bearing.
+- Outstanding: step 3 of the sweep protocol, the FOSSi, ORConf and Latch-Up talk
+  archives, was not run. Recorded in the file rather than quietly skipped.
+
+**WP2 mostly done.** This repo is now the Tiny Tapeout project repo; the stock
+flow needs info.yaml, src/, test/ and the workflows at the root, and the
+tt-gds-action is pinned at @ttsky26c, the target shuttle. One fabric site, a
+four-ring calibration strip, the scan chain with CRC-gated load, the frequency
+counter and the hardware safety controller are written and tested. 10 cocotb
+tests and 17 harness tests pass in CI.
+- The flow's first real answer: LibreLane rejected the design on multiple-driver
+  nets, not on the combinational feedback edge. The loop runs through liberty
+  blackbox cells so yosys's check cannot see it. `ERROR_ON_SYNTH_CHECKS` is now
+  false with the reasoning in src/config.json, and the lost guarantee is
+  replaced by `tools/check_netlist.py` running in CI.
+- Marginal area measured at 99.5 cells per site against a 40 to 80 estimate,
+  projecting 7,200 cells at 64 sites. docs/THROUGHPUT.md is corrected and names
+  the saving to take first if area runs short.
+- **Still open: tiles.** The LibreLane run has to finish and its utilization has
+  to go into docs/AREA_GATE.md. That is the one WP2 deliverable not yet in hand.
+
+**WP3 items 1 and 2 done in simulation.** harness/ implements the genome, the
+validator, the operators, the search, the results database and two devices. The
+Python model and the actual Verilog agree on 64 random and 36 sabotaged genomes,
+which is what makes the encoder trustworthy rather than merely self-consistent.
+Three defects that all produce reasonable-looking numbers were found and fixed
+along the way; see the commit for a7d494b.
+- Simulation rate is 121 trials per second, which is a simulation rate and is
+  labelled as one. The hardware number needs a board.
+- docs/FPGA_PILOT.md assigns each WP3 item to iCE40 or AWS F2 and explains why
+  six of the eight need a physical part on a bench. tools/aws/launch_f2.sh is
+  ready but deliberately not run.
+
+**WP4 and WP5 not started.**
+
+### Next action
+Read docs/AREA_GATE.md for the tile verdict, then decide the site count for
+tapeout one. After that, WP3 item 8 (evaluate the Bitstream Evolution toolkit)
+is desk work that needs no hardware and should happen before WP4.
