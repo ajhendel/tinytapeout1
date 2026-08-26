@@ -63,6 +63,34 @@ def test_crc_detects_every_single_bit_error():
         assert crc8(p ^ (1 << bit), g.payload_w) != good
 
 
+def test_message_followed_by_its_crc_leaves_the_register_at_zero():
+    """The device computes the CRC serially and simply checks for zero.
+
+    src/scan_config.v feeds the whole chain, payload then CRC, through one LFSR
+    step per scan clock and asserts crc_ok when the register is zero. That works
+    only because appending the remainder drives this LFSR form to zero, so the
+    property is asserted here against an independent implementation rather than
+    taken on trust. Get it wrong and every frame reads as corrupt, or worse,
+    every frame reads as good.
+    """
+    def run(bits):
+        crc = 0
+        for b in bits:
+            top = (crc >> 7) & 1
+            crc = ((crc << 1) & 0xFF) ^ (0x07 if (top ^ b) else 0x00)
+        return crc
+
+    rng = random.Random(20)
+    for _ in range(300):
+        g = random_genome(rng.choice([1, 4, 8, 16]), rng)
+        assert run(g.bits_msb_first()) == 0
+        # and a single bit flip anywhere in the frame must break it
+        bits = g.bits_msb_first()
+        i = rng.randrange(len(bits))
+        bits[i] ^= 1
+        assert run(bits) != 0
+
+
 def test_config_hash_is_stable_and_discriminating():
     rng = random.Random(4)
     seen = {}

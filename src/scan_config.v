@@ -60,25 +60,50 @@ module scan_config #(
   assign scan_out = shadow[CHAIN_W-1];
 
   // ------------------------------------------------------------------- CRC-8
-  // Poly 0x07, init 0x00, MSB first over the payload. Chosen because it is the
-  // simplest thing that catches the failure we actually care about, a frame
-  // that is short or long by a bit, which would otherwise silently rotate the
-  // whole genome and produce a plausible looking but wrong configuration.
-  function automatic [7:0] crc8;
-    input [PAYLOAD_W-1:0] data;
-    integer i;
-    reg [7:0] c;
+  // Poly 0x07, init 0x00, MSB first. Chosen because it catches the failure that
+  // actually matters here, a frame short or long by a bit, which would
+  // otherwise rotate the whole genome and produce a plausible looking but wrong
+  // configuration.
+  //
+  // Computed SERIALLY, one bit per scan clock, not combinationally over the
+  // assembled payload. The combinational version was the first thing built and
+  // the trial place and route rejected it: a 120 bit payload makes a 120 level
+  // deep XOR chain, which showed up as 36 ns of setup violation at the slow
+  // corner against a 20 ns clock. The serial version is one XOR level deep and
+  // also removes about 12 cells per site, because the tree grew with the site
+  // count and so landed in the marginal area column.
+  //
+  // No end-of-payload counter is needed. For this LFSR form, feeding the
+  // payload and then its own CRC leaves the register at zero, so the whole
+  // chain is fed in and the check is simply that the register is zero. That
+  // property is asserted against an independent implementation in
+  // harness/tests/test_genome.py rather than taken on trust.
+  // The running register is reinitialised on the rising edge of scan_en, so
+  // each frame is checked on its own. Carrying the residue of the previous
+  // frame into the next one is not a theoretical concern; it was the first
+  // thing the tests caught after this change, and it would have made a good
+  // frame look corrupt whenever a corrupt one preceded it.
+  function automatic [7:0] crc_step;
+    input [7:0] c;
+    input       bit_in;
     begin
-      c = 8'h00;
-      for (i = PAYLOAD_W-1; i >= 0; i = i - 1)
-        c = {c[6:0], 1'b0} ^ ((c[7] ^ data[i]) ? 8'h07 : 8'h00);
-      crc8 = c;
+      crc_step = {c[6:0], 1'b0} ^ ((c[7] ^ bit_in) ? 8'h07 : 8'h00);
     end
   endfunction
 
+  reg [7:0] crc_run;
+  reg       scan_en_d;
+  always @(posedge clk) scan_en_d <= scan_en;
+  wire scan_start = scan_en & ~scan_en_d;
+
+  always @(posedge clk) begin
+    if (!rst_n)         crc_run <= 8'h00;
+    else if (scan_start) crc_run <= crc_step(8'h00, scan_in);
+    else if (scan_en)    crc_run <= crc_step(crc_run, scan_in);
+  end
+  assign crc_ok = (crc_run == 8'h00);
+
   wire [PAYLOAD_W-1:0] shadow_payload = shadow[CHAIN_W-1 -: PAYLOAD_W];
-  wire [7:0]           shadow_crc     = shadow[7:0];
-  assign crc_ok = (crc8(shadow_payload) == shadow_crc);
 
   // -------------------------------------------------------- live config regs
   reg [PAYLOAD_W-1:0] live;
@@ -102,8 +127,16 @@ module scan_config #(
   // window is the trial duration limit as well as the counter gate, so a trial
   // cannot run forever by construction rather than by the host remembering to
   // stop it.
+  // The limits are tested by looking at ONE bit of the counter rather than by
+  // comparing against 2^k - 1. A counter counting up from zero sets bit k
+  // exactly when it reaches 2^k, so the two are equivalent, but the comparison
+  // form needs a 24 bit variable shifter and a 24 bit comparator in series and
+  // the bit test needs a 24 to 1 mux. The trial place and route found 136
+  // endpoints with setup violations and these were two of the deep paths.
   wire [3:0]  window_exp = gcfg[11:8];
   wire [3:0]  trans_exp  = gcfg[15:12];
+  wire [4:0]  window_bit = 5'd4 + {1'b0, window_exp};
+  wire [4:0]  trans_bit  = 5'd4 + {1'b0, trans_exp};
   reg  [23:0] win_cnt;
   reg         busy;
   reg         load_d;
@@ -118,7 +151,7 @@ module scan_config #(
       win_cnt <= 24'd0;
       busy    <= 1'b1;
     end else if (busy) begin
-      if (win_cnt >= ((24'd1 << (4 + window_exp)) - 1)) busy <= 1'b0;
+      if (win_cnt[window_bit]) busy <= 1'b0;
       else win_cnt <= win_cnt + 24'd1;
     end
   end
@@ -168,7 +201,7 @@ module scan_config #(
   reg trip;
   always @(posedge clk) begin
     if (!rst_n) trip <= 1'b0;
-    else if (busy && (tcnt >= ((24'd1 << (4 + trans_exp)) - 1))) trip <= 1'b1;
+    else if (busy && tcnt[trans_bit]) trip <= 1'b1;
   end
   assign tripped = trip;
   assign inert   = trip | ~arm | ~loaded;
