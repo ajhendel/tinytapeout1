@@ -10,9 +10,19 @@
 # nothing. Where a test asserts a value that the design itself computed, that is
 # stated in the test.
 
+import os
+
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Timer
+
+# Gate-level runs use the extracted netlist with a UNIT DELAY model, where every
+# cell takes the same time regardless of its drive variant. That is exactly the
+# thing this chip exists to measure, so a gate-level run cannot tell inv_1,
+# inv_2 and inv_4 rings apart and must not be asked to. Where a test asserts a
+# property that only real timing can show, it asserts the weaker property here
+# and says so, rather than being skipped or quietly relaxed for both modes.
+GATE_LEVEL = os.environ.get("GATES") == "yes"
 
 N_SITES = 8
 GLOBAL_W = 16
@@ -342,7 +352,19 @@ async def test_calibration_rings_are_distinguishable(dut):
         await tick(dut, 120)
         counts.append(dut.uio_out.value.to_unsigned())
     dut._log.info(f"calibration ring counts: {counts}")
-    assert all(c > 0 for c in counts), f"a ring produced no edges: {counts}"
+    assert all(c > 0 for c in counts), (
+        f"a ring produced no edges: {counts}; the select is not reaching the "
+        "rings or a ring is not oscillating")
+    if GATE_LEVEL:
+        # Unit delay makes all four rings the same length in time, because they
+        # are all 31 stages and drive variant costs nothing in that model. What
+        # a gate-level run CAN show is that four real oscillating rings exist in
+        # the netlist and that the select reaches each of them, which is what
+        # the assertion above checks. The variant-dependent difference is a
+        # silicon measurement and is listed in predictions/ as such.
+        dut._log.info("gate level: skipping the distinctness check by design, "
+                      "see the comment in this test")
+        return
     assert len(set(counts)) == 4, (
         f"calibration rings are not distinguishable ({counts}), so either the "
         "select or the drive variant is not reaching the rings")
