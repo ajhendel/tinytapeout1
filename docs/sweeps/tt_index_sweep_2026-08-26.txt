@@ -1,0 +1,1766 @@
+index updated 2026-07-04T13:52:00.021Z
+shuttles 27  projects swept 4572
+  tt02       sky130A            166
+  tt03       sky130A            249
+  tt03p5     sky130A             29
+  tt04       sky130A            143
+  tt05       sky130A            173
+  tt05of     sky130A            175
+  tt06       sky130A            238
+  tt07       sky130A            120
+  ttihp0p1   ihp-sg13g2          24
+  tt08       sky130A            135
+  ttihp0p2   ihp-sg13g2          95
+  tt09       sky130A            369
+  ttihp25a   ihp-sg13g2         564
+  ttihp0p3   ihp-sg13g2          23
+  ttcad25a   sky130A            257
+  ttihp25b   ihp-sg13g2          81
+  ttsky25a   sky130A            237
+  ttgf0p1    gf180mcuD           24
+  ttsky25b   sky130A            316
+  ttgf0p2    gf180mcuD           52
+  ttihp26a   ihp-sg13g2         283
+  ttihp0p4   ihp-sg13cmos5l      40
+  ttsky26a   sky130A            289
+  ttsky26b   sky130A            273
+  ttgf26a    gf180mcuD           95
+  ttgf26b    gf180mcuD           90
+  ttgf0p3    gf180mcuD           32
+
+===== RO: 125 hits =====
+  [tt02] Ring OSC Speed Test | Eric Smith
+        https://github.com/ericsmi/tt02-verilog-ring-osc-demo
+        Make two rings with the same number of stages but measure how their frequency differs. Measure if they can influence eachother.
+  [tt02] MicroASIC VI | Mikhail Svarichevsky
+        https://github.com/BarsMonster/MicroAsicVI
+        Free-running oscillators to verify simulation vs reality + TRNG
+  [tt03] Ring oscillator with skew correction | Daniel Wisehart
+        https://github.com/dwisehart/tt03-ring-grey
+        Fixing the problem of skew in a ring oscillator with a differential clock ring. 
+  [tt03] Ring OSC Speed Test | Eric Smith
+        https://github.com/ericsmi/tt02-verilog-ring-osc-demo
+        Make two rings with the same number of stages but measure how their frequency differs. Measure if they can influence eachother.
+  [tt03] ro-based_tempsense | Jorge Marin, Daniel Arevalos
+        https://github.com/JorgeMarinN/tt03_ac3e-usm_ro-based_tempsens
+        Ring oscillator whose frecuency depends on temperature.
+  [tt03] MicroASIC VI | Mikhail Svarichevsky
+        https://github.com/BarsMonster/MicroAsicVI
+        Free-running oscillators to verify simulation vs reality + TRNG
+  [tt03p5] XLS APU Pulse Oscillator | Johan Euphrosine
+        https://github.com/proppy/tt03p5-xls-apu
+        attempt at recreating the square oscillator from the NES APU with XLS
+  [tt03p5] Grey-code divide by 10 and 100 of six different ring oscillators | Daniel Wisehart
+        https://github.com/dwisehart/tt03p5-greycode
+        Select one of six ring oscillators. If none is selected the system clock is used. The output will be divided by 10 (uo[0]) and 100 (uo[5]). uo[4:0] together is x1 decemal grey-code of the ring oscillator.
+  [tt03p5] Ring oscillator with counter, PFET-gated | Uri Shaked
+        https://github.com/TinyTapeout/tt03p5-ringosc-cnt-with-pfet
+        Test module for the TT03p5 power switching FET
+  [tt04] RO-based temperature sensor with hysteresis | Francisco Aguirre, Francisca Donoso, based on design by Daniel Arevalos and Jorge Marín
+        https://github.com/Grimrist/tt04_usm_ro-based_tempsens-hyst
+        Ring oscillator whose frequency depends on temperature, with a hysteresis module for temperature detection.
+  [tt04] Variable Duty-Cycle TRNG | Thomas Pluck
+        https://github.com/ThomasPluck/tt04-biased-trng
+        Generates a random bit with a given probability with a special ring oscillator
+  [tt04] Multi stage path for delay measurements. | Daniel Mundo, Noel Prado, Victor Vanegas
+        https://github.com/mun19508/tt04-measure_delay
+        Verilog coding for cascaded not gates connected as a ring oscillator. After running the flow it is observed that the synthesizer does not support combinatorial feedback and that it collapsed several cascaded not gates into buffers. The original purpose for the ring oscillator will not be achieved bu
+  [tt04] another ring oscillator based temperature sensor | Rodrigo Munoz (UCH)
+        https://github.com/rodrigomunoz1/tt04-verilog-ro-temperature-sensor
+        4 differents Ring oscillator whose frecuency depends on temperature. It project is based on https://github.com/JorgeMarinN/tt03_ac3e-usm_ro-based_tempsens
+  [tt04] Oscillators II | Mikhail Svarichevsky
+        https://github.com/BarsMonster/tt04-MicroAsicVII
+        Free-running oscillators to verify simulation vs reality + TRNG
+  [tt05] TROS | Gerrit Grutzeck
+        https://github.com/gfg-development/tt05-tros
+        Three different ring oscillator, with different temperature dependence
+  [tt05] Analog emulation monosynth | Toivo Henningsson
+        https://github.com/toivoh/tt05-synth
+        One synth voice with two oscillators and a 2nd order filter
+  [tt05] Brain-Inspired Oscillatory Network | Derek Abarca
+        https://github.com/derekabarca/tt05-OscilatorNetworks
+        Two neuron modules interact with a synapse module to produce rhythmic oscillations.
+  [tt05] TT05 Analog Testmacro (Ringo, DAC) | Harald Pretl and Jakob Ratschenberger
+        https://github.com/iic-jku/tt05-analog-test
+        For future analog enablement of TinyTapeout we designed a few simple analog blocks for testing the flow. The first block is a ca. 500kHz ring oscillator outputting a square-wave signal. The second block is a 3bit R-2R DAC outputting a programmable dc voltage. Both analog output signals can be gated 
+  [tt05] Ring oscillator with counter | Uri Shaked
+        https://github.com/TinyTapeout/tt05-ringosc-counter
+        Test module for the TT05 power switching FET
+  [tt05] ring osc test | Bob Poekert
+        https://github.com/bobpoekert/tinytapeout
+        simple ring oscillator
+  [tt05] Ring Oscillator and Clock Source Switch | Dave Cox
+        https://github.com/davecoxhome/tinytapeout
+        A series of NOT gates with whip outs to measure self oscillation, and a clock switch
+  [tt05of] Ringy oscillator and fast computation | Emilian Miron
+        https://github.com/diferential/tt05-ringy
+        Factory test module
+  [tt05of] TROS | Gerrit Grutzeck
+        https://github.com/gfg-development/tt05-tros
+        Three different ring oscillator, with different temperature dependence
+  [tt05of] Analog emulation monosynth | Toivo Henningsson
+        https://github.com/toivoh/tt05-synth
+        One synth voice with two oscillators and a 2nd order filter
+  [tt05of] Brain-Inspired Oscillatory Network | Derek Abarca
+        https://github.com/derekabarca/tt05-OscilatorNetworks
+        Two neuron modules interact with a synapse module to produce rhythmic oscillations.
+  [tt05of] TT05 Analog Testmacro (Ringo, DAC) | Harald Pretl and Jakob Ratschenberger
+        https://github.com/iic-jku/tt05-analog-test
+        For future analog enablement of TinyTapeout we designed a few simple analog blocks for testing the flow. The first block is a ca. 500kHz ring oscillator outputting a square-wave signal. The second block is a 3bit R-2R DAC outputting a programmable dc voltage. Both analog output signals can be gated 
+  [tt05of] Ring oscillator with counter | Uri Shaked
+        https://github.com/TinyTapeout/tt05-ringosc-counter
+        Test module for the TT05 power switching FET
+  [tt05of] ring osc test | Bob Poekert
+        https://github.com/bobpoekert/tinytapeout
+        simple ring oscillator
+  [tt05of] Ring Oscillator and Clock Source Switch | Dave Cox
+        https://github.com/davecoxhome/tinytapeout
+        A series of NOT gates with whip outs to measure self oscillation, and a clock switch
+  [tt06] Relaxation oscillator | Matt Venn
+        https://github.com/mattvenn/tt06-analog-relax-osc
+        A relaxation oscillator
+  [tt06] Analog Test Circuit ITS: VCO | Astria Nur Irfansyah
+        https://github.com/nurirfansyah/tt06-analog-its_ip_alits01
+        Voltage controlled ring oscillator. 
+  [tt06] Oscillating Bones | Uri Shaked
+        https://github.com/urish/tt06-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [tt07] Reversible logic based Ring-Oscillator Physically Unclonable Function (RO-PUF) | Syed Farah Naz, Shivam Bhardwaj, Ambika Prasad Shah
+        https://github.com/shivam7086/tt07-verilog-RO_PUF
+        Reversible logic based Ring-Oscillator Physically Unclonable Function (RO-PUF)
+  [tt07] DDA solver for van der Pol oscillator | Adonai Cruz
+        https://github.com/adonairc/tt07-dda-van-der-pol
+        Digital differential analyzer (DDA) solver for the van der Pol oscillator using posit (16,1)
+  [tt07] dual oscillator | Devin Atkin
+        https://github.com/devinatkin/tt07-dual-oscillator
+        20 Mhz and 21Mhz Output Sine Waves
+  [tt07] RO-based Physically Unclonable Function (PUF) | Pablo Aravena
+        https://github.com/litneet64/tt07-RO-based-PUF
+        Implementation of a Ring Oscillator-based Physically Unclonable Function (PUF) in Sky130, with 8 bits of Challenge-Response Pairs (CRP)
+  [tt08] 5MHz Ring Oscillator | Alex Jaeger
+        https://github.com/AlexJaeger/tt_um_alexjaeger_ringoscillator
+        A _very_ simple 5MHz ring oscillator
+  [tt08] Analog Voltage Controlled Oscillator | Georg Boecherer
+        https://github.com/gbsha/tt08-analog-vco
+        A voltage controlled oscillator with 4 differential stages.
+  [tt08] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [tt08] Voltage Controlled LC-Oscillator | Noritsuna Imamura
+        https://github.com/noritsuna/tt08-analog-Vctrl_LC_oscillator
+        Voltage Controlled LC-Oscillator of 2GHz for Skywater130nm
+  [tt08] Oscillating Bones | Uri Shaked
+        https://github.com/urish/tt08-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [tt08] Divided Ring Oscillator | Ignatius Bezzam, Dhandeep Challagundla, Jarnail Sanghera, Russell Kim
+        https://github.com/SmellyJelly01/tt08-ring-divider
+        Ring Oscillator
+  [ttihp0p2] Ring Oscillator (5 inverter) | Darryl Miles
+        https://github.com/dlmiles/ttihp0p2-ringosc-5inv
+        Ring Oscillator (5 inverter)
+  [ttihp0p2] Giant Ring Oscillator (3853 inverters) | Uri Shaked
+        https://github.com/urish/ttihp-giant-ring-oscillator
+        Configurable ring oscillator with up to 3853 inverters
+  [tt09] Verilog ring oscillator | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt09-ring-osc
+        Simple ring oscillator by instantiating a sky130 inv_2 inverter ring
+  [tt09] Verilog ring oscillator V2 | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt09-ring-osc2
+        Multiple simple ring oscillators by instantiating sky130 inv_2 inverter rings
+  [tt09] Verilog ring oscillator V3 | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt09-ring-osc3
+        sky130 inv_2 ring oscillator with externally-selectable length
+  [tt09] instrumented_ring_oscillator | Jeremy Mickelsen
+        https://github.com/AnotherPseudonym/intstrumented_ring_oscillator
+        A ring oscillator with a selectable number of stages and initial state.
+  [tt09] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [tt09] Oscillating Bones | Uri Shaked
+        https://github.com/urish/tt08-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [tt09] Senol Gulgonul tt09 | Senol Gulgonul
+        https://github.com/senolgulgonul/tt09-senolgulgonul
+        Display the letters of SEnOLGULGONUL on 7-Seg using internal oscillator
+  [tt09] Tinysynth | Erling Rennemo Jellum
+        https://github.com/erlingrj/tinysynth2
+        A tiny square wave oscillator accepting MIDI commands.
+  [tt09] Giant Ring Oscillator (3853 inverters) | Uri Shaked
+        https://github.com/urish/tt09-giant-ring-oscillator
+        Configurable ring oscillator with up to 3853 inverters
+  [tt09] Duffy | Jonathan Duffy
+        https://github.com/jduffy105/WokWiTest
+        trying out an oscillator or delay line
+  [tt09] Pseudo Random Generator Using 2 Ring Oscillators | Michael Yim
+        https://github.com/questwiseventures/tt09-wokwi-template
+        Pseudo Random Generator Using 2 Ring Oscillators
+  [ttihp25a] Verilog ring oscillator | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt09-ring-osc
+        Simple ring oscillator by instantiating a sky130 inv_2 inverter ring
+  [ttihp25a] Verilog ring oscillator V2 | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt09-ring-osc2
+        Multiple ring oscillators with simple PWM experiments
+  [ttihp25a] Verilog ring oscillator V3 | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt09-ring-osc3
+        TTIHP25a resubmission of TT09 ring oscillator with externally-selectable length
+  [ttihp25a] instrumented_ring_oscillator | Jeremy Mickelsen
+        https://github.com/AnotherPseudonym/intstrumented_ring_oscillator
+        A ring oscillator with a selectable number of stages and initial state.
+  [ttihp25a] Divided Ring Oscillator | Ignatius Bezzam, Dhandeep Challagundla, Jarnail Sanghera, Russell Kim
+        https://github.com/SmellyJelly01/tt08-ring-divider
+        Ring Oscillator
+  [ttihp25a] Senol Gulgonul tt09 | Senol Gulgonul
+        https://github.com/senolgulgonul/tt09-senolgulgonul
+        Display the letters of SEnOLGULGONUL on 7-Seg using internal oscillator
+  [ttihp25a] Tinysynth | Erling Rennemo Jellum
+        https://github.com/erlingrj/tinysynth2
+        A tiny square wave oscillator accepting MIDI commands.
+  [ttihp25a] Giant Ring Oscillator (3853 inverters) | Uri Shaked
+        https://github.com/urish/tt09-giant-ring-oscillator
+        Configurable ring oscillator with up to 3853 inverters
+  [ttihp25a] Duffy | Jonathan Duffy
+        https://github.com/TinyTapeout/dummy
+        trying out an oscillator or delay line
+  [ttihp25a] Pseudo Random Generator Using 2 Ring Oscillators | Michael Yim
+        https://github.com/questwiseventures/tt09-wokwi-template
+        Pseudo Random Generator Using 2 Ring Oscillators
+  [ttihp0p3] Ring Oscillator Worker | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttihp0p3-ring-worker
+        Simple digital logic, doing work, driven by a ring oscillator
+  [ttcad25a] 5MHz Ring Oscillator | Alex Jaeger
+        https://github.com/AlexJaeger/tt_um_alexjaeger_ringoscillator
+        A _very_ simple 5MHz ring oscillator
+  [ttcad25a] Analog Voltage Controlled Oscillator | Georg Boecherer
+        https://github.com/gbsha/tt08-analog-vco
+        A voltage controlled oscillator with 4 differential stages.
+  [ttcad25a] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [ttcad25a] Voltage Controlled LC-Oscillator | Noritsuna Imamura
+        https://github.com/noritsuna/tt08-analog-Vctrl_LC_oscillator
+        Voltage Controlled LC-Oscillator of 2GHz for Skywater130nm
+  [ttcad25a] Oscillating Bones | Uri Shaked
+        https://github.com/urish/tt10-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [ttcad25a] R-C Oscillators | R. Timothy Edwards
+        https://github.com/RTimothyEdwards/tt10_rc_oscillators
+        16MHz and 500kHz oscillators, three of each
+  [ttcad25a] Divided Ring Oscillator | Ignatius Bezzam, Dhandeep Challagundla, Jarnail Sanghera, Russell Kim
+        https://github.com/SmellyJelly01/tt08-ring-divider
+        Ring Oscillator
+  [ttcad25a] Microrobotics-Basic-IPs | Jonas Boerschmann
+        https://github.com/jonoboderbonobo/tt10-uR-IPs
+        First Test for Basic IPs like: PTAT, Oscillator, Decoder, Command Checker, Driver, ...
+  [ttihp25b] RNG | Felix N
+        https://github.com/Xelef2000/tinytapeout-verilog
+        Ring oscillator based random number generator
+  [ttihp25b] Oscillating Bones | Uri Shaked
+        https://github.com/urish/ttihp-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [ttsky25a] Oscillator tester | Pietro Paolo Scimia
+        https://github.com/Elettronica-UnivAQ/ttsky_oscillator_tester
+        a simple frequency meter
+  [ttsky25a] Digitally Controlled Oscillator | Rohan K Loni, Shrinidhi Udupa, Sudha Kumaran, Aditya Manjunatha and Shylashree N, RV College of Engineering
+        https://github.com/RVCE-ECE/TT_UM_DCO
+        The digitally controlled oscillator (DCO) generates a frequency-adjustable clock signal based on an 8-bit control input.
+  [ttsky25a] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [ttsky25a] Oscillating Bones | Uri Shaked
+        https://github.com/urish/tt10-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [ttsky25a] Giant Ring Oscillator (3853 inverters) | Uri Shaked
+        https://github.com/urish/tt09-giant-ring-oscillator
+        Configurable ring oscillator with up to 3853 inverters
+  [ttsky25b] Onchip - Ring VCO 11 stages x2 | Jorge Angarita
+        https://github.com/Gior-gio/tt_um_Onchip_VCO
+        Two identical 11-stages ring oscillator voltage controled oscillator
+  [ttsky25b] instrumented_ring_oscillator_two | Jeremy Mickelsen
+        https://github.com/AnotherPseudonym/instrumented_ring_oscillator_two
+        A ring oscillator with a selectable number of stages and initial state.
+  [ttsky25b] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [ttsky25b] Relaxation oscillator | Matt Venn
+        https://github.com/mattvenn/ttsky25b-analog-relax-oscillator
+        A relaxation oscillator
+  [ttsky25b] Numerically Controlled Oscillator | Snevin Leoneel Dsouza, Kishan Revankar, Suhan Rai K
+        https://github.com/snevindsouza/NCO_TTO
+        A versatile NCO, capable of generating a diverse range of waveforms such as sine, cosine, triangular, square, gaussian chirplet and ecg waves.
+  [ttsky25b] Oscillating Bones | Uri Shaked
+        https://github.com/urish/tt10-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [ttsky25b] NCO | Pantelis
+        https://github.com/pantelis300/tt_um_pantelis300_nco
+        Numerically Controlled Oscillator
+  [ttsky25b] Relax_Oscillator | UABC
+        https://github.com/FloresCesarMX/relax_oscillator
+        relaxation_oscilator
+  [ttsky25b] Verilog Multistage Oscillator with Enable and Counter | Remington Holder, Sherry Yu, Rohin Kumar, Julia Ke, Jeda Williams, Crystal Jiang
+        https://github.com/RemingtonHolder/tapeout_verilog
+        ring oscillator with externally-selectable length, enable, and counter
+  [ttgf0p2] Ring osc on VGA | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttgf0p2-vga-ring-osc
+        VGA display visualisation of a ring oscillator doing work
+  [ttgf0p2] Ring Oscillator (5 inverter) | Darryl Miles
+        https://github.com/dlmiles/ttgf0p2-ringosc-5inv
+        Ring Oscillator (5 inverter)
+  [ttihp26a] RNG | Felix N
+        https://github.com/Xelef2000/tinytapeout-verilog
+        Ring oscillator based random number generator
+  [ttihp26a] True(er) Random Number Generator (TRNG) | Angelo Nujic
+        https://github.com/anujic/anujic_ttihp26a
+        Generates a random byte based on bits sampled from ring oscillators.
+  [ttihp26a] IHP Gate Delay Characterizer (3-Flavor) | Catalin Lazar
+        https://github.com/catalinlazar/tt_ihp_char_osc
+        Characterizes 3 flavors of ring oscillators (Inv1, 2, 4) with 31 stages (30 inv + 1 NAND, prime length) using a 24-bit counter.
+  [ttihp26a] Verilog ring oscillator | Chiranjit Vivek
+        https://github.com/ChiranjitPatel/tt_ihp26a_ringosc_stdcell
+        Multiple ring oscillators with simple PWM experiments
+  [ttihp26a] Oscillating Bones | Uri Shaked
+        https://github.com/urish/ttihp-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [ttihp26a] RO-based security primitives | Simon Pankner
+        https://github.com/thravax/tt-test
+        Two physical security primitives based on Ring-Oscillators: RO-PUF and TRNG.
+  [ttihp0p4] Ring osc on VGA | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttihp0p4-vga-ring-osc
+        VGA display visualisation of a ring oscillator doing work
+  [ttsky26a] Ring oscillator VCO and Differential Amplifier | Vipul Sharma
+        https://github.com/engrvip123/ttsky26a_IEEE_open_silicon_FOSSEE
+        Current-controlled analog VCO 
+  [ttsky26a] WobblyBits - A probabilistic computing chip | Isaac W
+        https://github.com/rats2012/WobblyBits
+        A probabilistic computing array: 6 p-bits driven by a ring-oscillator TRNG, with a SPI-loadable 6x6 coupling matrix for Ising/Boltzmann sampling on SKY130.
+  [ttsky26a] ADPLL - All-Digital Phase-Locked Loop | Ali Alshamma
+        https://github.com/alienonyx/tt-adpll
+        All-digital PLL that locks a ring oscillator to a 32.768 kHz crystal reference, synthesizing a 16.777 MHz output clock (x512 multiplication)
+  [ttsky26a] Digital | Julia Desmazes
+        https://github.com/Essenceia/analog_sky26a
+        Slow 33MHz analog oscillator.
+  [ttsky26a] HSXO | htfab
+        https://github.com/htfab/ttsky26a-hsxo
+        High-speed crystal oscillator IP block from Chipalooza 2024 wrapped into the TT analog template
+  [ttsky26a] Ring Oscillator PUF | Kaelan
+        https://github.com/JimboKN/TinyTapeout_basic
+        Creates a 129 bit PUF from 32 ring oscillators
+  [ttsky26a] Oscillating Bones | Uri Shaked
+        https://github.com/urish/ttsky-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [ttsky26a] Current-Starved Ring Oscillator Based True Random Number Generator | Rakha Naufal
+        https://github.com/rakhanaufm/truerandom
+        Making truly random sequences of ones and zeros
+  [ttsky26a] Ring Oscillator PVT Sensor & TRNG | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_ring_osc
+        5 SPI-configurable ring oscillators (7/11/15/21/31 sky130 stages) with 16-bit frequency counter, auto gate timer, configurable prescaler, XOR jitter TRNG, health monitor with frequency bounds checking, and differential RO beat-frequency mode for PVT characterization
+  [ttsky26a] YEN | JakubMiszczynski
+        https://github.com/MiszczuX/tt_analog_z2a
+        A TinyTapeout project featuring an analog-controlled 8-pin multiplexer and a set of ring oscillators and additional circuits for comprehensive testing of the design.
+  [ttsky26b] CSRO with 8-bit DAC | Luca Maddison
+        https://github.com/Luca-Madd/tt_um_Madd_CS_Ring_Osc
+        Voltage controlled ring oscillator with 8-bit DAC and analog input
+  [ttsky26b] Onchip-UIS Ring Oscillators for Aging | Ramon Sarmiento and Jorge Angarita and Jeison Acevedo and Daniel Barrios and Nicolas Orcasitas and Juan S. Moya
+        https://github.com/RamonSsc/tt_um_Onchip_Ring_Oscillators_Aging
+        13-stage Ring Oscillator for aging analysis (BTI/HCI)
+  [ttsky26b] 4-Stage Differential Ring VCO | Adithya Selvakumar
+        https://github.com/adithya-n-selvakumar/ttsky26a-analog-voltage-controlled-oscillator
+        A current-controlled 4-stage differential ring VCO with buffered quadrature outputs.
+  [ttsky26b] 127-stage Coarse-Tapped ADPLL | Catalin Lazar
+        https://github.com/catalinlazar/tt_um_catalinlazar_adpll_125m_sky130
+        A lower-frequency All-Digital PLL featuring a 127-stage tapped structural ring oscillator targeting 125MHz midpoint locking loops on SkyWater 130nm.
+  [ttsky26b] Digitally Controlled Oscillator | Sollys Le - PVC
+        https://github.com/SollysLe2/tt_um_digi_controlled_osci
+        The digitally controlled oscillator (DCO) generates a frequency-adjustable clock signal based on an 8-bit control input.
+  [ttsky26b] Simple Ring Oscillator | ER
+        https://github.com/erijnbeek/tt_ring_osc
+        Ring Oscillator Tryout
+  [ttsky26b] Oscillating Bones | Uri Shaked
+        https://github.com/urish/ttsky-oscillating-bones
+        A stylish ring oscillator built from SkullFET transistors
+  [ttsky26b] IEEE Ring Oscillator PUF | Rajkamal
+        https://github.com/Rajkamal0842/tt-Puf
+        8-pair RO-PUF: LFSR-driven toggle FFs, 8x12-bit counter pairs, 3-state FSM
+  [ttsky26b] IEEE Multi-Stage Configurable Ring Oscillator | Nemalipuri Rajkamal
+        https://github.com/Rajkamal0842/tt_um_rajkamal_analog
+        Analog clock generation unit with voltage-controlled MUX routing between 3, 5, and 7-stage ring oscillators on the Sky130 process.
+  [ttsky26b] Tetrahedral Oscillator | Juvenal Romero Pedraza, Gael Gabino Diaz Ojeda, Mario Ranferi Romero Salgado.
+        https://github.com/ROMERUU-dev/ttsky-tetrahedral-oscillator
+        Tetrahedral oscillator based on coupled CMOS inverter pairs with capacitive load tuning.
+  [ttsky26b] (IEEE) USP OpenSilicio Didactic Testchip | USP OpenSilicio Group (IEEE)
+        https://github.com/opensilicio-usp/IEEE-didatic-chip-opensilio-brazil
+        Didactic chip for teaching CMOS design at USP. Five modules selected by a 3-bit main MUX: logic gate library, ring oscillator with 24-bit configurable divider, phase-frequency detector (PFD), D/T flip-flop study, and 4-bit binary counter.
+  [ttgf26a] Ring Oscillator PVT Sensor & TRNG (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_ring_osc_gf_pub
+        GF180mcuD port of 5 SPI-configurable ring oscillators (7/11/15/21/31 gf180 stages) with 16-bit frequency counter, auto gate timer, configurable prescaler, XOR jitter TRNG, per-RO health history, differential RO beat-frequency mode, and frequency-bounds health monitor for cross-foundry PVT characteri
+  [ttgf26b] TRNG using Ring Oscillator | Karthik
+        https://github.com/cambridgeinstituetechnologyBLR-karthikp/trng_
+        True Random Number Generator using ring oscillator
+  [ttgf26b] Tiny RIng Oscillator PUF | Manuel Roales
+        https://github.com/mRoales/Programmable_Ring_Oscillator_PUF
+        A Ring Oscillators PUF wit programmable characteristics
+  [ttgf26b] Neuromorphic PUF (distinct-tap LFSR arbiter + memristor XOR, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_neuro_puf_gf_pub
+        GF180mcuD digital Physical Unclonable Function: 8 distinct-tap maximal-length 10-bit LFSRs act as synthesizable virtual ring-oscillators, a 6-bit challenge selects a pair, and an arbiter FSM compares their popcounts over a programmable 2^N-cycle window (N in 4..12) to produce a response bit. 64 chal
+  [ttgf0p3] Oscillating Bones | Uri Shaked
+        https://github.com/urish/ttgf-oscillating-bones
+        A stylish SkullFET ring oscillator (~120 MHz) with an 8-bit /2../256 divider
+
+===== PUF: 13 hits =====
+  [tt07] Reversible logic based Ring-Oscillator Physically Unclonable Function (RO-PUF) | Syed Farah Naz, Shivam Bhardwaj, Ambika Prasad Shah
+        https://github.com/shivam7086/tt07-verilog-RO_PUF
+        Reversible logic based Ring-Oscillator Physically Unclonable Function (RO-PUF)
+  [tt07] RO-based Physically Unclonable Function (PUF) | Pablo Aravena
+        https://github.com/litneet64/tt07-RO-based-PUF
+        Implementation of a Ring Oscillator-based Physically Unclonable Function (PUF) in Sky130, with 8 bits of Challenge-Response Pairs (CRP)
+  [ttihp0p2] One Bit PUF | Yimin Gao and Ceylan Morgul
+        https://github.com/mcmorgul/ttihp02-multi-bit-puf
+        It is a PUF based on a difference of two registers
+  [ttihp0p2] One Bit PUF | Yimin Gao and Ceylan Morgul
+        https://github.com/mcmorgul/ttihp02-one-bit-puf
+        It is a PUF based on a difference of two registers
+  [ttgf0p2] One Bit PUF | Yimin Gao and Ceylan Morgul
+        https://github.com/Capulus123/ttihp03-multi-bit-puf
+        It is a PUF based on a difference of two registers
+  [ttihp26a] RO-based security primitives | Simon Pankner
+        https://github.com/thravax/tt-test
+        Two physical security primitives based on Ring-Oscillators: RO-PUF and TRNG.
+  [ttsky26a] Ring Oscillator PUF | Kaelan
+        https://github.com/JimboKN/TinyTapeout_basic
+        Creates a 129 bit PUF from 32 ring oscillators
+  [ttsky26b] IEEE Ring Oscillator PUF | Rajkamal
+        https://github.com/Rajkamal0842/tt-Puf
+        8-pair RO-PUF: LFSR-driven toggle FFs, 8x12-bit counter pairs, 3-state FSM
+  [ttgf26a] Hardware Entropy Explorer: UART/SPI TRNG and PUF | gojimmypi
+        https://github.com/gojimmypi/ttgf-UART-FSM-TRNG-Lab
+        UART/SPI-controlled ASIC lab for exploring true-random number generation and PUF-style hardware entropy sources.
+  [ttgf26b] Tiny RIng Oscillator PUF | Manuel Roales
+        https://github.com/mRoales/Programmable_Ring_Oscillator_PUF
+        A Ring Oscillators PUF wit programmable characteristics
+  [ttgf26b] Neuromorphic PUF (distinct-tap LFSR arbiter + memristor XOR, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_neuro_puf_gf_pub
+        GF180mcuD digital Physical Unclonable Function: 8 distinct-tap maximal-length 10-bit LFSRs act as synthesizable virtual ring-oscillators, a 6-bit challenge selects a pair, and an arbiter FSM compares their popcounts over a programmable 2^N-cycle window (N in 4..12) to produce a response bit. 64 chal
+  [ttgf0p3] Hardware Entropy Explorer: UART/SPI TRNG and PUF | gojimmypi
+        https://github.com/gojimmypi/ttgf0p3-UART-FSM-TRNG-Lab
+        UART/SPI-controlled ASIC lab for exploring true-random number generation and PUF-style hardware entropy sources.
+  [ttgf0p3] Hardware Entropy Explorer: UART/SPI TRNG and PUF (Analog) | gojimmypi
+        https://github.com/gojimmypi/ttgf0p3-analog-UART-FSM-TRNG-Lab
+        UART/SPI-controlled GF180 analog lab with DAC, threshold sampling, TRNG monitors, and measured ua5 passive probe.
+
+===== TRNG: 65 hits =====
+  [tt02] Dice roll | Tholin
+        https://github.com/AvalonSemiconductors/tt2-diceroll
+        Will roll a random number from 1 - 6 on the 7-segment display, like a dice.
+  [tt02] Pseudo-random number generator | Thomas Böhm <thomas.bohm@gmail.com>
+        https://github.com/tcptomato/tt02-submission-template
+        Pseudo-random number generator using a 16-bit Fibonacci linear-feedback shift register
+  [tt02] MicroASIC VI | Mikhail Svarichevsky
+        https://github.com/BarsMonster/MicroAsicVI
+        Free-running oscillators to verify simulation vs reality + TRNG
+  [tt02] XorShift32 | Ethan Mahintorabi
+        https://github.com/QuantamHD/evan-submission
+        XorShift32 random number generator
+  [tt02] XorShift32 | Ethan Mahintorabi
+        https://github.com/QuantamHD/ethan-evan-random-numbers
+        XorShift32 random number generator
+  [tt03] Random number guess game | Yufei Zhen, Elaina Zodiatis, Khadijatou Dibba
+        https://github.com/lastminwarrior-fei/tt03-random-num-guess-game
+        Guess 6-bit random number, 3 attemps in one round. 
+  [tt03] Dice roll | Tholin
+        https://github.com/AvalonSemiconductors/tt2-diceroll
+        Will roll a random number from 1 - 6 on the 7-segment display, like a dice.
+  [tt03] Pseudo-random number generator | Thomas Böhm <thomas.bohm@gmail.com>
+        https://github.com/tcptomato/tt02-submission-template
+        Pseudo-random number generator using a 16-bit Fibonacci linear-feedback shift register
+  [tt03] MicroASIC VI | Mikhail Svarichevsky
+        https://github.com/BarsMonster/MicroAsicVI
+        Free-running oscillators to verify simulation vs reality + TRNG
+  [tt03] XorShift32 | Ethan Mahintorabi
+        https://github.com/QuantamHD/evan-submission
+        XorShift32 random number generator
+  [tt03] XorShift32 | Ethan Mahintorabi
+        https://github.com/QuantamHD/ethan-evan-random-numbers
+        XorShift32 random number generator
+  [tt04] Variable Duty-Cycle TRNG | Thomas Pluck
+        https://github.com/ThomasPluck/tt04-biased-trng
+        Generates a random bit with a given probability with a special ring oscillator
+  [tt04] lfsr random number generator | Arun A V
+        https://github.com/arunav321/tt04-sahrdaya-prng
+        4-bit Linear Feedback Shift Register with configurable feedback polynomials based on the `mod` input, and it resets to the initial state when `reset` is asserted.
+  [tt04] Pseudo Random Number Generator | International Hellenic University - Department of Information and Electronic Engineering
+        https://github.com/IIntzes/tt4_prng
+        This project implements a pseudo-random number generator using Verilog. It generates pseudo-random numbers and outputs them to drive two 7-segment displays.
+  [tt04] Oscillators II | Mikhail Svarichevsky
+        https://github.com/BarsMonster/tt04-MicroAsicVII
+        Free-running oscillators to verify simulation vs reality + TRNG
+  [tt05] Clock and Random Number Gen | Austin Lo
+        https://github.com/lolo0827/tapeout-v2
+        Divider up it 16bit input and a simple random number
+  [tt05] A Boolean function based pseudo random number generator (PRNG) | SEAL, CSE Department, IIT Kharagpur
+        https://github.com/fleathlushby/tt05_boolean_pseudo_random_generator
+        Boolean function based pseudo random number generator implemented using finite field
+  [tt05] WS2812B LED strip driver | Ciro Cattuto
+        https://github.com/ccattuto/tt05-rng-ws2812b-strip
+        Drives a WS2812B LED strip with random colors for each refresh
+  [tt05] metastability experiment | yubex
+        https://github.com/yubex/tt04-metastability-experiment
+        The design purpose is to evaluate, if metastability can be used as a true random number generator source in an ASIC design.
+  [tt05of] Clock and Random Number Gen | Austin Lo
+        https://github.com/lolo0827/tapeout-v2
+        Divider up it 16bit input and a simple random number
+  [tt05of] A Boolean function based pseudo random number generator (PRNG) | SEAL, CSE Department, IIT Kharagpur
+        https://github.com/fleathlushby/tt05_boolean_pseudo_random_generator
+        Boolean function based pseudo random number generator implemented using finite field
+  [tt05of] WS2812B LED strip driver | Ciro Cattuto
+        https://github.com/ccattuto/tt05-rng-ws2812b-strip
+        Drives a WS2812B LED strip with random colors for each refresh
+  [tt05of] metastability experiment | yubex
+        https://github.com/yubex/tt04-metastability-experiment
+        The design purpose is to evaluate, if metastability can be used as a true random number generator source in an ASIC design.
+  [tt06] Die Roller | Nathan Gross
+        https://github.com/nathangross1/tt06-verilog-template
+        Generates a random number when rolled with input 1-99
+  [tt06] rng Test | Luca Collini
+        https://github.com/Lucaz97/tt06_RNG2
+        HLS implementation of NIST 800.22 Monobit Test for RNGs.
+  [tt06] Random number generator | VineetaVNair & ShilpaPavithran
+        https://github.com/vinizz/tt06-RNG
+        Randomly generates bit stream
+  [tt06] RNG3 | Luca Collini
+        https://github.com/Lucaz97/RNG3_tt
+        NIST RNG TESTS
+  [tt06] Hardware Trojan Part II | Jeremy Hong
+        https://github.com/hongselectronics/HW_Trojan_Rev2
+        Pseudorandom number generator with and without hardware trojan
+  [tt07] LFSR | James Meech and Werner Florian
+        https://github.com/JamesTimothyMeech/TT07-LFSR
+        Linear feedback shift register random number generator
+  [tt08] Dice | ZHU QUANHAO
+        https://github.com/DanielZhu123/tt08-verilog-Ztemplate
+        after you press the button， the system will generate a random number from 0-F
+  [tt08] RO | Arna Roy
+        https://github.com/Secure-Embedded-Systems/tt08-trng
+        Implementation of simple RO
+  [tt09] 8 bit LFSR | Aaron Nowack
+        https://github.com/abnowack/tinytapeout
+        8 Bit LFSR, aka 8 Bit Pseudo Random Number Generator
+  [ttihp25a] TRNG | Muhammad Bilal
+        https://github.com/engrbilal992/tt10-TRNG
+        Generate Raw and Hashed Random Numbers
+  [ttihp25a] RNG_test | Ba-Anh Dao
+        https://github.com/daobaanh/tt10-trng-test
+        trying to implement lightweight all digital trng
+  [ttihp25a] Dice | ZHU QUANHAO
+        https://github.com/DanielZhu123/tt08-verilog-Ztemplate
+        after you press the button， the system will generate a random number from 0-F
+  [ttihp25a] RO | Arna Roy
+        https://github.com/Secure-Embedded-Systems/tt08-trng
+        Implementation of simple RO
+  [ttihp25a] 8 bit LFSR | Aaron Nowack
+        https://github.com/abnowack/tinytapeout
+        8 Bit LFSR, aka 8 Bit Pseudo Random Number Generator
+  [ttcad25a] TRNG | Muhammad Bilal
+        https://github.com/engrbilal992/tt10-TRNG
+        Generate Raw and Hashed Random Numbers
+  [ttcad25a] RNG_test | Ba-Anh Dao
+        https://github.com/daobaanh/tt10-trng-test
+        trying to implement lightweight all digital trng
+  [ttcad25a] Dice | ZHU QUANHAO
+        https://github.com/DanielZhu123/tt08-verilog-Ztemplate
+        after you press the button， the system will generate a random number from 0-F
+  [ttcad25a] RO | Arna Roy
+        https://github.com/Secure-Embedded-Systems/tt08-trng
+        Implementation of simple RO
+  [ttihp25b] RNG | Felix N
+        https://github.com/Xelef2000/tinytapeout-verilog
+        Ring oscillator based random number generator
+  [ttihp25b] TinyTapeout 2025 | SG Nanovolt
+        https://github.com/sgnanovolt/tinytapeout2025
+        8 bit Pseudo-Random Number Generator
+  [ttsky25a] random_latch | Laurent Roro
+        https://github.com/lerobynetcool/ttsky-verilog-SNPU
+        A potentially working random number generator using the unstable state of a latch
+  [ttsky25a] Six Sided Die | tgrillz
+        https://github.com/tgrillz/tt_um_sixSidedDie
+        Outputs a Random Number 1-6 to simulate a dice roll.
+  [ttihp26a] RNG | Felix N
+        https://github.com/Xelef2000/tinytapeout-verilog
+        Ring oscillator based random number generator
+  [ttihp26a] True(er) Random Number Generator (TRNG) | Angelo Nujic
+        https://github.com/anujic/anujic_ttihp26a
+        Generates a random byte based on bits sampled from ring oscillators.
+  [ttihp26a] VGA multiplex with TRNG | Khanh Lo
+        https://github.com/DivineMK/ttihp26a-tapeout
+        Multiplex between 4 VGA projects with TRNG
+  [ttihp26a] RO-based security primitives | Simon Pankner
+        https://github.com/thravax/tt-test
+        Two physical security primitives based on Ring-Oscillators: RO-PUF and TRNG.
+  [ttihp26a] RandomNum | Aakarsh Yadav
+        https://github.com/aakarsh1011/tiny-tapeout
+        Currently shows a random number on the display
+  [ttsky26a] Melody Generator based on Markov Chains | Arellano Nordahl Jose Luis
+        https://github.com/JLANordhal/ttsky26a-Markov-Chains-Melody-Generator
+        A stochastic music generator using two Markov Chains for note selection and duration on a Pentatonic Scale. Features a 16-bit LFSR entropy source, adjustable BPM, and selectable probability matrices.
+  [ttsky26a] WobblyBits - A probabilistic computing chip | Isaac W
+        https://github.com/rats2012/WobblyBits
+        A probabilistic computing array: 6 p-bits driven by a ring-oscillator TRNG, with a SPI-loadable 6x6 coupling matrix for Ising/Boltzmann sampling on SKY130.
+  [ttsky26a] Sky26a Advanced TRNG | Josh Gillespie
+        https://github.com/chicagojones/tt09-trng-sky130
+        8-RO bank TRNG with NIST health monitors and 6 chaotic whiteners.
+  [ttsky26a] Current-Starved Ring Oscillator Based True Random Number Generator | Rakha Naufal
+        https://github.com/rakhanaufm/truerandom
+        Making truly random sequences of ones and zeros
+  [ttsky26a] Ring Oscillator PVT Sensor & TRNG | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_ring_osc
+        5 SPI-configurable ring oscillators (7/11/15/21/31 sky130 stages) with 16-bit frequency counter, auto gate timer, configurable prescaler, XOR jitter TRNG, health monitor with frequency bounds checking, and differential RO beat-frequency mode for PVT characterization
+  [ttsky26b] C0haotic RNG | onrkrts
+        https://github.com/onurkrts/ttsky-chaotic_rng
+        Programmable chaotic random number generator based on a 3D chaotic map
+  [ttsky26b] 16 bit Galois LFSR based Random number generator-IEEE | Subir Maity, Jitendra Kr. Das
+        https://github.com/charlie2951/tt_um_galois_lfsr16
+        Random no generator using LFSR with user selectable 32 different polynomial
+  [ttsky26b] Logic-Locked 5-Bit RNGy | Ragib
+        https://github.com/gitragi/Logic-Locked-Pseudo-RNG
+        A 5-bit LFSR-based random number generator with key-based logic locking, bounded output, and a 7-segment display for the rightmost decimal digit.
+  [ttgf26a] Hardware Entropy Explorer: UART/SPI TRNG and PUF | gojimmypi
+        https://github.com/gojimmypi/ttgf-UART-FSM-TRNG-Lab
+        UART/SPI-controlled ASIC lab for exploring true-random number generation and PUF-style hardware entropy sources.
+  [ttgf26a] Ring Oscillator PVT Sensor & TRNG (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_ring_osc_gf_pub
+        GF180mcuD port of 5 SPI-configurable ring oscillators (7/11/15/21/31 gf180 stages) with 16-bit frequency counter, auto gate timer, configurable prescaler, XOR jitter TRNG, per-RO health history, differential RO beat-frequency mode, and frequency-bounds health monitor for cross-foundry PVT characteri
+  [ttgf26a] xoroshiro64 | Vivek Chiranjit
+        https://github.com/ChiranjitPatel/ttgf_xoroshiro64
+        xoroshiro TRNG
+  [ttgf26b] TRNG using Ring Oscillator | Karthik
+        https://github.com/cambridgeinstituetechnologyBLR-karthikp/trng_
+        True Random Number Generator using ring oscillator
+  [ttgf26b] Secure TRNG Entropy Generator | Likitha
+        https://github.com/Cambridgeinstituteoftechnology-likitha/likii
+        Hardware entropy mixing circuit generating randomized outputs using XOR feedback paths
+  [ttgf0p3] Hardware Entropy Explorer: UART/SPI TRNG and PUF | gojimmypi
+        https://github.com/gojimmypi/ttgf0p3-UART-FSM-TRNG-Lab
+        UART/SPI-controlled ASIC lab for exploring true-random number generation and PUF-style hardware entropy sources.
+  [ttgf0p3] Hardware Entropy Explorer: UART/SPI TRNG and PUF (Analog) | gojimmypi
+        https://github.com/gojimmypi/ttgf0p3-analog-UART-FSM-TRNG-Lab
+        UART/SPI-controlled GF180 analog lab with DAC, threshold sampling, TRNG monitors, and measured ua5 passive probe.
+
+===== EVOLVE: 0 hits =====
+
+===== CHARACTERIZE: 8 hits =====
+  [tt04] Multi stage path for delay measurements. | Daniel Mundo, Noel Prado, Victor Vanegas
+        https://github.com/mun19508/tt04-measure_delay
+        Verilog coding for cascaded not gates connected as a ring oscillator. After running the flow it is observed that the synthesizer does not support combinatorial feedback and that it collapsed several cascaded not gates into buffers. The original purpose for the ring oscillator will not be achieved bu
+  [ttsky25b] SKY130 technology characterization | Andreas Madner
+        https://github.com/analogandi/ttsky-um-technology-characterization
+        First attempt in characterizing the SKY130 technology and perform aging experiments
+  [ttihp26a] IHP Gate Delay Characterizer (3-Flavor) | Catalin Lazar
+        https://github.com/catalinlazar/tt_ihp_char_osc
+        Characterizes 3 flavors of ring oscillators (Inv1, 2, 4) with 31 stages (30 inv + 1 NAND, prime length) using a 24-bit counter.
+  [ttsky26a] Ring Oscillator PVT Sensor & TRNG | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_ring_osc
+        5 SPI-configurable ring oscillators (7/11/15/21/31 sky130 stages) with 16-bit frequency counter, auto gate timer, configurable prescaler, XOR jitter TRNG, health monitor with frequency bounds checking, and differential RO beat-frequency mode for PVT characterization
+  [ttgf26a] Ring Oscillator PVT Sensor & TRNG (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_ring_osc_gf_pub
+        GF180mcuD port of 5 SPI-configurable ring oscillators (7/11/15/21/31 gf180 stages) with 16-bit frequency counter, auto gate timer, configurable prescaler, XOR jitter TRNG, per-RO health history, differential RO beat-frequency mode, and frequency-bounds health monitor for cross-foundry PVT characteri
+  [ttgf26a] RRAM Characterization Platform (DC sweep + endurance + retention + histogram, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_rsd_char_gf_pub
+        GF180mcuD standalone characterization platform for one external resistive-switching device (RRAM / memristor / PCM). Drives an 8-bit DAC rail and reads back an 8-bit ADC rail, with four SPI-selectable modes: DC sweep (VSTART..VSTOP by VSTEP with on-chip 16-bin histogram and min/max tracking), pulse 
+  [ttgf26a] Memristive Crossbar Peripheral Controller (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_xbar_ctrl_gf_pub
+        GF180mcuD port of the 8x8 memristive crossbar controller: READ/SET/RESET/FORMING/SWEEP modes, pulse trains, 16-bit pulse counter, compliance auto-abort with sticky history, V/2 half-select DAC, last-ADC-in-sweep snapshot. Direct cross-foundry sibling to the TTSKY26a xbar_ctrl for comparative charact
+  [ttgf26b] Tiny RIng Oscillator PUF | Manuel Roales
+        https://github.com/mRoales/Programmable_Ring_Oscillator_PUF
+        A Ring Oscillators PUF wit programmable characteristics
+
+===== ISING: 15 hits =====
+  [tt02] 4-spin Ising Chain Simulation | Seppe Van Dyck
+        https://github.com/svd321/tt02-Ising
+        A self-contained physics simulation. This circuit simulates 4 spins of an Ising chain in an external field.
+  [tt03] 4-spin Ising Chain Simulation | Seppe Van Dyck
+        https://github.com/svd321/tt02-Ising
+        A self-contained physics simulation. This circuit simulates 4 spins of an Ising chain in an external field.
+  [tt04] Custom falling and rising edge detection | Kelvin Kung
+        https://github.com/kelvinutp/TinyTapeOut-circuits
+        Build a custom edge detection circuit using flip-flop
+  [tt05] Event Denoising Circuit | Emily Lee
+        https://github.com/nerfectt/tt05-verilog-demo
+        Implementing a Denoiser for Event Based Data in Silicon
+  [tt05] Event-Based Denoising Circuit | Sean Venadas
+        https://github.com/seanvenadas/tt05-verilog-ece183chip
+        Takes an 8-bit signal with 4 parameters: x, y, p, t. When p is high, signal is outputted and filtered to reduce noise. Otherwise, output signal is zero.
+  [tt05of] Event Denoising Circuit | Emily Lee
+        https://github.com/nerfectt/tt05-verilog-demo
+        Implementing a Denoiser for Event Based Data in Silicon
+  [tt05of] Event-Based Denoising Circuit | Sean Venadas
+        https://github.com/seanvenadas/tt05-verilog-ece183chip
+        Takes an 8-bit signal with 4 parameters: x, y, p, t. When p is high, signal is outputted and filtered to reduce noise. Otherwise, output signal is zero.
+  [tt06] 8-bit Binary Counter | Aryan kannaujiya, Shivam Bhardwaj and Ambika Prasad Shah
+        https://github.com/aryan-kannaujiya/tt06-verilog-template
+         This Verilog module defines a synchronous 8-bit counter, where the count increments on each rising edge of the clock input (clk). Additionally, it features an asynchronous reset input (rst_n), which,0 when activated, sets the counter output (out) to zero regardless of the clock signal.
+  [tt08] Lab and Lectures SoC | Aloke Kumar Das
+        https://github.com/alokerdas/tt_um_LnL_SoC
+        A tiny SoC comprising of a cpu, memory and SPI protocol
+  [ttcad25a] Lab and Lectures SoC | Aloke Kumar Das
+        https://github.com/alokerdas/tt_um_LnL_SoC
+        A tiny SoC comprising of a cpu, memory and SPI protocol
+  [ttsky25a] Latched 4-bits adder | Adan Kvitschal
+        https://github.com/adankvitschal/tt-4bit-adder
+        4-bits added with lacthed output, sum result is updated every clock rising edge
+  [ttihp26a] Lab and Lectures SoC | Aloke Kumar Das
+        https://github.com/alokerdas/tt_um_ihp26a_LnL_SoC
+        A tiny SoC comprising of a cpu, memory, pwm, timer and SPI protocol
+  [ttsky26a] WobblyBits - A probabilistic computing chip | Isaac W
+        https://github.com/rats2012/WobblyBits
+        A probabilistic computing array: 6 p-bits driven by a ring-oscillator TRNG, with a SPI-loadable 6x6 coupling matrix for Ising/Boltzmann sampling on SKY130.
+  [ttsky26b] IEEE 7-bit ALU - Serial Input / Parallel Output | Sharif Obando
+        https://github.com/SharifGiraldoo/BootcampChipProject
+        7-bit ALU with LSB-first serial input and 8-bit parallel output. Supports ADD, AND, OR, XOR and SUB. Protocol: 7 bits operand A + 7 bits operand B per clock edge (14 rising edges total). The opcode op[2:0] is a stable parallel input on ui_in[3:1]. Done signal on uio[0] pulses high for exactly one cl
+  [ttgf26a] Stochastic neuron + STDP controller (merged, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_stoch_stdp_pair_gf_pub
+        GF180mcuD merged-pair cell: an 8-bit saturating LIF/stochastic neuron with an 8-entry sigmoid LUT, 8-bit Galois LFSR, programmable refractory, per-clock leak, host-triggered stimulus on ext_input rising edge, homeostatic theta adaptation over a 256-clock window (theta_live floats between theta_min a
+
+===== PBIT: 11 hits =====
+  [tt08] Stochastic Multiplier, Adder and Self-Multiplier | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/CL-123-abc/tt_um_stochastic_addmultiply_CL123abc
+        Multiplier, Adder and Self-Multiplier using stochastic computing
+  [ttihp0p2] Stochastic Multiplier, Adder and Self-Multiplier | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/davidparent/tt_um_stochastic_math
+        Multiplier, Adder and Self-Multiplier using stochastic computing
+  [tt09] Stochastic Integrator | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/CL-123-abc/tt_um_stochastic_integrator_tt9_CL123abc
+        Use stochastic computing to implement integration
+  [ttihp25a] Stochastic Multiplier, Adder and Self-Multiplier | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/CL-123-abc/tt_um_stochastic_addmultiply_CL123abc
+        Multiplier, Adder and Self-Multiplier using stochastic computing
+  [ttihp25a] Stochastic Integrator | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/CL-123-abc/tt_um_stochastic_integrator_tt9_CL123abc
+        Use stochastic computing to implement integration
+  [ttcad25a] Stochastic Multiplier, Adder and Self-Multiplier | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/CL-123-abc/tt_um_stochastic_addmultiply_CL123abc
+        Multiplier, Adder and Self-Multiplier using stochastic computing
+  [ttsky25a] Stochastic Computing based QIF model neuron | Ciecen Lestari, Ze-An Chen and David Parent
+        https://github.com/CL-123-abc/tt_um_sc_bipolar_qif_neuron
+        Models a QIF neuron using Stochastic Computing (probability based values) in bipolar format
+  [ttsky25a] Stochastic Multiplier, Adder and Self-Multiplier | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/CL-123-abc/tt_um_stochastic_addmultiply_CL123abc
+        Multiplier, Adder and Self-Multiplier using stochastic computing
+  [ttsky25a] Stochastic Integrator | Ciecen Lestari, Chih-Kuan Ho, David Parent
+        https://github.com/CL-123-abc/tt_um_stochastic_integrator_tt9_CL123abc
+        Use stochastic computing to implement integration
+  [ttsky26a] WobblyBits - A probabilistic computing chip | Isaac W
+        https://github.com/rats2012/WobblyBits
+        A probabilistic computing array: 6 p-bits driven by a ring-oscillator TRNG, with a SPI-loadable 6x6 coupling matrix for Ising/Boltzmann sampling on SKY130.
+  [ttgf26a] Stochastic neuron + STDP controller (merged, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_stoch_stdp_pair_gf_pub
+        GF180mcuD merged-pair cell: an 8-bit saturating LIF/stochastic neuron with an 8-entry sigmoid LUT, 8-bit Galois LFSR, programmable refractory, per-clock leak, host-triggered stimulus on ext_input rising edge, homeostatic theta adaptation over a 256-clock window (theta_live floats between theta_min a
+
+===== TDC: 18 hits =====
+  [tt04] Delay Line | Ashley J. Robinson
+        https://github.com/ashleyjr/tt04-delay-line
+        A simple delay line with instrumentation
+  [tt06] Synthesized Time-to-Digital Converter (TDC) | Harald Pretl
+        https://github.com/iic-jku/jku-tt06-tdc-v1
+        Synthesized TDC based on an interleaved delay line
+  [tt06] Synthesized Time-to-Digital Converter (TDC) v2 | Harald Pretl
+        https://github.com/iic-jku/jku-tt06-tdc-v2
+        Synthesized TDC based on two Vernier delay rings
+  [tt06] UCSC HW Systems Collective, TDC | Tyler Sheaves, Phillip Marlowe, & Dustin Richmond
+        https://github.com/tsheaves/tt06_hsc_tdc
+        A tiny TDC constructed entirely of standard cells. Skywater130 FA-2 delay element
+  [tt06] UCSC HW Systems Collective, TDC - BUF2x1 | Phillip Marlowe, Tyler Sheaves, & Dustin Richmond
+        https://github.com/phillipmmarlowe/tt06_hsc_tdc_buf_delay
+        A tiny TDC constructed entirely of standard cells. Skywater130 AND-2 delay element
+  [tt06] UCSC HW Systems Collective, TDC - MUX2x1 | Phillip Marlowe, Tyler Sheaves, & Dustin Richmond
+        https://github.com/phillipmmarlowe/tt06_hsc_tdc_mux_delay
+        A tiny TDC constructed entirely of standard cells. Skywater130 MUX2x1 delay element
+  [tt06] Convertidor de Tiempo a Digital (TDC) | Juan Vargas Ferrer & Luis Carlos Alvarez Simón
+        https://github.com/jferrer08/latinpractice
+        El proyecto consiste en el diseño de un circuito Front end o interfaz para convertir a digital la señal proveniente de un sensor con salida en tiempo.
+  [tt07] Delay Line Time Multiplexed NAND Gate | Frans Skarman (TheZoq2)
+        https://github.com/TheZoq2/tt07_delay_line_tmng
+        A time multiplexed nand gate powered by a giant shift reigster
+  [tt07] Analog TDC | Luis Carlos Alvarez Simon
+        https://github.com/luis-asimon/tt07_AnalogTdc
+        Analog part of a Time to Digital Convert
+  [tt09] Time to Digital Converter | Jeremiasz Hauck
+        https://github.com/13hihi31/tt09-analog-tdc
+        Phase difference measuring circuit with digital output
+  [tt09] Micro tile container | Arna
+        https://github.com/Secure-Embedded-Systems/tt09-microtile-final_TDC
+        Example Experimental microtile TDC container
+  [tt09] Duffy | Jonathan Duffy
+        https://github.com/jduffy105/WokWiTest
+        trying out an oscillator or delay line
+  [ttihp25a] TDC with SPI | Tautvydas Brukstus
+        https://github.com/Brukstus/tt10_tdc_with_spi
+        TDC with SPI design
+  [ttihp25a] Duffy | Jonathan Duffy
+        https://github.com/TinyTapeout/dummy
+        trying out an oscillator or delay line
+  [ttsky25a] Time to Digital Converter | Jeremiasz Hauck
+        https://github.com/13hihi31/tt09-analog-tdc
+        Phase difference measuring circuit with digital output
+  [ttsky25a] Micro tile container | Arna
+        https://github.com/Secure-Embedded-Systems/tt09-microtile-final_TDC
+        Example Experimental microtile TDC container
+  [ttsky25b] Simple Tapped Delay Line | Carson
+        https://github.com/carson-mpspace/tinytapeout-demo
+        Tapped Delay line formed with inverters and FFs
+  [ttsky26a] Resistor Capacitor TDC | Rowan Tyler
+        https://github.com/rowantylerr/tt02-RC-TDC
+        Calculated the resistance of an external RC circuit based on its measured rise time to an outputted step signal
+
+===== FAULT: 6 hits =====
+  [ttihp26a] Glitcher | Philip Åkesson
+        https://github.com/pakesson/tt_glitcher
+        Fault injection pulse generator with trigger input and configurable parameters, controllable over UART.
+  [ttihp0p4] Glitcher | Philip Åkesson
+        https://github.com/pakesson/tt_glitcher
+        Fault injection pulse generator with trigger input and configurable parameters, controllable over UART.
+  [ttsky26a] Tiny Secure Telemetry Engine | Chidambaresh N ,Dr.Sudhanya P, Charukkesh S, Dhivya G, Priyavarshini T, Sriharivasan P S
+        https://github.com/icy-chidam/tt_chidam_secengine
+        8-bit security and integrity co-processor with nonlinear permutation, keystream, and CRC modes
+  [ttsky26a] Glitcher | Philip Åkesson
+        https://github.com/pakesson/tt_glitcher
+        Fault injection pulse generator with trigger input and configurable parameters, controllable over UART.
+  [ttsky26b] IEEE Devil Nyan Cat VGA | Daniel García
+        https://github.com/Dani3184/devil_Nyan_Cat
+        VGA Nyan Cat with synchronized audio and a real-time color mutation toggle (Devil Mode).
+  [ttgf26a] BIST-8: Built-In Self-Test for 8-bit CLA Adder | Mario Garcia Jimenez
+        https://github.com/mgarciajimenezAirzone/tt-mmggjj
+        BIST architecture for an 8-bit Carry-Lookahead Adder. Includes 12-bit LFSR pattern generator, 16-bit MISR response compactor, fault injection and 4-state FSM controller. Golden signature 0xCF77.
+
+===== RESERVOIR: 43 hits =====
+  [tt04] LIF Neuron, Telluride 2023 | Paola Vitolo, Andrew Wabnitz, ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt04-LIF-neuron-telluride2023
+        Standalone test for a Binarized Leaky Integrate and Fire neuron that is part of the larger experimental design from Telluride Neuromorphic Workshop 2023
+  [tt05] Spiking LSTM Network | Skye Gunasekaran
+        https://github.com/SkyeGunasekaran/TinyTapeout-ECE183
+        A leaky integrate and fire neuron with adaptive threshold.
+  [tt05] Leaky Integrate and Fire Neuron Model | Miles Segal
+        https://github.com/nfjesifb/Leaky_Integrate_Fire_Neuron_Model
+        Models the functionality of a leaky integrate and fire neuron, of the style tipically found in spiking neural networks
+  [tt05] Basic Spiking Neural Network | Abhinandan singh
+        https://github.com/abhiucsc/SNN293
+        Study of spike generation in a SNN.
+  [tt05] ChatGPT designed Spiking Neural Network | Michael Tomlinson, Joe Lie, ChatGPT-4, Andreas Andreou - mtomlin5@jh.edu
+        https://github.com/AndreouLab/tinytapeout_05_chatgpt_snn
+        SPI Programmable spiking neural network with 6 LIF neurons ( 3 input - 3 output ) with fully programmable weights (8-bit)
+  [tt05] Delta Modulation Spike Encoding | John Madden
+        https://github.com/jmadden173/tt05-delta-modulation
+        Delta Modulation for Spiking Neural Networks (SNN) based on snnTorch's implementation.
+  [tt05] Chonky Spiking Neural Net | ReJ aka Renaldas Zioma, Paola Vitolo, Andrew Wabnitz. Big thanks to Jason Eshraghian!
+        https://github.com/rejunity/tt05-spiking-neural-net
+        3 layer Spiking Neural Net with on-chip weights
+  [tt05of] Spiking LSTM Network | Skye Gunasekaran
+        https://github.com/SkyeGunasekaran/TinyTapeout-ECE183
+        A leaky integrate and fire neuron with adaptive threshold.
+  [tt05of] Leaky Integrate and Fire Neuron Model | Miles Segal
+        https://github.com/nfjesifb/Leaky_Integrate_Fire_Neuron_Model
+        Models the functionality of a leaky integrate and fire neuron, of the style tipically found in spiking neural networks
+  [tt05of] Basic Spiking Neural Network | Abhinandan singh
+        https://github.com/abhiucsc/SNN293
+        Study of spike generation in a SNN.
+  [tt05of] ChatGPT designed Spiking Neural Network | Michael Tomlinson, Joe Lie, ChatGPT-4, Andreas Andreou - mtomlin5@jh.edu
+        https://github.com/AndreouLab/tinytapeout_05_chatgpt_snn
+        SPI Programmable spiking neural network with 6 LIF neurons ( 3 input - 3 output ) with fully programmable weights (8-bit)
+  [tt05of] Delta Modulation Spike Encoding | John Madden
+        https://github.com/jmadden173/tt05-delta-modulation
+        Delta Modulation for Spiking Neural Networks (SNN) based on snnTorch's implementation.
+  [tt05of] Chonky SNN | rej
+        https://github.com/rejunity/tt05-spiking-neural-net
+        3 layer Spiking Neural Net with on-chip weights
+  [tt06] Analog Sigmoid | aleena
+        https://github.com/aleena-duk/tinytapeoutsig
+        Activation functions for neuromorphic computing
+  [tt06] ChatGPT designed Recurrent Spiking Neural Network | Paola Vitolo, Michael Tomlinson, ChatGPT-4, Gian Domenico Licciardo, Andreas Andreou - pvitolo1@jh.edu
+        https://github.com/Andreou-JHULabOrg/tinytapeout_06_chatgpt_rsnn
+        Programmable recurrent spiking neural network with 9 recurrent LIF neurons ( 3 input - 3 output ) with fully programmable weights (8-bit)
+  [tt07] QIF Neuron | Katie Burrows and David Parent
+        https://github.com/davidparent/tt_resistor_test
+        Models a QIF spiking neuron 
+  [tt09] Leaky integrate and fire spiking neural network | Aliyaa Islam
+        https://github.com/alnislam/tt09-ece-110
+        simulates a lif neuron
+  [tt09] Hopfield Network with Izhikevich-type RS and FS Neurons | Daniel Solis
+        https://github.com/cellular-alchemist/tt09-danielsolis
+        An on-chip implementation of a Hopfield neural network using Izhikevich-type regular spiking (RS) and fast spiking (FS) neurons with on-chip Hebbian learning for pattern storage and retrieval.
+  [tt09] Dynamic Threshold Leaky Integrate-and-Fire | Kai Linsley
+        https://github.com/kalinsley/tt09-verilog
+        Leaky Integrate-and-Fire model simulating a spiking biological neuron
+  [tt09] Neuromorphic Hardware for SNN LSTM | Hunter Schweiger
+        https://github.com/hschweiger15/tt09-ECE-210
+        Efficient neuromorphic hardware implementation of a Leaky Spike Neural Network (LSNN) with adaptive threshold and refractory period
+  [tt09] ChatGPT-generated Spiking Neural Network with Delays | Paola Vitolo
+        https://github.com/PaolaUniSa/tt09_chatGPT_SNN_LD
+        ChatGPT-generated Spiking Neural Network with Delays
+  [tt09] Two LIF Neurons with STDP Learning | Sebastian Hernandez
+        https://github.com/jhern424/tt09-sebastianhernandez
+        A compact spiking neural network implementation featuring: - Two Leaky Integrate-and-Fire (LIF) neurons connected via plastic synapse - Spike-timing-dependent plasticity (STDP) for dynamic weight adjustment - 8-bit fixed-point arithmetic for state and weight representation - Real-time monitoring of 
+  [ttihp25a] Leaky integrate and fire spiking neural network | Aliyaa Islam
+        https://github.com/alnislam/tt09-ece-110
+        simulates a lif neuron
+  [ttihp25a] Hopfield Network with Izhikevich-type RS and FS Neurons | Daniel Solis
+        https://github.com/cellular-alchemist/tt09-danielsolis
+        An on-chip implementation of a Hopfield neural network using Izhikevich-type regular spiking (RS) and fast spiking (FS) neurons with on-chip Hebbian learning for pattern storage and retrieval.
+  [ttihp25a] Dynamic Threshold Leaky Integrate-and-Fire | Kai Linsley
+        https://github.com/kalinsley/tt09-verilog
+        Leaky Integrate-and-Fire model simulating a spiking biological neuron
+  [ttihp25a] Neuromorphic Hardware for SNN LSTM | Hunter Schweiger
+        https://github.com/hschweiger15/tt09-ECE-210
+        Efficient neuromorphic hardware implementation of a Leaky Spike Neural Network (LSNN) with adaptive threshold and refractory period
+  [ttihp25a] ChatGPT-generated Spiking Neural Network with Delays | Paola Vitolo
+        https://github.com/PaolaUniSa/tt09_chatGPT_SNN_LD
+        ChatGPT-generated Spiking Neural Network with Delays
+  [ttihp25a] Two LIF Neurons with STDP Learning | Sebastian Hernandez
+        https://github.com/jhern424/tt09-sebastianhernandez
+        A compact spiking neural network implementation featuring: - Two Leaky Integrate-and-Fire (LIF) neurons connected via plastic synapse - Spike-timing-dependent plasticity (STDP) for dynamic weight adjustment - 8-bit fixed-point arithmetic for state and weight representation - Real-time monitoring of 
+  [ttsky25a] Reward implemented Spiking Neural Network | Amon Suzuki
+        https://github.com/Amonsuzuki/Reward-implemented-Spiking-Neural-Network
+        SNN learn by STDP and Rewards
+  [ttsky25a] Adaptive Leaky Integrate-and-Fire spiking neuron core for edge AI | CUTM
+        https://github.com/tapeoutcutm/lif-neuron-accelerator
+        Hardware implementation of an adaptive leaky integrate-and-fire spiking neuron for edge AI
+  [ttsky25b] EZ Reservoir | kinako71-2
+        https://github.com/kinako71-2/TTSKY25b
+        Lightweight linear reservoir ASIC implemented in Verilog.
+  [ttihp26a] Neuromorphic Tile | Justin Long
+        https://github.com/crockpotveggies/neuron-ttihp
+        Event-driven neuromorphic neuron tile with selectable modes and on-chip learning
+  [ttsky26a] Spiking Pattern Recognition Core | Terdoo Osu
+        https://github.com/ttosu25/ASIC-Draft
+        A LIF neuron core that triggers an event when a target spike pattern is detected.
+  [ttsky26a] Neuromorphic Processor (SNN) | Duarte Monteiro
+        https://github.com/d-monteiro/tinytapeout
+        Time-Multiplexed SNN accelerator
+  [ttsky26a] LFSR-Based Stochastic Neuron | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_stoch_neuron
+        Standalone stochastic neuron with configurable 16-bit LFSR, programmable sigmoid LUT, refractory period, and SPI interface for neuromorphic computing
+  [ttsky26b] SKY130 Spiking Neuron | Abdulkarim Alorf, Tomohisa Kawakami
+        https://github.com/Abiaselli/SKY130-Spiking-Neuron
+        A compact analog spiking neuron
+  [ttsky26b] SNN AFib Detector — Spiking Reservoir Computing Core | SanjayKrishna
+        https://github.com/AdvaittejPS/vspace-snn-afib-detector
+        A spiking neural network (SNN) reservoir computing chip that detects atrial fibrillation and asystole in real time from R-peak timing pulses, using 11 LIF neurons, recurrent feedback, and 2-of-3 triple-window majority voting.
+  [ttsky26b] TRI-1 Gamma — MAX-TRUE NEUROMORPHIC FLAGSHIP 32-tile 8-column | Dmitrii Vasilev
+        https://github.com/gHashTag/tt-trinity-gamma
+        MAX-TRUE NEUROMORPHIC FLAGSHIP SKU of the TRI-1 Triad (TTSKY26b). 32 tiles = 8x4 TT footprint. Architecture: 8 cortical columns (cortical_column.v — LIF leaky-integrate-and-fire dynamics with 8-bit membrane potential, BitNet b1.58 ternary MLP hidden layer, GF16 dot4 input projection, sparse PE accum
+  [ttgf26a] RRAM Characterization Platform (DC sweep + endurance + retention + histogram, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_rsd_char_gf_pub
+        GF180mcuD standalone characterization platform for one external resistive-switching device (RRAM / memristor / PCM). Drives an 8-bit DAC rail and reads back an 8-bit ADC rail, with four SPI-selectable modes: DC sweep (VSTART..VSTOP by VSTEP with on-chip 16-bin histogram and min/max tracking), pulse 
+  [ttgf26b] 4-Neuron LIF Spiking Neural Network | Ilim Stankulov
+        https://github.com/ilim-stankulov/lif-spiking-neural-network
+        A simple 4-neuron spiking neural network implementing the LIF model
+  [ttgf26b] Neuromorphic PUF (distinct-tap LFSR arbiter + memristor XOR, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_neuro_puf_gf_pub
+        GF180mcuD digital Physical Unclonable Function: 8 distinct-tap maximal-length 10-bit LFSRs act as synthesizable virtual ring-oscillators, a 6-bit challenge selects a pair, and an arbiter FSM compares their popcounts over a programmable 2^N-cycle window (N in 4..12) to produce a response bit. 64 chal
+  [ttgf26b] Spiking Neural Network WTA Inference Engine (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/ragansanthosh/tt_um_santhosh_snn_wta_gf_pub
+        GF180mcuD digital spiking neural network inference engine: 4 LIF neurons with programmable 4x4 signed synaptic weight matrix, per-neuron bias, programmable global threshold/leak/refractory, hard winner-take-all lateral inhibition, optional self-recurrence, SPI-configurable 16-bit register file, 4-ch
+  [ttgf26b] Neuromorphic Spike Codec (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_spike_codec_gf_pub
+        GF180mcuD digital neuromorphic spike codec: three encoders (rate via 8-bit Fibonacci LFSR, latency/time-to-first-spike, delta with programmable threshold) and three symmetric decoders (rate count, latency-to-value, signed delta-sigma accumulator with leak) in one SPI-programmable block; 1x2 tile, si
+
+===== ANALOG: 221 hits =====
+  [tt02] TinyPID | Aidan Medcalf
+        https://github.com/AidanMedcalf/tt02-pid
+        Tiny PID controller with SPI configuration channel, SPI ADC and DAC driver
+  [tt02] Sigma-Delta ADC/DAC | Adam Greig
+        https://github.com/adamgreig/tt02-adc-dac
+        Simple ADC and DAC
+  [tt02] Asynchronous Binary to Ternary Converter and Comparator | Steven Bos
+        https://github.com/aiunderstand/tt02-async-binary-ternary-convert-compare
+        This chip offers various kinds of conversions and comparisons between binary encoded ternary and unary encoded ternary in both machine readible output and human readible (7-segment display decimal) output
+  [tt03] TinyPID | Aidan Medcalf
+        https://github.com/AidanMedcalf/tt02-pid
+        Tiny PID controller with SPI configuration channel, SPI ADC and DAC driver
+  [tt03] Sigma-Delta ADC/DAC | Adam Greig
+        https://github.com/adamgreig/tt02-adc-dac
+        Simple ADC and DAC
+  [tt03] Asynchronous Binary to Ternary Converter and Comparator | Steven Bos
+        https://github.com/aiunderstand/tt02-async-binary-ternary-convert-compare
+        This chip offers various kinds of conversions and comparisons between binary encoded ternary and unary encoded ternary in both machine readible output and human readible (7-segment display decimal) output
+  [tt04] SAR ADC Backend | Hugo Frisk
+        https://github.com/PepperoniPingu/tt04-submission-SAR-ADC-Backend
+        A digital backend of a successive approximation digital to analog converter (SAR ADC) featuring two interfaces: I2C or an 11-bit parallel bus.
+  [tt04] Simple QSPI DAC | Piotr Kuligowski
+        https://github.com/pkuligowski/tt04-simple-qspi-dac
+        Simple implementation of 8-bit R-2R DAC using QSPI interface + bi-directional port test breakout.
+  [tt04] PWM audio | Yeo Kheng Meng
+        https://github.com/yeokm1/tt4-pwm-audio
+        Takes in 8-bit audio over a parallel (port) interface then generates an analog audio signal like a Covox Speech Thing.
+  [tt05] 4-Bit ALU | CE JMU Wuerzburg
+        https://github.com/CEJMU/tt05-alu
+        A simple 4-Bit ALU which contains two types of adders, multipliers, a comparator and a barrel-shifter
+  [tt05] TT05 Analog Test | Matt Venn
+        https://github.com/mattvenn/tt05-analog-test
+        Test voltage divider
+  [tt05] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt05-psg-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [tt05] Analog emulation monosynth | Toivo Henningsson
+        https://github.com/toivoh/tt05-synth
+        One synth voice with two oscillators and a 2nd order filter
+  [tt05] TT05 Analog Testmacro (Ringo, DAC) | Harald Pretl and Jakob Ratschenberger
+        https://github.com/iic-jku/tt05-analog-test
+        For future analog enablement of TinyTapeout we designed a few simple analog blocks for testing the flow. The first block is a ca. 500kHz ring oscillator outputting a square-wave signal. The second block is a 3bit R-2R DAC outputting a programmable dc voltage. Both analog output signals can be gated 
+  [tt05] Analog Clock | Justin Hui
+        https://github.com/jhui323444/tt05-submission-template-Justin-Hui-Analog-Clock
+        LED controller for an Analog Clock taking a 1Hz internal clk input
+  [tt05of] 4-Bit ALU | CE JMU Wuerzburg
+        https://github.com/CEJMU/tt05-alu
+        A simple 4-Bit ALU which contains two types of adders, multipliers, a comparator and a barrel-shifter
+  [tt05of] TT05 Analog Test | Matt Venn
+        https://github.com/mattvenn/tt05-analog-test
+        Test voltage divider
+  [tt05of] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt05-psg-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [tt05of] Analog emulation monosynth | Toivo Henningsson
+        https://github.com/toivoh/tt05-synth
+        One synth voice with two oscillators and a 2nd order filter
+  [tt05of] TT05 Analog Testmacro (Ringo, DAC) | Harald Pretl and Jakob Ratschenberger
+        https://github.com/iic-jku/tt05-analog-test
+        For future analog enablement of TinyTapeout we designed a few simple analog blocks for testing the flow. The first block is a ca. 500kHz ring oscillator outputting a square-wave signal. The second block is a 3bit R-2R DAC outputting a programmable dc voltage. Both analog output signals can be gated 
+  [tt05of] Analog Clock | Justin Hui
+        https://github.com/jhui323444/tt05-submission-template-Justin-Hui-Analog-Clock
+        LED controller for an Analog Clock taking a 1Hz internal clk input
+  [tt06] TT06 8-bit SAR ADC | Carsten Wulff
+        https://github.com/wulffern/tt06-sar
+        8-bit Successive Approximation Register ADC
+  [tt06] Analog Sigmoid | aleena
+        https://github.com/aleena-duk/tinytapeoutsig
+        Activation functions for neuromorphic computing
+  [tt06] TT06 Grab Bag | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt06-grab-bag
+        A few analog/mixed-signal experiments with a 24-bit VGA pattern generator as the highlight
+  [tt06] TT06 Analog Factory Test | Sylvain Munaut
+        https://github.com/smunaut/tt06-analog-factory-test
+        Test structures for TT06 analog support
+  [tt06] Analog loopback | Matt Venn
+        https://github.com/TinyTapeout/tt06-analog-loopback
+        Analog loopback test
+  [tt06] Tiny Opamp | argunda
+        https://github.com/argunda/tt06-tiny-opamp
+        Super simple two stage opamp without miller compensation
+  [tt06] Simple FET OpAmp with Sky130. | Diego Satizabal
+        https://github.com/dsatizabal/tt06-fet-opamp
+        A simple FET OpAmp
+  [tt06] 8-bit DEM R2R DAC | Eric Fogleman
+        https://github.com/ejfogleman/ef_smsdac
+        8-bit segmented mismatch-shaping R2R DAC
+  [tt06] Flash ADC | htfab
+        https://github.com/htfab/flash-adc
+        4-bit flash ADC with binary encoder
+  [tt06] 1st passive Sigma Delta ADC | Joerg Vollrath
+        https://github.com/JVollrath/tt06_jv_sigdel_v
+        External R1 and R2 and C2 realize a ADC
+  [tt06] Crossbar Array | Kevin Guan
+        https://github.com/kevinwguan/tt06-kevinwguan
+        Analog Matrix Multiplication with 64x64 array
+  [tt06] Analog 8bit R2R DAC | Matt Venn
+        https://github.com/mattvenn/tt06-analog-r2r-dac
+        A simple 8 bit DAC with a sawtooth waveform driver
+  [tt06] Relaxation oscillator | Matt Venn
+        https://github.com/mattvenn/tt06-analog-relax-osc
+        A relaxation oscillator
+  [tt06] Power Management IC | Matt Wong
+        https://github.com/wongmatthew73/tt06-mw-pmic
+        Creates a half bridge PWM duel output from ADC input
+  [tt06] Analog Test Circuit ITS: VCO | Astria Nur Irfansyah
+        https://github.com/nurirfansyah/tt06-analog-its_ip_alits01
+        Voltage controlled ring oscillator. 
+  [tt06] WoWA | Pat Deegan
+        https://github.com/psychogenic/tt06-analog-wowa
+        Is it really the World Worst ADC? Maybe it'll be a wow-ADC instead... we'll see!
+  [tt06] Analog Current Comparator | Renaldas Zioma
+        https://github.com/rejunity/tt06-analog-current-comparator
+        An analog current comparator with Excitatory (+) and Inhibitory (-) currents formed by summing up digital inputs
+  [tt06] UART interface to ADC TLV2556 (VHDL Test) | Jonas Nilsson
+        https://github.com/sanojn/tt06-vhdl-adc_interface
+        Simple interface that allows values from a TLV2556 ADC to be read out over a UART
+  [tt06] BIT COMPARATOR | FELIPE SD
+        https://github.com/felipe-SD/tt06-wokwi-template-BIT_TEST
+        Compare two bits 
+  [tt07] Instrumentation Amplifier for Electrocardiogram Signal Adquisition | Rocha Judith Rocha-Torres
+        https://github.com/PatriciaJRT/tt07-analog-template
+        The amplifier gatters the electrical signal coming from the skin/muscles over the heart
+  [tt07] Analog comparator | Diego Carrera and Leonel Miranda
+        https://github.com/EduHolg/EjemploAnalog2
+        Analog comparator made by the MNEL team from USFQ.
+  [tt07] 4-bit R2R DAC | Vishal Bingi
+        https://github.com/Vishalbingi1999/tt07_r2r
+        It is a 4-bit R2R DAC with a sawtooth waveform driver
+  [tt07] Analog buffer test | Aron Dennen
+        https://github.com/adennen/tt07-arond-analog
+        Double inverter project from Matt's analog course
+  [tt07] TT07 Analog Factory Test | Sylvain Munaut
+        https://github.com/smunaut/tt07-analog-factory-test
+        Test structures for TT07 analog support
+  [tt07] RF_peripheral_circuits | Shilpa Pavithran, Vineeta V Nair, Sruthi P, Aravind S, Vyshnav P Dinesh, Aswani A R
+        https://github.com/ShilpaPavithranManju/AnalogRF_peripheral_circuit
+        Peripheral circuits for RF based transmission.
+  [tt07] FastMagnitudeComparator | Daniel Burke
+        https://github.com/drburke3/FastMagnitudeComparator
+        Digital neuron threshold detector
+  [tt07] DJ8 8-bit CPU w/ DAC | DaveX
+        https://github.com/dvxf/tt07-dj8v-dac
+        DJ8 8-bit CPU with parallel Flash / RAM interface and 8-bit R-2R DAC
+  [tt07] 8-bit DEM R2R DAC | Eric Fogleman
+        https://github.com/ejfogleman/tt07-ef-smsdac8
+        8-bit segmented mismatch-shaping R2R DAC
+  [tt07] Analog TDC | Luis Carlos Alvarez Simon
+        https://github.com/luis-asimon/tt07_AnalogTdc
+        Analog part of a Time to Digital Convert
+  [tt07] All Digital DAC and Analog Comparators | Maximiliam Luppe
+        https://github.com/maxluppe/tt07_maxluppe_Digital_DAC_Comp
+        Implementation of a DAC and three versions of a analog comparator using only standard cells
+  [tt07] MOS Bandgap | Matt Venn
+        https://github.com/mattvenn/tt07-mos-bandgap
+        bandgap using only MOSFETs
+  [tt07] Analog Test Circuit ITS 2 | A. N Irfansyah, Raditya Eka, Yohanes Stefanus
+        https://github.com/nurirfansyah/tt07-analog-its_ip_alits02
+        PLL parts (VCO and phase detector)
+  [tt07] AY-8193 single channel DAC | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt07-analog-dac-ay8913
+        Logarithmic 4-bit DAC for AY-8193 sound generator
+  [tt07] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt07-psg-ay8913-with-analog-dac
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [tt07] 12 bit SAR ADC | Ricardo Nunes
+        https://github.com/rnunes2311/tt07-12bit_SAR_ADC
+        A 12 bit differential (11 bit single-ended) SAR ADC
+  [tt07] DDS and DAC | Meonwara
+        https://github.com/meonwara/tt07_mw_analogue
+        DDS with DAC and analogue output pin
+  [tt07] Twin Tee Sine Wave Generator | Matt Venn
+        https://github.com/mattvenn/tt07-twin-tee-opamp-osc
+        Opamp plus notch filter = sine wave out
+  [ttihp0p1] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt05-psg-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [tt08] TT08 VGA FUN! | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt08-vga-fun
+        Rough 24-bit VGA DAC tests with digital control block
+  [tt08] TT08 Analog Factory Test | Sylvain Munaut
+        https://github.com/smunaut/tt08-analog-factory-test
+        Test structures for TT08 analog support
+  [tt08] Bandgap Reference | Asal Golmanesh
+        https://github.com/AsalGolmanesh/tt08-bgr
+        Bandgap 1.2V at 1.8 supply with skywater 130nm from 0 to 80deg
+  [tt08] LDO BG IREF OSC | Lukas Baumann
+        https://github.com/devstdin/tt08-ldo-bg-ref-osc
+        Analog building-blocks for Tiny Tapeout 8
+  [tt08] Analog Voltage Controlled Oscillator | Georg Boecherer
+        https://github.com/gbsha/tt08-analog-vco
+        A voltage controlled oscillator with 4 differential stages.
+  [tt08] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [tt08] Analog 8 bit 3.3v R2R DAC | Matt Venn
+        https://github.com/mattvenn/tt08-analog-r2r-dac-3v3
+        A simple 8 bit DAC with a sine waveform driver and 3.3v output
+  [tt08] R2R DAC | Wallie Everest
+        https://github.com/WallieEverest/tt08
+        Duplicate of 8-bit DAC from Matt Venn
+  [tt08] Voltage Controlled LC-Oscillator | Noritsuna Imamura
+        https://github.com/noritsuna/tt08-analog-Vctrl_LC_oscillator
+        Voltage Controlled LC-Oscillator of 2GHz for Skywater130nm
+  [tt08] Bias Generator | Rod Burt
+        https://github.com/rburt16/tt08-analog-bias-generator
+        A test chip for a simple CMOS beta multiplier current source.
+  [tt08] 2-stage Opamp Designs | Vipul Sharma
+        https://github.com/engrvip123/tt08-ssp-opamp
+        This project contain opamp circuits designed by participants under SSP training program
+  [tt08] AICD Playground | Leo Moser
+        https://github.com/mole99/tt08-aicd-playground
+        A mixed-signal test project for the analog IC design course at Graz University of Technology.
+  [ttihp0p2] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt05-psg-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [tt09] Time to Digital Converter | Jeremiasz Hauck
+        https://github.com/13hihi31/tt09-analog-tdc
+        Phase difference measuring circuit with digital output
+  [tt09] Spectrogram extractor, 2 channels | Coline Chehense, Dinko Oletic
+        https://github.com/DinkoOletic/tt09-HDL_unizgfer_2ch_AE_tf_spectrogram
+        Digital part of a time-frequency feature extraction sensor interface, two-channel real-time signal amplitude tracker. 7 input lines per channel represent thermometer code output of a flash ADC. Two-channel serial output.
+  [tt09] Team 17's 8 bit DAC | Vance Wiberg
+        https://github.com/VanceWiberg/8bitSAR
+        This 8 bit digital to analogue converter uses a SAR to convert signals from Digial into Analoge
+  [tt09] Delta-Sigma ADC Decimation Filter | Alexander Sheldon
+        https://github.com/asheldon44/tt09-delta-sigma-decimation-filter
+        Decimation filter for output of a delta-sigma ADC.
+  [tt09] 2-bit Flash ADC | Brandon S. Ramos
+        https://github.com/J0NTrollston/tt08-analog-adc
+        Flash ADC that outputs 2-bit encoded data
+  [tt09] Analog Switch | Andrew Dona-Couch
+        https://github.com/couchand/tt09-analog-switch
+        A simple analog switch.
+  [tt09] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [tt09] Analog double inverter | Matt Venn
+        https://github.com/mattvenn/tt09-analog-double-inverter
+        A pair of inverters wired between 2 analog pins
+  [tt09] Analog 8 bit 3.3v R2R DAC | Matt Venn
+        https://github.com/mattvenn/tt08-analog-r2r-dac-3v3
+        A simple 8 bit DAC with a sine waveform driver and 3.3v output
+  [tt09] Analog MUX module | Pat Deegan
+        https://github.com/psychogenic/tt09-analogmux
+        Pipe 4 or 8 analog signals around through switchable passgates, useful for adding debug and inspection to analog projects without wasting many pins
+  [tt09] 4-bit R2R DAC | David Parent
+        https://github.com/davidparent/tt09-r2r-dac
+        Converts a 4 bit wide signal to an analog signal
+  [tt09] OpAmp 3stage | Rod Burt
+        https://github.com/rburt16/tt09-analog-opamp-3stage
+        3stage PMOS OpAmp
+  [tt09] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt05-psg-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [tt09] tt_um_tim2305_adc_dac | Timonas Juonys
+        https://github.com/Timonas04/adc_dac2
+        8bit dac and 4bit flash adc
+  [tt09] Noise test for a CDAC capacitor chain | Venkadesh Eswaranandam & Allan Huang
+        https://github.com/TinyTinfoil/tt09-sar-dac-noise
+        This project was made to answer the question of ow much does bad layout affect performance of a SAR ADC
+  [tt09] comparator | prtx
+        https://github.com/prtx/tiny-tapeout
+        comparator
+  [tt09] Sigma-Delta ADC | Martin Schoeberl
+        https://github.com/schoeberl/tt09-sigma-delta
+        Analog to digital converter - and back
+  [ttihp25a] Spectrogram extractor, 2 channels | Coline Chehense, Dinko Oletic
+        https://github.com/DinkoOletic/tt09-HDL_unizgfer_2ch_AE_tf_spectrogram
+        Digital part of a time-frequency feature extraction sensor interface, two-channel real-time signal amplitude tracker. 7 input lines per channel represent thermometer code output of a flash ADC. Two-channel serial output.
+  [ttihp25a] Team 17's 8 bit DAC | Vance Wiberg
+        https://github.com/VanceWiberg/8bitSAR
+        This 8 bit digital to analogue converter uses a SAR to convert signals from Digial into Analoge
+  [ttihp25a] Delta-Sigma ADC Decimation Filter | Alexander Sheldon
+        https://github.com/asheldon44/tt09-delta-sigma-decimation-filter
+        Decimation filter for output of a delta-sigma ADC.
+  [ttihp25a] Classic 8-bit era Programmable Sound Generator AY-3-8913 | Eric Farrow - ReJ aka Renaldas Zioma
+        https://github.com/devmonkZA/devmonk-tto-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [ttihp25a] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt05-psg-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [ttihp25a] comparator | prtx
+        https://github.com/prtx/tiny-tapeout
+        comparator
+  [ttihp25a] Sigma-Delta ADC | Martin Schoeberl
+        https://github.com/schoeberl/tt09-sigma-delta
+        Analog to digital converter - and back
+  [ttihp0p3] HBT Comparator | Nicklaus Thompson
+        https://github.com/FangameEmpire/TTIHP0p3_HBT_555_Timer
+        A high-speed 555 timer using SiGE NPN devices
+  [ttihp0p3] Antonalog analog VGA | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttihp0p3-antonalog
+        Rough 24-bit VGA DAC tests with digital control block
+  [ttihp0p3] R-2R DAC | htfab
+        https://github.com/htfab/ttihp0p3-r2r-dac
+        Basic 8 bit R-2R DAC for IHP
+  [ttcad25a] 4-Bit Successive Approximation ADC | Sudarshana K S, Viraj Bhat B, Shreyas Gowda B N, Sudharsan S, Shylashree N, RV College of Engineering
+        https://github.com/RVCE-DrSSN/tt_um_4Bit_SAR_ADC
+        This project implements a 4-Bit Successive Approximation Analog-to-Digital Converter
+  [ttcad25a] TT08 VGA FUN! | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/tt08-vga-fun
+        Rough 24-bit VGA DAC tests with digital control block
+  [ttcad25a] TT08 Analog Factory Test | Sylvain Munaut
+        https://github.com/smunaut/tt08-analog-factory-test
+        Test structures for TT08 analog support
+  [ttcad25a] Bandgap | ZHU QUANHAO
+        https://github.com/DanielZhu123/tt10-analog-bandgap
+        constant 1.2V output
+  [ttcad25a] Bandgap Reference | Asal Golmanesh
+        https://github.com/AsalGolmanesh/tt08-bgr
+        Bandgap 1.2V at 1.8 supply with skywater 130nm from 0 to 80deg
+  [ttcad25a] Current-Mode Bandgap Reference | Christoph Weiser
+        https://github.com/christoph-weiser/tt10-vref
+        PVT stable reference voltage and current.
+  [ttcad25a] Classic 8-bit era Programmable Sound Generator AY-3-8913 | Eric Farrow - ReJ aka Renaldas Zioma
+        https://github.com/devmonkZA/devmonk-tto-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [ttcad25a] LDO BG IREF OSC | Lukas Baumann
+        https://github.com/devstdin/tt08-ldo-bg-ref-osc
+        Analog building-blocks for Tiny Tapeout 8
+  [ttcad25a] Analog Voltage Controlled Oscillator | Georg Boecherer
+        https://github.com/gbsha/tt08-analog-vco
+        A voltage controlled oscillator with 4 differential stages.
+  [ttcad25a] Dempsey-Gorman DAC | htfab
+        https://github.com/htfab/dg-dac
+        4+4 bit segmented DAC made from two resistor ladders
+  [ttcad25a] Adjustable supply digital counter | Matt Venn
+        https://github.com/mattvenn/adjustable-psu-digital-counter
+        Allow analog supply to supply a digital counter
+  [ttcad25a] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [ttcad25a] Level Shifter | Matt Venn
+        https://github.com/mattvenn/tt10-level-shifter
+        Analog Level Shifter Experiment
+  [ttcad25a] Analog 8 bit 3.3v R2R DAC | Matt Venn
+        https://github.com/mattvenn/tt08-analog-r2r-dac-3v3
+        A simple 8 bit DAC with a sine waveform driver and 3.3v output
+  [ttcad25a] R2R DAC | Wallie Everest
+        https://github.com/WallieEverest/tt08
+        Duplicate of 8-bit DAC from Matt Venn
+  [ttcad25a] Voltage Controlled LC-Oscillator | Noritsuna Imamura
+        https://github.com/noritsuna/tt08-analog-Vctrl_LC_oscillator
+        Voltage Controlled LC-Oscillator of 2GHz for Skywater130nm
+  [ttcad25a] Bias Generator | Rod Burt
+        https://github.com/rburt16/tt08-analog-bias-generator
+        A test chip for a simple CMOS beta multiplier current source.
+  [ttcad25a] 2-stage Opamp Designs | Vipul Sharma
+        https://github.com/engrvip123/tt08-ssp-opamp
+        This project contain opamp circuits designed by participants under SSP training program
+  [ttcad25a] AICD Playground | Leo Moser
+        https://github.com/mole99/tt08-aicd-playground
+        A mixed-signal test project for the analog IC design course at Graz University of Technology.
+  [ttihp25b] SAR ADC Controller | Cédric Cyril Hirschi
+        https://github.com/CedricHirschi/ttihp-verilog-cedrichirschi
+        Simple SAR ADC Controller with SPI interface
+  [ttihp25b] Delta Sigma Comparator Based ADC | Pawel Kozlowski
+        https://github.com/kozlowp1/Delta-Sigma-Comparator-Based-ADC
+        Evaluating the feasibility of implementing a delta-sigma analog-to-digital conversion using two switched-capacitor lines. One line serves as a reference, while the other is intended for current measurement, such as from a photodiode. The project also explores how process, voltage, and temperature (P
+  [ttsky25a] Time to Digital Converter | Jeremiasz Hauck
+        https://github.com/13hihi31/tt09-analog-tdc
+        Phase difference measuring circuit with digital output
+  [ttsky25a] tt_um_DAC1 | cicciopanza & lorij
+        https://github.com/Elettronica-UnivAQ/DAC
+        dac4bit
+  [ttsky25a] 2-Stage OpAmp Design | Majid Sami
+        https://github.com/Eng-SaeedAlahmari/tt_um_Maj_opamp
+        this project was designed by Majid Sami ALakl from TT08 shuttle, done by instructor Vipul Sharma
+  [ttsky25a] adc_dac_BCT_addr_ALU_STI | Stven Bos, Timonas Juonys
+        https://github.com/aiunderstand/ttsky25a-ternary-alu-ff-dac-adc
+        adc, dac
+  [ttsky25a] Analog VGA CSDAC experiments | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttsky25a-vga-matrix-dac
+        Current switching matrix DAC implementations for analog VGA displays
+  [ttsky25a] TT08 Analog Factory Test | Sylvain Munaut
+        https://github.com/smunaut/tt08-analog-factory-test
+        Test structures for TT08 analog support
+  [ttsky25a] 2 Stage CMOS Op Amp | An Wei Teck
+        https://github.com/anweiteck/ttsky25a-2stageCMOSOpAmp
+        Simple 2 stage CMOS Op Amp with Miller compensation 
+  [ttsky25a] 2-bit Flash ADC | Brandon S. Ramos
+        https://github.com/J0NTrollston/tt08-analog-adc
+        Flash ADC that outputs 2-bit encoded data
+  [ttsky25a] Leaky Integrate and Fire Neuron | Chris Htet
+        https://github.com/ChrisHtet/tt_um_chrishtet_LIF
+        Fixed-point accumulator with leak and a comparator to fire a spike when voltage is greater than threshold
+  [ttsky25a] Current-Mode Bandgap Reference | Christoph Weiser
+        https://github.com/christoph-weiser/tt10-vref
+        PVT stable reference voltage and current.
+  [ttsky25a] 12 bit DAC | Kevin Zhou
+        https://github.com/gamenewbie/tt_um_dac12
+        converts digital input to analog pwm output with 12 bit resolution
+  [ttsky25a] Design and Implementation of R-2R Ladder DAC | CUTM
+        https://github.com/tapeoutcutm/Design-and-Implementation-of-R-2R-Ladder-DAC-
+        A simple 8 bit DAC with a sine waveform driver and 3.3v output
+  [ttsky25a] 3 Bit TIQ ADC | Emmerson Velazquez
+        https://github.com/emmersonv/sky25a-TIQ_ADC
+        Converts a 0V - 1.8V analog signal from analog pin 0 to a 3 bit digital signal to digital outputs 0, 1, and 2.
+  [ttsky25a] Analog PLL | Jae Young Yoon
+        https://github.com/jyblue1001/ttsky-analog-PLL
+        2.4GHz targeted frequency synthesizer PLL
+  [ttsky25a] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [ttsky25a] Analog 8 bit 3.3v R2R DAC | Matt Venn
+        https://github.com/mattvenn/tt08-analog-r2r-dac-3v3
+        A simple 8 bit DAC with a sine waveform driver and 3.3v output
+  [ttsky25a] Simple audio player | Michael Bikovitsky
+        https://github.com/mbikovitsky/tt10-analog
+        Plays audio from an SPI flash chip
+  [ttsky25a] 4-bit R2R DAC | David Parent
+        https://github.com/davidparent/tt09-r2r-dac
+        Converts a 4-bit wide signal to an analog signal
+  [ttsky25a] Bias Generator | Rod Burt
+        https://github.com/rburt16/tt08-analog-bias-generator
+        A test chip for a simple CMOS beta multiplier current source.
+  [ttsky25a] OpAmp 3stage | Rod Burt
+        https://github.com/rburt16/tt09-analog-opamp-3stage
+        3stage PMOS OpAmp
+  [ttsky25a] Simple Analog Circuit | Guido Baitelman- Universidad de Palermo
+        https://github.com/gbaitelman/TTSKY25A-UP-analog-circuit
+        A simple analog circuit
+  [ttgf0p1] Classic 8-bit era Programmable Sound Generator AY-3-8913 | ReJ aka Renaldas Zioma
+        https://github.com/rejunity/tt05-psg-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [ttsky25b] Function Generator | Dominik Brandstetter
+        https://github.com/DomnikBrandstetter/jku-sky-FunctionGenerator
+        An 8-bit TinyTapeout function generator targeting the AD5330 parallel DAC. A write-only register interface selects a constant signal, a sine wave, or programmable trapezoid/pulse waveforms with adjustable amplitude, offset, phase, and timing.
+  [ttsky25b] OnChip - Bandgap Reference | Jeison Acevedo & Ramon Sarmiento
+        https://github.com/RamonSsc/tt_um_Onchip_BandGap
+        BandGap Voltage Reference 1.23V
+  [ttsky25b] PWM_selector | Delia Hurtado, Ruben Velasquez, Gerardo Aerreola, Julio Ramirez
+        https://github.com/DeliaMariaHC/PWM_selector
+        PWM_module generates a PWM (Pulse-Width Modulation) signal using a counter and a comparator. The output duty-cycle resolution is 12.5%.
+  [ttsky25b] Tiny Whisper | Simon Dorrer, Jonathan Hager, Matthias Jung, Harald Pretl
+        https://github.com/iic-jku/tt-sky-jku-jmu-TinyWhisper
+        This chip implements a transmitter for the wireless long-reach protocol called WSPR (weak signal propagation reporter) in the shortwave frequency range (3 MHz to 30 MHz), containing a CORDIC, a DS-Modulator, and LO Generation (digital core), as well as an analog IQ Modulator.
+  [ttsky25b] Analog VGA CSDAC experiments (TTSKY25b) | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttsky25b-analog-vga-dacs
+        Current switching matrix DAC implementations for analog VGA displays
+  [ttsky25b] tt_classic_vga_clock_by_TT | A Person
+        https://github.com/Some-Other-Random-Person/tt_classic_vga_clock_by_TT
+        Crude implementation of an analog/classic clock to be displayed via VGA
+  [ttsky25b] Classic 8-bit era Programmable Sound Generator AY-3-8913 | Eric Farrow - ReJ aka Renaldas Zioma
+        https://github.com/devmonkZA/devmonk-tto-ay8913
+        The AY-3-8913 is a 3-voice programmable sound generator (PSG) chip from General Instruments. The AY-3-8913 is a smaller variant of AY-3-8910 or its analog YM2149.
+  [ttsky25b] 8 Bit SAR ADC | Eric Estevez
+        https://github.com/eestevez3/ttsky_SAR_ADC
+        Convert analog signal to digital
+  [ttsky25b] 3V3 Opamp and DRAM cell | Emilian Miron
+        https://github.com/diferential/ttsky25b-analog-mix
+        Simple opamp with 3.3v power and DRAM cell
+  [ttsky25b] Ring Oscillators | Matt Venn
+        https://github.com/mattvenn/tt08-analog-ring-osc
+        Ring Oscillators using analog output pins
+  [ttsky25b] Analog 8 bit 3.3v R2R DAC | Matt Venn
+        https://github.com/mattvenn/tt08-analog-r2r-dac-3v3
+        A simple 8 bit DAC with a sine waveform driver and 3.3v output
+  [ttsky25b] Relaxation oscillator | Matt Venn
+        https://github.com/mattvenn/ttsky25b-analog-relax-oscillator
+        A relaxation oscillator
+  [ttsky25b] ttsky25_se_opamps | Kithmin Wickremasinghe
+        https://github.com/SkillSurf/ttsky25_se_opamps
+        TTSKY25b Low-power Single-ended Op-Amp tapeout from AICD Content
+  [ttsky25b] Sleepy Chip | Ron Sardarian
+        https://github.com/teafella/sleepy_tapeout
+        SPI-controlled 3-waveform synthesizer with streaming mode and delta-sigma DAC
+  [ttsky25b] Time Domain ADC | M. Taufiqul Huda
+        https://github.com/mthudaa/its_10b_tadc
+        Time Domain Comparator Based ADC
+  [ttsky25b] SKY130 technology characterization | Andreas Madner
+        https://github.com/analogandi/ttsky-um-technology-characterization
+        First attempt in characterizing the SKY130 technology and perform aging experiments
+  [ttsky25b] Tiny Flash ADC | Blake Mott
+        https://github.com/vincentfusco/ttsky25b_tinyflash
+        3bit flash ADC with binary and thermometer output
+  [ttsky25b] Noise shaping delta-sigma DAC | Toivo Henningsson
+        https://github.com/toivoh/ttsky25b-noise-shaping-ds-dac
+        16 bit digital noise shaping single pin output delta-sigma DAC
+  [ttsky25b] TT25 3B DAC and RingO | Luke McCubbin
+        https://github.com/LukeMcCubbin/TT_LMcCubbin_DAC_OSC
+        First Tapeout Run using Harald Pretl and Jakob Ratschenberger's tt05 analog design
+  [ttsky25b] AnalogClockTest1 | Ahaan and Bruce
+        https://github.com/ahaansethi12/Ahaan---Bruce-s-GDS
+        Analog Clock with switches... I think
+  [ttihp26a] Operational Amplifier Test Circuits | Pascal Gesell
+        https://github.com/gfcwfzkm/ttihp_opamp_bfh_gesep1_mht1_msm9
+        The test circuit contains an operational amplifier for external feedback, a voltage follower, and an R2R DAC.
+  [ttihp26a] SoilZ v1 Lock-In Impedance Analyzer | TechHU
+        https://github.com/TechHU-GS/analog-trial
+        1-bit IQ lock-in sigma-delta impedance analyzer for soil moisture, IHP SG13G2 130nm
+  [ttihp26a] TinyMOA: RISC-V CPU with Compute-in-Memory Accelerator | Ezra Wolf
+        https://github.com/EzraWolf/TinyMOA-IHP26a
+        RISC-V CPU based on TinyQV with an integrated SRAM-based compute-in-memory (CIM) accelerator for performing efficient analog matrix multiplications.
+  [ttsky26a] Ring oscillator VCO and Differential Amplifier | Vipul Sharma
+        https://github.com/engrvip123/ttsky26a_IEEE_open_silicon_FOSSEE
+        Current-controlled analog VCO 
+  [ttsky26a] 12-bit ADC | Ahmed Nematallah
+        https://github.com/Ahmed-Nematallah/12-bit-adc
+        12-bit ADC
+  [ttsky26a] Analog VGA CSDAC experiments | Jay13ch
+        https://github.com/Jay13ch/ttsky_jay13ch
+        Current switching matrix DAC implementations for analog VGA displays
+  [ttsky26a] Analog RO | Chiranjit Patel Vivek Adi
+        https://github.com/ChiranjitPatel/ttsky_analog_RO
+        Analog RO
+  [ttsky26a] Configurable Self-biasing Miller-compensated OTA | atenfyr
+        https://github.com/atenfyr/ttsky_analog
+        A single-ended two-stage Miller-compensated OTA with a self-biasing beta multiplier current reference circuit and configurable compensation on SKY 130nm
+  [ttsky26a] CFAR Detector without Buzzer | Ilamparuthi G
+        https://github.com/illamparuthi/ttsky_cffar_7seg
+        A simplified CFAR-based signal detection system using 14-bit ADC input and 7-segment display output.
+  [ttsky26a] Design and Implementation of R-2R Ladder DAC for GPR Application | CCCIR_CIT
+        https://github.com/abhilash0419/CCCIR_CIT_R2R_DAC
+        A simple 8 bit DAC with a sine waveform driver and 3.3v output
+  [ttsky26a] ECE298A analog tile | jrl
+        https://github.com/jayrel053/jayrel053_ttsky26a_analog
+        analog workflow
+  [ttsky26a] Digital | Julia Desmazes
+        https://github.com/Essenceia/analog_sky26a
+        Slow 33MHz analog oscillator.
+  [ttsky26a] HSXO | htfab
+        https://github.com/htfab/ttsky26a-hsxo
+        High-speed crystal oscillator IP block from Chipalooza 2024 wrapped into the TT analog template
+  [ttsky26a] Analog Readout Circuit | irfan tekin
+        https://github.com/irfantekin/tt10-analog-readout
+        Analog Readout Circuit
+  [ttsky26a] 9-Channel Frequency Counter with I2C + SPI DAC & ADC | Jose Bahamonde
+        https://github.com/JosenBM/tt_asic_jb_sky
+        Programmable 9-channel frequency counter with I2C control, SPI DAC output, and SPI ADC sampling.
+  [ttsky26a] Analog-PLL | Vighneshkumar Uttarkar
+        https://github.com/vighnesh-Uttarkar/ttsky-analog-PLL
+        2.4GHz targeted frequency synthesizer Phase Lock Loop
+  [ttsky26a] Standard Digital Logic Cells Analog Comparator | Maximiliam Luppe
+        https://github.com/maxluppe/ttsky26a_analog
+        Implementation of an analog comparator using only digital standard cells based on SKY130 digital cells
+  [ttsky26a] Memristive Crossbar Peripheral Controller | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_xbar_ctrl
+        Standalone 8-row × 8-column crossbar controller with READ/SET/RESET/FORMING/SWEEP modes, pulse-train support, compliance current limit with auto-abort, V/2 half-select DAC for sneak-path mitigation, device-agnostic SPI-configurable IP for memristive and spintronic arrays
+  [ttsky26a] SAR FSM | Sönke Appel
+        https://github.com/FHW-Appel/TTSky26a-SARfms
+        A parameterizable successive approximation (SAR) finite state machine (FSM) for an ADC
+  [ttsky26a] One-tile ADC | Daniel S
+        https://github.com/shimmydee/TinyTapeout_workshop_SKY130
+        This is the stand-in for my ADC ASIC design. Idea is to use a clamped ±3V sinudoid on an input pin which will be digitsed with this circuit.
+  [ttsky26a] analog circuit | shimomi
+        https://github.com/0w5/tt_sky26a_analog_prj
+        delta-sigma A/D with band-gap reference
+  [ttsky26a] Time Domain ADC | Nikitha D
+        https://github.com/nikithad99/CCCIR_TADC
+        Time Domain Comparator Based ADC
+  [ttsky26a] IEEE Open Silicon 2026: UTB Hex Counter and Logic Gate Validator | George Archbold, Karoll Silva, Camilo Miranda
+        https://github.com/GWATopamp/UTB_1_calculadora4bits
+        A 4-bit asynchronous hex counter paired with a programmable 4-function logic gate tester.
+  [ttsky26a] IEEE Open Silicon 2026: UTB Logic Trivia Challenge: 8-bit Digital Lock | George Archbold, Junior Sarmiento, Daniela Gonzalez, Miguel Baranoa, Jorge Mercado, Samuel Meza
+        https://github.com/GWATopamp/UTB_2_Electronic_Lock
+        8-bit Pattern Comparator that functions as a digital lock
+  [ttsky26a] IEEE Open Silicon 2026: UTB UART Transmitter basic | George Archbold and Semillero SIMIC UTB
+        https://github.com/GWATopamp/UTB_3_counter_and_dice
+        An 8-bit serial transmitter that converts parallel ASCII data (supporting characters from 0x40 to 0x5F) into a standard UART frame using a shift register architecture
+  [ttsky26a] Lady's First Tapeout | Lady Nicole Payan Cepeda
+        https://github.com/ladypayancepeda/Tiny-Tapeout
+        4-bit comparator.
+  [ttsky26a] YEN | JakubMiszczynski
+        https://github.com/MiszczuX/tt_analog_z2a
+        A TinyTapeout project featuring an analog-controlled 8-pin multiplexer and a set of ring oscillators and additional circuits for comprehensive testing of the design.
+  [ttsky26a] Analog design | Zedulo
+        https://github.com/eprempeh/ttsky-zed-Analog
+        A tri 2 -input AND gate (7408 compatible) and an SR Latch
+  [ttsky26b] CSRO with 8-bit DAC | Luca Maddison
+        https://github.com/Luca-Madd/tt_um_Madd_CS_Ring_Osc
+        Voltage controlled ring oscillator with 8-bit DAC and analog input
+  [ttsky26b] Onchip-UIS 3-bit Trimmed 1.2V BandGap | Jeison Acevedo and Ramon Sarmiento and Camilo Estevez
+        https://github.com/RamonSsc/tt_um_Onchip_Trimmed_BandGap
+        A 1.2V CMOS Bandgap Reference featuring a 3-bit resistor trimming network for PVT variation compensation.
+  [ttsky26b] 4-Stage Differential Ring VCO | Adithya Selvakumar
+        https://github.com/adithya-n-selvakumar/ttsky26a-analog-voltage-controlled-oscillator
+        A current-controlled 4-stage differential ring VCO with buffered quadrature outputs.
+  [ttsky26b] sky130 Bandgap Reference | Guruprasad
+        https://github.com/guru-gitrepo/TTSKY26a-analog-bgr
+        Bandgap reference (~0.9V) with analog VREF output
+  [ttsky26b] Pseudo-PTAT cell based bandgap reference | Istvan Kovacs
+        https://github.com/kovistvan/tt_um_ik_0_ptat_bgr_ieee
+        Simple bandgap reference voltage generator based on the pseudo-PTAT current generator with enable gated startup included.
+  [ttsky26b] SKY130 Spiking Neuron | Abdulkarim Alorf, Tomohisa Kawakami
+        https://github.com/Abiaselli/SKY130-Spiking-Neuron
+        A compact analog spiking neuron
+  [ttsky26b] Analog BGR | Youssef Emad
+        https://github.com/youssef0000oooo/tt10_analog_BGR
+        simple Bandgap reference
+  [ttsky26b] TT ADC SQ Compare | Takaharu YAMADA
+        https://github.com/nezumi-tech/ttsky-verilog-26b-ADC_Comp
+        For my academic research
+  [ttsky26b] 5 GHz RF-DC Rectifier | Carlos Knebel
+        https://github.com/opensilicio-usp/analog_opensilicio
+        Differential RF-DC rectifier in Sky130 for passive RFID / RF energy harvesting experiments.
+  [ttsky26b] UART_Controller | Preetish
+        https://github.com/preetish998/Tapeout_Des_1
+        Programmable through UART, I can choose between Analog circuits like Inverters
+  [ttsky26b] IEEE Multi-Stage Configurable Ring Oscillator | Nemalipuri Rajkamal
+        https://github.com/Rajkamal0842/tt_um_rajkamal_analog
+        Analog clock generation unit with voltage-controlled MUX routing between 3, 5, and 7-stage ring oscillators on the Sky130 process.
+  [ttsky26b] ttsky26b-ramp-adc | Christian Zingl
+        https://github.com/zchris9/ttsky26b-ramp-adc
+        2-channel ramp ADC
+  [ttsky26b] bandgap-ptat | rcyaon
+        https://github.com/rcyaon/bandgap-ptat
+        1.2V Brokaw bandgap voltage reference with PTAT temperature readout
+  [ttsky26b] IEEE Open-Silicon 2026 x NITHUB: Soil Moisture Irrigation Controller | Shadia, Elijah, Oluwatomiwa, Emmanuel, Daniel, Orobosa
+        https://github.com/ultrasage-danz/IEEE_Open-silicon_initiative_2026_Soil_Moisture_Irrigation_Controller
+         An IEEE Division 1 Open Silicon Tapeout Initiative Project, this is a finite state machine that controls irrigation pump based on soil moisture levels detected by two comparators, with error handling for invalid states
+  [ttsky26b] Sigma-Delta Bitstream ADC (8-bit) | William Anthony
+        https://github.com/wlmoi/TTSKY26A-ADC-8BIT
+        Enable-controlled 1-bit sigma-delta decimator ADC with gain and offset trim
+  [ttsky26b] IEEE IC Bootcamp Khalifa University | Nuzhat, Ayesha and Umamah
+        https://github.com/nuzhatmahdiyat/wokwi
+        This is a 3-bit reversible comparator
+  [ttsky26b] Analog design | Zedulo
+        https://github.com/eprempeh/ttsky-zed-Analog
+        A tri 2 -input AND gate (7408 compatible) and an SR Latch
+  [ttgf26a] VCO driven by DAC | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttgf26a-vco
+        Mixed-signal project with DAC setting a VCO's control voltage
+  [ttgf26a] RRAM Characterization Platform (DC sweep + endurance + retention + histogram, GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_rsd_char_gf_pub
+        GF180mcuD standalone characterization platform for one external resistive-switching device (RRAM / memristor / PCM). Drives an 8-bit DAC rail and reads back an 8-bit ADC rail, with four SPI-selectable modes: DC sweep (VSTART..VSTOP by VSTEP with on-chip 16-bin histogram and min/max tracking), pulse 
+  [ttgf26a] Memristive Crossbar Peripheral Controller (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/SanthoshSivasubramani/tt_um_santhosh_xbar_ctrl_gf_pub
+        GF180mcuD port of the 8x8 memristive crossbar controller: READ/SET/RESET/FORMING/SWEEP modes, pulse trains, 16-bit pulse counter, compliance auto-abort with sticky history, V/2 half-select DAC, last-ADC-in-sweep snapshot. Direct cross-foundry sibling to the TTSKY26a xbar_ctrl for comparative charact
+  [ttgf26b] 8-bit Comparator | Nagaraj
+        https://github.com/Cambridge-CIT-ASIC-Tapeouts/VLSI-project
+        Compares two 8-bit inputs and indicates equal, greater than, or less than.
+  [ttgf26b] Programmable Waveform and PWM Generator | silicon_nomad
+        https://github.com/silicon-nomad/tt-programmble-tiny-pattern-gen
+        UART-programmable waveform and PWM generator. Send samples over UART, stored in 256-byte RAM, played back as 8-bit parallel DAC output or 8 independent PWM channels.
+  [ttgf26b] Simple SPI configuration for analog designs | Alan G
+        https://github.com/agurlask/ttgf26b-spi-config-reg
+        Simple 8-bit unidirectional SPI register for external configuration of future analog/mixed-signal designs
+  [ttgf0p3] algofoogle analog stuff | algofoogle (Anton Maurovic)
+        https://github.com/algofoogle/ttgf0p3-algofoogle-analog
+        Some analog and custom layout experiments in gf180mcuD for ttgf0p3 (the TT GF 1st analog experimental shuttle)
+  [ttgf0p3] TT GF180mcuD Analog Factory Test | Sylvain Munaut
+        https://github.com/smunaut/ttgf_analog_factory_test
+        Test structures for GF180mcuD analog support
+  [ttgf0p3] TT GF180mcuD Testbuffer | Christoph Weiser
+        https://github.com/christoph-weiser/ttgf0p3-submission
+        Analog voltage buffer
+  [ttgf0p3] GF R2R DAC | Matt Venn
+        https://github.com/mattvenn/gf-r2r-dac
+        8 bit R2R DAC
+  [ttgf0p3] Hardware Entropy Explorer: UART/SPI TRNG and PUF (Analog) | gojimmypi
+        https://github.com/gojimmypi/ttgf0p3-analog-UART-FSM-TRNG-Lab
+        UART/SPI-controlled GF180 analog lab with DAC, threshold sampling, TRNG monitors, and measured ua5 passive probe.
+  [ttgf0p3] MoM capacitor | htfab
+        https://github.com/htfab/ttgf0p3-momcap
+        Simple metal-oxide-metal capacitor for gf180mcuD that fills an analog 1x2 tile
+  [ttgf0p3] Analog 4 bit Current DAC | Kiterai
+        https://github.com/Kiterai/ttgf-practice1
+        Simple 4 bit current output DAC
+  [ttgf0p3] GF BGR | Rahul Bhagwat
+        https://github.com/bhagwat-rahul/ttgf180-bandgap-reference
+        Bandgap Reference
+
+===== SELFTEST: 22 hits =====
+  [tt02] Chisel 16-bit GCD with scan in and out | Steve Burns
+        https://github.com/stevenmburns/tt02-scannable-gcd
+        Simple chisel based design based on Knuth's BinaryGDC algorithm using scan chains for I/O.
+  [tt03] RiscV Scan Chain based CPU -- block 1 -- clocking | Emilian Miron
+        https://github.com/diferential/sc-rv-tt03-block1
+        RiscV Scan Chain based CPU -- block 1 -- clocking
+  [tt03] RiscV Scan Chain based CPU -- block 2 -- instructions | Emilian Miron
+        https://github.com/diferential/sc-rv-tt03-block2
+        RiscV Scan Chain based CPU -- block 2 -- instructions
+  [tt03] RiscV Scan Chain based CPU -- block 3 -- registers | Emilian Miron
+        https://github.com/diferential/sc-rv-tt03-block3
+        RiscV Scan Chain based CPU -- block 3 -- registers
+  [tt03] RiscV Scan Chain based CPU -- block 4 -- ALU | Emilian Miron
+        https://github.com/diferential/sc-rv-tt03-block4
+        RiscV Scan Chain based CPU -- block 4 -- ALU
+  [tt03] Chisel 16-bit GCD with scan in and out | Steve Burns
+        https://github.com/stevenmburns/tt02-scannable-gcd
+        Simple chisel based design based on Knuth's BinaryGDC algorithm using scan chains for I/O.
+  [tt04] Poor Person's Boundary Scan | Verneri Hirvonen
+        https://github.com/chiplet/tt04-jtag
+        JTAG test logic with a 8-bit TDR for 'external' boundary scan
+  [tt08] Find The Damn Issue | Leonel Gouveia Ergin (Synogate), Michael Offel (Synogate)
+        https://github.com/synogate/find-the-damn-issue
+        USB to UART/SPI/I2C/JTAG/GPIO adapter
+  [ttihp25a] Find The Damn Issue | Leonel Gouveia Ergin (Synogate), Michael Offel (Synogate)
+        https://github.com/synogate/find-the-damn-issue
+        USB to UART/SPI/I2C/JTAG/GPIO adapter
+  [ttihp25a] JTAG TAP | Sean Patrick O'Brien
+        https://github.com/obriensp/tt10-spo-jtag
+        JTAG TAP with Boundary Scan
+  [ttcad25a] Find The Damn Issue | Leonel Gouveia Ergin (Synogate), Michael Offel (Synogate)
+        https://github.com/synogate/find-the-damn-issue
+        USB to UART/SPI/I2C/JTAG/GPIO adapter
+  [ttcad25a] JTAG TAP | Sean Patrick O'Brien
+        https://github.com/obriensp/tt10-spo-jtag
+        JTAG TAP with Boundary Scan
+  [ttsky25a] JTAG CONTROLLER | Sakthi and Shailendher
+        https://github.com/Marxkar/ttsky-verilog-temp
+        Circuit tester
+  [ttihp26a] TinyScanChain | Yann Guidon
+        https://github.com/YannGuidon/TinyScanChain
+        Low footprint scan chain for iHP PDK
+  [ttihp26a] MBIST + MBISR Built-In Memory Test & Repair | Dr Aditya Kumar Singh Pundir, Dr Pallavi Singh
+        https://github.com/adityapundir1985/tt_um_aksp_mbist_mbisr
+        Memory Built-In Self-Test (March C-) and Built-In Self-Repair with CAM-based faulty address remapping.
+  [ttihp26a] 2x2 Systolic array with DFT and bfloat16 - v2 | Julia Desmazes
+        https://github.com/Essenceia/Systolic_Array_with_DFT_v2
+        Second version of the 2x2 systollic array with DFT intrastructure, including bfloat16 floating point arithmetic and DFT scan chain.
+  [ttihp0p4] TinyScanChain5L | Yann Guidon
+        https://github.com/ygdes/TinyScanChain5L
+        Low footprint scan chain for iHP PDK / SG13CMOS5L
+  [ttsky26b] TRI-1 Euler — Trinity e-engine 8×2 SUPER-CROWN + 10 CLARA Gaps | Dmitrii Vasilev · Trinity Stack
+        https://github.com/gHashTag/tt-trinity-euler
+        TRI-1 Euler is the e-engine SKU (Trinity TRI-NET sacred-constant triplet: phi-anchor / e-engine / gamma-surface) of the TRI-1 Triad submitted to TTSKY26b (siblings: tt-trinity-phi 1x1 anchor, tt-trinity-gamma 8x4 surface). 8x2 tiles = 16 GF16 cells + full SUPER-CROWN modules + 10 DARPA CLARA AI safe
+  [ttsky26b] Tiny SCAN chain tester | Pablo Mendoza Ponce
+        https://github.com/pmendozap/ieee_tiny_scan
+        Test module to lear about scan chains
+  [ttgf26a] BIST-8: Built-In Self-Test for 8-bit CLA Adder | Mario Garcia Jimenez
+        https://github.com/mgarciajimenezAirzone/tt-mmggjj
+        BIST architecture for an 8-bit Carry-Lookahead Adder. Includes 12-bit LFSR pattern generator, 16-bit MISR response compactor, fault injection and 4-state FSM controller. Golden signature 0xCF77.
+  [ttgf26b] triad01 | Duan Yihe
+        https://github.com/Alanduan21/ttgf-triad01
+        A clocked failsafe arbitration block for autonomous drone control paths. Evaluates RC and FC health signals through temporal filtering and ternary inference to select PRIMARY / FALLBACK / SAFE_HOLD, driving a 50 Hz PWM output accordingly. Includes a scan chain for counter observability and lightweig
+  [ttgf26b] CIM Controller with BIST and Fault Map (GF180) | Prof. Santhosh Sivasubramani, IIT Delhi
+        https://github.com/santhoshs93/tt_um_santhosh_cim_bist_gf_pub
+        GF180mcuD digital compute-in-memory peripheral: 8x8 1-bit cell array with built-in self-test (march/checkerboard/diagonal patterns), 64-bit sticky fault map, 16-bit dot-product accumulator over user-programmable row activations, SPI-programmable, irq output, 25 MHz signoff clock, 1x2 tile
+
+===== AGING: 9 hits =====
+  [tt03] Synthesizable Digital Temperature Sensor | Harald Pretl
+        https://github.com/hpretl/tt03-tempsensor
+        Measure the on-chip temperature and display on the LED display.
+  [tt04] RO-based temperature sensor with hysteresis | Francisco Aguirre, Francisca Donoso, based on design by Daniel Arevalos and Jorge Marín
+        https://github.com/Grimrist/tt04_usm_ro-based_tempsens-hyst
+        Ring oscillator whose frequency depends on temperature, with a hysteresis module for temperature detection.
+  [tt04] another ring oscillator based temperature sensor | Rodrigo Munoz (UCH)
+        https://github.com/rodrigomunoz1/tt04-verilog-ro-temperature-sensor
+        4 differents Ring oscillator whose frecuency depends on temperature. It project is based on https://github.com/JorgeMarinN/tt03_ac3e-usm_ro-based_tempsens
+  [tt06] Temperature Sensor NG | Harald Pretl
+        https://github.com/iic-jku/jku-tt06-tempsens-ng
+        Temperature sensor synthesized from standard cells
+  [ttsky25a] JNW-TEMP | Carsten Wulff
+        https://github.com/wulffern/jnw-tt-2025
+        Two Temperature Sensors from NTNU students
+  [ttsky25b] SKY130 technology characterization | Andreas Madner
+        https://github.com/analogandi/ttsky-um-technology-characterization
+        First attempt in characterizing the SKY130 technology and perform aging experiments
+  [ttsky25b] Uart and Temperature sensor | riyasls
+        https://github.com/riyasls/tt_uart_temp_sens
+        This project implements a convert a pwm digital serial signal to a parallel value and transmits it over UART (Tx) at the configured baud rate.
+  [ttsky26b] Onchip-UIS Ring Oscillators for Aging | Ramon Sarmiento and Jorge Angarita and Jeison Acevedo and Daniel Barrios and Nicolas Orcasitas and Juan S. Moya
+        https://github.com/RamonSsc/tt_um_Onchip_Ring_Oscillators_Aging
+        13-stage Ring Oscillator for aging analysis (BTI/HCI)
+  [ttsky26b] TRI-1 Gamma — MAX-TRUE NEUROMORPHIC FLAGSHIP 32-tile 8-column | Dmitrii Vasilev
+        https://github.com/gHashTag/tt-trinity-gamma
+        MAX-TRUE NEUROMORPHIC FLAGSHIP SKU of the TRI-1 Triad (TTSKY26b). 32 tiles = 8x4 TT footprint. Architecture: 8 cortical columns (cortical_column.v — LIF leaky-integrate-and-fire dynamics with 8-bit membrane potential, BitNet b1.58 ternary MLP hidden layer, GF16 dot4 input projection, sparse PE accum
+
+===== DRIVE: 5 hits =====
+  [tt03] MicroTapeout (of sky130 cells) | htfab
+        https://github.com/htfab/microtapeout
+        395 standard cells with a mux to select between them
+  [tt06] UCSC HW Systems Collective, TDC - MUX2x1 | Phillip Marlowe, Tyler Sheaves, & Dustin Richmond
+        https://github.com/phillipmmarlowe/tt06_hsc_tdc_mux_delay
+        A tiny TDC constructed entirely of standard cells. Skywater130 MUX2x1 delay element
+  [ttihp26a] float_synth | Niklaus Leuenberger
+        https://github.com/NikLeberg/tt_um_float_synth
+        Synthesizing the VHDL-2008 IEEE.float_pkg
+  [ttihp0p4] float_synth | Niklaus Leuenberger
+        https://github.com/NikLeberg/tt_um_float_synth
+        Synthesizing the VHDL-2008 IEEE.float_pkg
+  [ttsky26a] ADPLL - All-Digital Phase-Locked Loop | Ali Alshamma
+        https://github.com/alienonyx/tt-adpll
+        All-digital PLL that locks a ring oscillator to a 32.768 kHz crystal reference, synthesizing a 16.777 MHz output clock (x512 multiplication)
+
+===== COUPLED: 8 hits =====
+  [tt05] Thermocouple-to-temperature converter (digital backend) | Aidan Medcalf
+        https://github.com/AidanMedcalf/tt05-thermocouple
+        Converts digitized thermocouple voltage into temperature.
+  [tt05of] Thermocouple-to-temperature converter (digital backend) | Aidan Medcalf
+        https://github.com/AidanMedcalf/tt05-thermocouple
+        Converts digitized thermocouple voltage into temperature.
+  [ttihp25a] Emil Njor's Design | Emil Njor
+        https://github.com/Ekhao/tiny_tapeout
+        Nothing much really, just a couple of logic gates connecting the input to the output.
+  [ttcad25a] Emil Njor's Design | Emil Njor
+        https://github.com/Ekhao/tiny_tapeout
+        Nothing much really, just a couple of logic gates connecting the input to the output.
+  [ttsky25b] Andrew chip design | Andrew Marjanski
+        https://github.com/andycandy15123/Andrew-Chip-design
+        my project is very simple and essentially just a test of a button and a couple switches.
+  [ttsky26a] WobblyBits - A probabilistic computing chip | Isaac W
+        https://github.com/rats2012/WobblyBits
+        A probabilistic computing array: 6 p-bits driven by a ring-oscillator TRNG, with a SPI-loadable 6x6 coupling matrix for Ising/Boltzmann sampling on SKY130.
+  [ttsky26b] brainamp-ac-coupled-lna | Rahul Bhagwat
+        https://github.com/bhagwat-rahul/ttsky-bci-low-noise-amp
+        AC Coupled Low Noise Amplifier for a brain computer interface
+  [ttsky26b] Tetrahedral Oscillator | Juvenal Romero Pedraza, Gael Gabino Diaz Ojeda, Mario Ranferi Romero Salgado.
+        https://github.com/ROMERUU-dev/ttsky-tetrahedral-oscillator
+        Tetrahedral oscillator based on coupled CMOS inverter pairs with capacitive load tuning.

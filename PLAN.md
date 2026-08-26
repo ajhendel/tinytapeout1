@@ -1,6 +1,6 @@
 # PLAN
 
-Last updated 2026-08-26. This document is the source of truth for what we are building and why. It records the conclusions of the design discussion that produced this repo, including the claims that were narrowed or killed along the way, so we do not re-argue them.
+Last updated 2026-08-26 (WP1 sweep folded in). This document is the source of truth for what we are building and why. It records the conclusions of the design discussion that produced this repo, including the claims that were narrowed or killed along the way, so we do not re-argue them.
 
 ## 1. Mission
 
@@ -24,6 +24,7 @@ These are settled. Do not reopen without new evidence.
 - Coupling-as-computation exists on FPGAs (side-channel literature). Our claim is designed geometry + extracted prediction + shielded/supply-separated controls, i.e. quantitative model tests of a designed channel, not first demonstration.
 - sky130 open models are an experimental preview with documented Liberty issues. Phrase as "validating the publicly released open-PDK models", distinguish Liberty vs Liberty+extraction vs transistor-level SPICE. Disagreement at one layer does not indict another.
 - Calibrate the on-chip TDC against bench equipment through pins, never against Liberty-predicted macro delays (circularity).
+- **Added 2026-08-26 by the WP1 sweep, and it costs us.** WobblyBits (shuttle TTSKY26a, github.com/rats2012/WobblyBits) is an open sky130 Tiny Tapeout chip with 6 p-bits, an SPI-loadable 6x6 signed coupling matrix and neoTRNG entropy, sampling an Ising/Boltzmann distribution. It is described by its own authors as a digital probabilistic computing chip and its update rule is a synchronous threshold comparison, not phase settling. Consequences. (a) "open-silicon oscillator Ising machine, cheaply reproducible" is no longer an available claim. (b) The p-bit claim for tapeout one is dead outright; the p-bit mode stays as a measurement and cites WobblyBits. (c) Block P's residual is continuous-time phase dynamics with the coupling ladder searched in-loop, against a digitally-updated control on the same die. See docs/PRIOR_ART.md rows 3 and 4.
 - Pre-registration: commit all pre-silicon predictions with uncertainty bounds to this repo before the shuttle deadline. Chips arriving is the reveal.
 - Holdout discipline: dies, voltage/temperature points, input traces, and fabric regions never used during evolution, reserved for generalization tests.
 - Safety is hardware, outside the fabric: default-inert configuration, one-hot enforcement for tristates, trial duration and transition-rate limits, cooldown, external kill. Fault modes use weak/series-resistance devices sized in SPICE, never hard bridges. A host-side genome validator rejects structurally unsafe configurations before load.
@@ -35,7 +36,7 @@ Tier discipline: overwhelmingly tier 1 (standard digital flow, hand-instantiated
 Blocks, in priority order (later blocks are dropped first if area runs out):
 
 - **B. Evolvable electrical-realization fabric** (the mission). Target ~48–64 sites. Per site: function select (NAND/NOR/XOR/INV/wire), drive variant select (X1/X2/X4 from sky130_fd_sc_hd, one library only), load ladder (switch-parasitic / 1 / 2 / 4 dummy inputs), sabotage mux (stuck-0, stuck-1, bypass-A, bypass-B, invert), local routing select with explicitly enabled feedback edges (feed-forward columns + strategic feedback, not full mesh). Scan-chain config with readback + CRC.
-- **P. Physics patch.** 8–16 coupled ring oscillators with mux-selectable coupling strength via parallel tristate drivers (digital-flow-compatible), phase readout via counters/sampling. Doubles as p-bit substrate (jittery oscillator sampled = tunable random bit). This is the flagship demo target: configure couplings to a MAX-CUT instance, let phase dynamics settle, read the cut.
+- **P. Physics patch.** 8–16 coupled ring oscillators with mux-selectable coupling strength via parallel tristate drivers (digital-flow-compatible), phase readout via counters/sampling. Doubles as p-bit substrate (jittery oscillator sampled = tunable random bit), which after the WP1 sweep is a measurement rather than a claim. This is the flagship demo target: configure couplings to a MAX-CUT instance, let phase dynamics settle, read the cut. The patch must also carry a digitally-updated Ising control mode on the same die, because that is the only thing separating this from WobblyBits and the comparison has to be on-chip and same-instance to mean anything.
 - **A. Calibration strip.** Fixed macros: each drive variant and structural alternative on a clean dedicated path with known load; replicas for within-die spread; one path routed to pins for bench-instrument TDC anchoring; ring-oscillator PVT monitors. ~15% of area, non-negotiable floor.
 - **C. Geometry replicas** (small). 2–3 logically identical paths with mirrored/spread placement, for netlist-vs-geometry transfer.
 - **D. Coupling matrix** (smallest, tier 2, droppable). One unshielded pair, one shielded control, one separated baseline.
@@ -52,7 +53,7 @@ Blocks, in priority order (later blocks are dropped first if area runs out):
 
 ## 5. Papers / outputs
 
-1. Platform + physics-patch result (does physical settling solve instances the same fabric clocked as logic solves slower/worse). The public pitch: a chip where the physics is the computer.
+1. Platform + physics-patch result (does physical settling solve instances the same fabric clocked as logic solves slower/worse, measured against the on-die digital control mode). The public pitch: a chip where the physics is the computer.
 2. Electrical-realization evolution vs open-PDK model predictions (the abstraction-gap chapter), with pre-registered predictions.
 3. Everything open: RTL, GDS, harness, predictions, raw measurements. Reproducible for a few hundred euros.
 
@@ -68,4 +69,4 @@ Claims hygiene: every novelty sentence must cite the closed enumeration row in d
 - OpenLane fights combinational feedback → hand-instantiated cells + keep attributes; precedent exists (TT ring-oscillator projects).
 - Physics patch phase dynamics too weak/too synchronized through digital coupling → tristate-strength coupling ladder is the mitigation; worst case the patch degrades to a TRNG/temporal-classifier study, still publishable.
 - Shuttle slip / lead time (~months to silicon) → FPGA control arm fills the wait by design.
-- Someone already did a sky130 characterization chip → fine; block A cites them and the paper leans on B/P/D.
+- Someone already did a sky130 characterization chip → confirmed 2026-08-26, four of them (docs/PRIOR_ART.md row 8). Block A claims nothing, cites them, and the paper leans on B and P.
