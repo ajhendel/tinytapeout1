@@ -16,6 +16,12 @@
 // infrastructure to the sites and would make the fabric look far more expensive
 // than it is. See tools/area_sweep.sh and docs/THROUGHPUT.md.
 
+// Explicit timescale. Without one, a module picks up whatever default the
+// compiler applies, and a delay written as 5 can land on a completely different
+// time base than the testbench driving it. That silently stopped the simulation
+// model of the calibration rings from oscillating at all in one harness while
+// working in another.
+`timescale 1ns / 1ps
 `default_nettype none
 
 // Site count. Overridable from the command line (iverilog -DN_SITES=4, or
@@ -51,6 +57,7 @@ module tt_um_ajhendel_evofab (
 
   // --------------------------------------------------------------- infra
   wire                  scan_out, crc_ok, inert, tripped, meas_busy;
+  wire                  meas_gate, meas_capture;
   wire [GLOBAL_W-1:0]   gcfg;
   wire [12*N_SITES-1:0] scfg;
   wire [23:0]           trans_count;
@@ -64,6 +71,7 @@ module tt_um_ajhendel_evofab (
       .scan_out(scan_out), .crc_ok(crc_ok),
       .gcfg(gcfg), .scfg(scfg),
       .inert(inert), .tripped(tripped), .meas_busy(meas_busy),
+      .meas_gate(meas_gate), .meas_capture(meas_capture),
       .trans_count(trans_count));
 
   wire       fb_en      = gcfg[0];
@@ -136,7 +144,8 @@ module tt_um_ajhendel_evofab (
   assign mon_to_safety = osc_sel;
 
   freq_counter u_freq (
-      .clk(clk), .rst_n(rst_n), .osc(osc_sel), .gate(meas_busy),
+      .clk(clk), .rst_n(rst_n), .osc(osc_sel),
+      .gate(meas_gate), .count_en(meas_busy), .capture(meas_capture),
       .value(freq_count));
 
   // ---------------------------------------------------------------- readout

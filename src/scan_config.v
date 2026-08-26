@@ -17,6 +17,12 @@
 // registers if the CRC matches and arm is high. A bad frame therefore cannot
 // reach the fabric at all, which is the point.
 
+// Explicit timescale. Without one, a module picks up whatever default the
+// compiler applies, and a delay written as 5 can land on a completely different
+// time base than the testbench driving it. That silently stopped the simulation
+// model of the calibration rings from oscillating at all in one harness while
+// working in another.
+`timescale 1ns / 1ps
 `default_nettype none
 
 module scan_config #(
@@ -37,6 +43,8 @@ module scan_config #(
     output wire                        inert,
     output wire                        tripped,
     output wire                        meas_busy,
+    output wire                        meas_gate,
+    output wire                        meas_capture,
     output wire [23:0]                 trans_count
 );
 
@@ -115,6 +123,19 @@ module scan_config #(
     end
   end
   assign meas_busy = busy;
+
+  // The window is held open for a short tail after the count stops, so the
+  // frequency counter can be read while it is frozen and still cleared. See the
+  // long note in src/freq_counter.v for why this handshake is shaped this way
+  // rather than done with a synchronizer.
+  reg [2:0] tail;
+  always @(posedge clk) begin
+    if (!rst_n)            tail <= 3'd0;
+    else if (busy)         tail <= 3'd5;
+    else if (tail != 3'd0) tail <= tail - 3'd1;
+  end
+  assign meas_gate    = busy | (tail != 3'd0);
+  assign meas_capture = (tail == 3'd2);
 
   // ---------------------------------------------- fabric observable, isolated
   reg mon_s1, mon_s2, mon_s3;

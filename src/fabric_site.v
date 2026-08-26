@@ -38,6 +38,12 @@
 // Drive select is decoded one-hot in hardware so tri-state contention on the
 // output node is structurally impossible, not merely avoided by convention.
 
+// Explicit timescale. Without one, a module picks up whatever default the
+// compiler applies, and a delay written as 5 can land on a completely different
+// time base than the testbench driving it. That silently stopped the simulation
+// model of the calibration rings from oscillating at all in one harness while
+// working in another.
+`timescale 1ns / 1ps
 `default_nettype none
 
 module fabric_site (

@@ -29,6 +29,12 @@
 // unprotected inverter chain into buffers and refuse the loop, which is why
 // every cell here is a keep/dont_touch wrapper from cells.v.
 
+// Explicit timescale. Without one, a module picks up whatever default the
+// compiler applies, and a delay written as 5 can land on a completely different
+// time base than the testbench driving it. That silently stopped the simulation
+// model of the calibration rings from oscillating at all in one harness while
+// working in another.
+`timescale 1ns / 1ps
 `default_nettype none
 
 module calib_ro #(

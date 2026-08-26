@@ -31,6 +31,12 @@ jobs:
           # make will return success even if the test fails, so check for failure in the results.xml
           ! grep failure results.xml
 
+      - name: Harness tests (genome, operators, and Python model vs RTL)
+        shell: bash
+        run: |
+          pip install pytest
+          python -m pytest harness/tests -q
+
       - name: Install yosys for the structural netlist check
         shell: bash
         run: sudo apt-get install -y yosys
