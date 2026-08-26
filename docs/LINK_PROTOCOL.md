@@ -79,8 +79,15 @@ device, not inferred by the host from a clock.
 - A bad link CRC is dropped silently and the host times out and retries the
   whole batch. Partial batches are never accepted, because a partial batch that
   looks complete is how a search ends up scoring genomes it never ran.
-- A device that sees SYNC while mid-payload abandons the current frame. This is
-  what makes resynchronisation after a reset at either end automatic.
+- Resynchronisation after a reset at either end is automatic, and it is driven
+  by the CRC, not by hunting for SYNC inside a payload. SYNC is not escaped and
+  a payload may legitimately contain it, so a decoder that abandoned a frame on
+  an embedded SYNC would corrupt legitimate traffic. When a frame fails its CRC
+  the decoder skips that SYNC and nothing else. It specifically does not skip
+  the length the bad header claimed, because trusting a length field that just
+  failed its own checksum is how a truncated frame swallows the good frame that
+  follows it. The cost is bounded: a garbage header can make the decoder wait
+  for at most MAX_PAYLOAD more bytes, which the host's batch timeout covers.
 - ABORT is honoured at any point, including mid-batch, and the device replies
   with FAULT rather than BATCH_RESULT so the host cannot mistake an aborted
   batch for a completed one.
