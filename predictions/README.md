@@ -23,11 +23,21 @@ history in a public repository is the cheapest credible timestamp available.
 
     predictions/
       README.md                  this file, the rule
-      calibration/               block A, one file per fixed macro
+      calibration/               block A, one file per fixed ring
         ro_inv1_31stage.md
         ro_inv2_31stage.md
         ro_inv4_31stage.md
         ro_inv1_31stage_loaded.md
+        ro_inv1_11stage_compact.md
+        ro_drive_node.md
+        ro_twin_spread.md
+      char/                      block C, one file per fixed path and the fits
+        depth_series.md
+        drive_series.md
+        load_series.md
+        isolation_pair.md
+      tdc/                       block T
+        tap_delay.md
       fabric/                    block B, a sampled set of configurations
         <config_hash>.md
       patch/                     block P, once the physics patch exists
@@ -66,6 +76,51 @@ The one thing that IS fixed already is the list of quantities. Writing that list
 now, before any of them are known, is what stops the list quietly becoming
 "whatever turned out to be predictable".
 
+### Quantities added 2026-08-27, when the RTL froze at 24 sites
+
+The blocks that produce these did not exist when the list below was fixed. They
+are added rather than substituted, and the original list stands.
+
+Fixed characterization paths (src/char_paths.v), measured by the TDC:
+
+- **The depth series slope and intercept.** Paths 8, 9, 0 and 10 are inv_1 at
+  depths 2, 4, 8 and 16. Predict the per-stage delay (the slope) and the fixed
+  offset from the launch gate, the select tree and the converter input (the
+  intercept), separately, with intervals. **This one is load bearing: without a
+  predicted slope the TDC calibration is unfalsifiable**, because any measured
+  tap count can be turned into any delay by choosing a tap width afterwards.
+- **The linearity of that series.** Predict the residual of a straight-line fit.
+  If the relationship is not linear the intercept is not a constant and nothing
+  else on the chip can be quoted against it, so predict the case that would
+  invalidate the method.
+- The drive series, paths 0 to 3, as ratios against path 0.
+- The load series, paths 4 to 7 against 0 to 3, as the delay cost of one inv_1
+  sink per stage at each drive variant.
+- **The isolation pair.** Paths 14 and 15 differ only in whether each drive
+  variant's input is gated. Predict the delay difference and its sign at each of
+  the four drive variants. A prediction of "no difference" is allowed and is a
+  real prediction here.
+
+Calibration strip additions (src/calib_macro.v):
+
+- The compact 11-stage ring against the 31-stage ring, as a per-stage ratio,
+  which is a prediction about whether stage count and geometry are separable.
+- The ring built from the fabric's own output stage against the plain inverter
+  ring, which is the cost of configurability expressed as a frequency.
+- **The spread of rings 0, 6 and 7**, which are the same circuit three times.
+  This is the within-die variation floor, so it is the number every other
+  difference on this chip has to beat. Predict it before seeing it, or the
+  temptation to accept whatever floor makes a result significant is left
+  standing.
+
+TDC (src/tdc.v):
+
+- The mean tap delay, and the spread of bin widths across the 32 taps. The
+  second is a prediction about how badly place and route distorts a delay line
+  in this flow, and we currently have no basis for it beyond an order of
+  magnitude, which is exactly the kind of thing worth writing down before
+  finding out.
+
 ### Quantities to be predicted, fixed 2026-08-26
 
 Calibration strip, per fixed ring oscillator, at nominal and at both supply
@@ -79,8 +134,12 @@ Fabric, for a sampled set of configurations that will be named before the
 deadline:
 - propagation delay from FAB_A to the column output, per drive variant setting
 - the change in that delay per step of the load ladder
-- the lowest supply voltage at which the configuration still computes its truth
-  table correctly
+- the lowest WHOLE-CHIP supply voltage at which the configuration still computes
+  its truth table correctly, quoted beside the voltage at which the scan CRC
+  fails and the voltage at which the reference paths fail. Corrected 2026-08-27:
+  there is no independent fabric supply on Tiny Tapeout, so the fabric's failure
+  point is only meaningful relative to the instrument's failure point. See
+  docs/MEASUREMENT_PROTOCOL.md.
 
 Cross cutting:
 - which of the three model layers is closest to silicon for each quantity, and

@@ -10,7 +10,13 @@
 // trip, never clear one.
 //
 // Chain order, shifted in MSB first:
-//     [ GLOBAL 16 ][ SITE 0 : 12 ][ SITE 1 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
+//     [ GLOBAL W ][ SITE 0 : 12 ][ SITE 1 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
+//
+// GLOBAL_W is 32 in src/project.v. The global field map lives in project.v and
+// in harness/evofab/genome.py; the only two fields this block consumes are
+// window_exp and trans_exp, and their positions are repeated below. If you move
+// a global field, move it in all three places in one commit. Nothing here would
+// fail loudly if you did not.
 //
 // The CRC is computed by the host over the payload and appended. On load, the
 // device recomputes it and only transfers the shadow chain into the live config
@@ -121,7 +127,7 @@ module scan_config #(
   assign scfg = live[12*N_SITES-1:0];
 
   // ------------------------------------------------------ measurement window
-  // Window length is 2^(4 + gcfg[11:8]) clocks, so 16 clocks up to 2^19. At the
+  // Window length is 2^(4 + window_exp) clocks, so 16 clocks up to 2^19. At the
   // 50 MHz target that is 320 ns up to 10.5 ms, which brackets the 1 ms to
   // 10 ms measurement window that docs/THROUGHPUT.md budgets per trial. The
   // window is the trial duration limit as well as the counter gate, so a trial
@@ -133,8 +139,8 @@ module scan_config #(
   // form needs a 24 bit variable shifter and a 24 bit comparator in series and
   // the bit test needs a 24 to 1 mux. The trial place and route found 136
   // endpoints with setup violations and these were two of the deep paths.
-  wire [3:0]  window_exp = gcfg[11:8];
-  wire [3:0]  trans_exp  = gcfg[15:12];
+  wire [3:0]  window_exp = gcfg[13:10];
+  wire [3:0]  trans_exp  = gcfg[17:14];
   wire [4:0]  window_bit = 5'd4 + {1'b0, window_exp};
   wire [4:0]  trans_bit  = 5'd4 + {1'b0, trans_exp};
   reg  [23:0] win_cnt;
@@ -192,7 +198,7 @@ module scan_config #(
   assign trans_count = tcnt;
 
   // ----------------------------------------------- safety, sticky, one way up
-  // A configuration that toggles more than 2^(4 + gcfg[15:12]) times inside the
+  // A configuration that toggles more than 2^(4 + trans_exp) times inside the
   // window is rejected mid-trial. The limit is a transition COUNT rather than a
   // rate because the window is itself bounded, which makes the pair of limits
   // a hard bound on total switching activity per trial.

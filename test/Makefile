@@ -6,11 +6,16 @@ SIM ?= icarus
 FST ?= -fst
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = cells.v fabric_site.v calib_macro.v scan_config.v freq_counter.v project.v
+PROJECT_SOURCES = cells.v drive_node.v fabric_site.v calib_macro.v char_paths.v tdc.v scan_config.v freq_counter.v project.v
 
-# Site count under test. Keep in sync with the `define default in project.v
-# unless you are deliberately sweeping it.
-N_SITES ?= 8
+# Site count under test. The default MUST match the `define default in
+# src/project.v, because the gate-level run has no way to be told: it simulates
+# whatever netlist the flow built. test/test.py reads the same environment
+# variable with the same default, and asserts the count the chip reports back
+# through readout_sel 7, so a drift between the three fails a test instead of
+# silently rotating every genome.
+N_SITES ?= 24
+export N_SITES
 
 ifneq ($(GATES),yes)
 

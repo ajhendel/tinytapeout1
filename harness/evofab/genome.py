@@ -7,7 +7,7 @@ same assumption.
 
 Layout, matching src/scan_config.v and src/fabric_site.v.
 
-    frame = [ GLOBAL 16 ][ SITE 0 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
+    frame = [ GLOBAL 32 ][ SITE 0 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
 
 shifted MSB first, so site 0 lands in the high bits of the site region. That
 detail is easy to get backwards and doing so silently reverses the genome, which
@@ -21,7 +21,7 @@ import hashlib
 import random
 from typing import Iterable, Sequence
 
-GLOBAL_W = 16
+GLOBAL_W = 32
 SITE_W = 12
 CRC_W = 8
 
@@ -43,13 +43,56 @@ SABOTAGE = ["NONE", "STUCK0", "STUCK1", "BYPASS_A", "BYPASS_B", "INVERT",
 ROUTES = ["PREV", "PI", "FEEDBACK", "ONE"]
 
 # -------------------------------------------------------------- global fields
+# This layout is duplicated in src/project.v (all fields) and src/scan_config.v
+# (window_exp and trans_exp only). Move a field here and you must move it there
+# in the same commit; nothing would fail loudly if you did not, the harness
+# would simply address the wrong bits.
 G_FB_EN, G_FB_EN_W = 0, 1
 G_CALIB_EN, G_CALIB_EN_W = 1, 1
-G_CALIB_SEL, G_CALIB_SEL_W = 2, 2
-G_CNT_SRC, G_CNT_SRC_W = 4, 1
-G_READOUT_SEL, G_READOUT_SEL_W = 5, 3
-G_WINDOW_EXP, G_WINDOW_EXP_W = 8, 4
-G_TRANS_EXP, G_TRANS_EXP_W = 12, 4
+G_CALIB_SEL, G_CALIB_SEL_W = 2, 3
+G_CNT_SRC, G_CNT_SRC_W = 5, 1
+G_READOUT_SEL, G_READOUT_SEL_W = 6, 4
+G_WINDOW_EXP, G_WINDOW_EXP_W = 10, 4
+G_TRANS_EXP, G_TRANS_EXP_W = 14, 4
+G_TDC_EN, G_TDC_EN_W = 18, 1
+G_TDC_SRC, G_TDC_SRC_W = 19, 1
+G_TDC_POL, G_TDC_POL_W = 20, 1
+G_CHAR_SEL, G_CHAR_SEL_W = 21, 4
+G_CHAR_DRIVE, G_CHAR_DRIVE_W = 25, 2
+
+# Readout selector codes, matching the case statement in src/project.v.
+READOUT = {
+    "freq0": 0, "freq1": 1, "freq2": 2,
+    "trans0": 3, "trans1": 4, "trans2": 5,
+    "status": 6, "n_sites": 7,
+    "tdc0": 8, "tdc1": 9, "tdc2": 10, "tdc3": 11,
+    "tdc_taps": 12, "twin_mask": 13, "char_count": 14, "alive": 15,
+}
+
+# The eight fixed calibration rings, by calib_sel code. See src/calib_macro.v.
+# Rings 0, 6 and 7 are the SAME circuit; their spread is the within-die
+# variation floor and their difference is placement and nothing else.
+CALIB_RINGS = ["inv1", "inv2", "inv4", "inv1_loaded", "inv1_compact",
+               "drive_node", "inv1_twin_a", "inv1_twin_b"]
+
+# The sixteen fixed characterization paths, by char_sel code.
+# See the table in src/char_paths.v.
+CHAR_PATHS = [
+    "inv1_d8", "inv2_d8", "inv4_d8", "inv8_d8",
+    "inv1_d8_loaded", "inv2_d8_loaded", "inv4_d8_loaded", "inv8_d8_loaded",
+    "inv1_d2", "inv1_d4", "inv1_d16",
+    "nand1_d8", "nand4_d8", "mux4_d8",
+    "drive_isolated_d4", "drive_shared_d4",
+]
+
+# The depth series, in stage order. A straight line through these four gives the
+# per-stage delay AND the fixed offset from the launch gate, the select tree and
+# the TDC input. Everything else in CHAR_PATHS is quoted against that offset.
+DEPTH_SERIES = [(2, "inv1_d2"), (4, "inv1_d4"), (8, "inv1_d8"), (16, "inv1_d16")]
+
+# Sites built WITHOUT drive-variant input isolation, from ISO_TWIN_MASK in
+# src/project.v. Each is paired with its even-indexed isolated neighbour.
+UNISOLATED_SITES = (1, 3, 5, 7)
 
 
 def _field(value: int, width: int, name: str) -> int:
@@ -94,6 +137,11 @@ class Globals:
     readout_sel: int = 0
     window_exp: int = 2
     trans_exp: int = 15
+    tdc_en: int = 0
+    tdc_src: int = 0
+    tdc_pol: int = 0
+    char_sel: int = 0
+    char_drive: int = 0
 
     def encode(self) -> int:
         return (_field(self.fb_en, G_FB_EN_W, "fb_en") << G_FB_EN
@@ -102,7 +150,12 @@ class Globals:
                 | _field(self.cnt_src, G_CNT_SRC_W, "cnt_src") << G_CNT_SRC
                 | _field(self.readout_sel, G_READOUT_SEL_W, "readout_sel") << G_READOUT_SEL
                 | _field(self.window_exp, G_WINDOW_EXP_W, "window_exp") << G_WINDOW_EXP
-                | _field(self.trans_exp, G_TRANS_EXP_W, "trans_exp") << G_TRANS_EXP)
+                | _field(self.trans_exp, G_TRANS_EXP_W, "trans_exp") << G_TRANS_EXP
+                | _field(self.tdc_en, G_TDC_EN_W, "tdc_en") << G_TDC_EN
+                | _field(self.tdc_src, G_TDC_SRC_W, "tdc_src") << G_TDC_SRC
+                | _field(self.tdc_pol, G_TDC_POL_W, "tdc_pol") << G_TDC_POL
+                | _field(self.char_sel, G_CHAR_SEL_W, "char_sel") << G_CHAR_SEL
+                | _field(self.char_drive, G_CHAR_DRIVE_W, "char_drive") << G_CHAR_DRIVE)
 
     @classmethod
     def decode(cls, word: int) -> "Globals":
@@ -113,7 +166,12 @@ class Globals:
                    cnt_src=m(G_CNT_SRC, G_CNT_SRC_W),
                    readout_sel=m(G_READOUT_SEL, G_READOUT_SEL_W),
                    window_exp=m(G_WINDOW_EXP, G_WINDOW_EXP_W),
-                   trans_exp=m(G_TRANS_EXP, G_TRANS_EXP_W))
+                   trans_exp=m(G_TRANS_EXP, G_TRANS_EXP_W),
+                   tdc_en=m(G_TDC_EN, G_TDC_EN_W),
+                   tdc_src=m(G_TDC_SRC, G_TDC_SRC_W),
+                   tdc_pol=m(G_TDC_POL, G_TDC_POL_W),
+                   char_sel=m(G_CHAR_SEL, G_CHAR_SEL_W),
+                   char_drive=m(G_CHAR_DRIVE, G_CHAR_DRIVE_W))
 
 
 class UnsafeGenome(Exception):
@@ -213,6 +271,25 @@ class Genome:
                 "counter watches the fabric; the ring would be a supply "
                 "disturbance during a fabric measurement and the trial would "
                 "not be comparable to one taken without it")
+
+        # The rules below are about COMPARABILITY, not damage, which is the same
+        # category as the one above. They live here rather than in a review
+        # checklist because a confound that only shows up in the analysis three
+        # months later is indistinguishable from a result.
+        if self.globals.tdc_en and self.globals.calib_en:
+            raise UnsafeGenome(
+                "tdc_en with calib_en runs a ring oscillator while the TDC "
+                "times a single edge; the ring is a supply disturbance of "
+                "exactly the size the TDC is trying to resolve. Take the ring "
+                "covariate in a separate trial, immediately before or after")
+
+        if self.globals.tdc_en and self.globals.tdc_src and self.globals.fb_en:
+            raise UnsafeGenome(
+                "tdc_en with tdc_src=1 times the fabric column, and fb_en "
+                "closes that column into a loop, so the arrival edge the TDC "
+                "samples is whichever oscillation happened to be passing. Time "
+                "the column open, then close the loop and use the frequency "
+                "counter")
 
 
 # ------------------------------------------------------------------------ crc

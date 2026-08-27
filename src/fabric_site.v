@@ -37,6 +37,14 @@
 //
 // Drive select is decoded one-hot in hardware so tri-state contention on the
 // output node is structurally impossible, not merely avoided by convention.
+//
+// 3. The drive stage lives in src/drive_node.v, and so does the argument about
+//    what the tri-state arrangement does and does not buy. Read it before
+//    changing anything here. The short version: putting the variants on the
+//    output node settles the OUTPUT side, and says nothing about the input
+//    side. ISOLATE controls the input side. Most sites are isolated; a named
+//    minority are not, on purpose, so the difference is measurable on the die
+//    instead of argued in a comment.
 
 // Explicit timescale. Without one, a module picks up whatever default the
 // compiler applies, and a delay written as 5 can land on a completely different
@@ -46,7 +54,14 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
-module fabric_site (
+module fabric_site #(
+    // 1 gates each drive variant's input with its own enable, so the three
+    // unselected variants do not switch. 0 is the deliberately un-isolated
+    // control arrangement. See src/drive_node.v for the full argument and
+    // src/char_paths.v paths 14 and 15 for the matched fixed measurement of
+    // the difference.
+    parameter integer ISOLATE = 1
+) (
     input  wire        a_prev,      // output of the previous site in the column
     input  wire        a_pi,        // primary input A
     input  wire        a_fb,        // the enumerated feedback edge
@@ -110,10 +125,7 @@ module fabric_site (
   wire drv_in;
   cell_and2 u_inert_gate (.A(sab_out), .B(live), .X(drv_in));
 
-  cell_einvn #(.DRIVE(1)) drv1 (.A(drv_in), .EN(den[0]), .Z(out));
-  cell_einvn #(.DRIVE(2)) drv2 (.A(drv_in), .EN(den[1]), .Z(out));
-  cell_einvn #(.DRIVE(4)) drv4 (.A(drv_in), .EN(den[2]), .Z(out));
-  cell_einvn #(.DRIVE(8)) drv8 (.A(drv_in), .EN(den[3]), .Z(out));
+  drive_node #(.ISOLATE(ISOLATE)) u_drive (.d(drv_in), .den(den), .z(out));
 
   // ------------------------------------------------------------ load ladder
   // Ladder code 0 enables nothing, 1 enables L1, 2 enables L1+L2, 3 enables all.

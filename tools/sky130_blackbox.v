@@ -12,6 +12,11 @@
 (* blackbox *) module sky130_fd_sc_hd__inv_4   (input A, output Y); endmodule
 (* blackbox *) module sky130_fd_sc_hd__inv_8   (input A, output Y); endmodule
 
+(* blackbox *) module sky130_fd_sc_hd__buf_1   (input A, output X); endmodule
+(* blackbox *) module sky130_fd_sc_hd__buf_2   (input A, output X); endmodule
+(* blackbox *) module sky130_fd_sc_hd__buf_4   (input A, output X); endmodule
+(* blackbox *) module sky130_fd_sc_hd__buf_8   (input A, output X); endmodule
+
 (* blackbox *) module sky130_fd_sc_hd__nand2_1 (input A, input B, output Y); endmodule
 (* blackbox *) module sky130_fd_sc_hd__nand2_2 (input A, input B, output Y); endmodule
 (* blackbox *) module sky130_fd_sc_hd__nand2_4 (input A, input B, output Y); endmodule

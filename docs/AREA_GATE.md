@@ -188,12 +188,108 @@ many tiles the design happens to want.
 So the numbers here bound the fabric and the calibration strip, and nothing else.
 WP4 has to re-run this gate once the full block list exists.
 
+## WP4 RE-GATE, 2026-08-27. The answer moved, and it moved down.
+
+Everything above this heading is the WP2 gate on the trial vehicle. This section
+is the re-gate the section immediately above demanded, run after the design
+review added the blocks it said were missing.
+
+### What was added, and why each one is not optional
+
+| block | file | why |
+|---|---|---|
+| drive-variant input isolation | `src/drive_node.v` | The tri-state output arrangement settled the OUTPUT side of drive selection and said nothing about the input side. All four variants shared one input net, so upstream load was the sum of four and three unselected variants switched on every transition. |
+| four un-isolated control sites | `src/project.v` | So the cost of isolation is a measurement on the die instead of an argument in a comment. |
+| sixteen fixed characterization paths | `src/char_paths.v` | The missing rung of the inference chain. Cells -> fixed paths -> configurable sites -> evolved circuits. |
+| a time-to-digital converter | `src/tdc.v` | A ring reports an average over millions of transitions and self-heats while it runs. A combinational path delay is one transition, and needed its own instrument. |
+| four more calibration rings | `src/calib_macro.v` | A compact ring, a ring built from the fabric's own output stage, and two more copies of ring 0 whose spread is the within-die variation floor and whose difference is placement. |
+| a timing anchor cell | `src/project.v` | `u_mon_iso`, so `src/timing.sdc` can cut the fabric-to-safety-monitor path by naming something that survives the flow. That path grows linearly with the site count and would violate at the submission size. |
+
+### The new numbers
+
+`tools/area_sweep.sh`, same method, slope between the 8 and 16 site builds.
+
+| | WP2, after the fixes | WP4, after the review |
+|---|---|---|
+| marginal hand cells per site | 34 | **38** |
+| marginal synthesized cells per site | 35.75 | 35.75 |
+| **marginal total per site** | **69.75** | **73.75** |
+| fixed hand cells | 156 | **576** |
+| fixed synthesized cells | 493 | **726** |
+| **fixed total** | **649** | **1,302** |
+| cells at 8 sites | 1,207 | 1,892 |
+| cells at 24 sites | | **3,072** |
+| cells at 32 sites | 2,881 | 3,662 |
+
+The marginal rise is exactly the four isolation AND gates per site, which is what
+it was predicted to be. The fixed rise is the whole story: **the review roughly
+doubled the fixed cost**, and fixed cost is the one thing a site count cannot
+amortise.
+
+### What that does to the tile count
+
+Same method as the WP2 gate: standard cell area scales with the yosys cell
+count, calibrated against the one completed LibreLane run, which placed 1,207
+yosys cells as 25,263 um2 of standard cells in a 4 tile core of 72,565 um2 at
+34.8 percent utilization.
+
+| sites | yosys cells | standard cell um2 | utilization in 6x2 | utilization in 8x2 |
+|---|---|---|---|---|
+| 8 | 1,892 | 39,600 | 18.2 % | 13.6 % |
+| 16 | 2,482 | 51,900 | 23.9 % | 17.9 % |
+| **24** | **3,072** | **64,300** | **29.5 %** | 22.2 % |
+| 32 | 3,662 | 76,600 | 35.2 % | 26.4 % |
+| 48 | 4,842 | 101,300 | 46.6 % | 34.9 % |
+
+**Verdict. 24 sites on 6x2.** At 29.5 percent projected utilization it sits below
+the 34.8 percent that already routed clean, DRC clean and LVS clean.
+
+32 sites on 6x2 projects to 35.2 percent, which is not a margin, it is a
+coincidence: it lands on the one density we have evidence for, with nothing
+either side of it. Routing congestion is not linear in cell count, the new
+blocks are keep and dont_touch and so cannot be resized to relieve it, and the
+projection is an extrapolation from a build four times smaller. Sitting exactly
+on the only data point is not the same as having headroom.
+
+The alternatives, honestly:
+
+1. **24 sites on 6x2, about 840 EUR.** The recommendation, and the same money
+   Andrew already approved for 32.
+2. **32 sites on 8x2, about 1,120 EUR.** Buys the site count back for 280 EUR and
+   lands at a comfortable 26.4 percent. A real option, and a budget decision
+   rather than a design one.
+3. **32 sites on 6x2.** Only after the 24 site build comes back from CI and shows
+   real headroom. The build is free; the extrapolation is not evidence.
+4. Cutting the calibration strip is still not on this list. PLAN.md section 3
+   says cut sites before cutting the strip, and this is the first time that rule
+   has actually cost something, which is exactly when a rule is worth having.
+
+### What is still NOT settled by this
+
+- These are 8 and 16 site yosys builds extrapolated through one LibreLane run of
+  a smaller and different design. **A trial build at 24 sites is required before
+  submission and it is free.** Until it comes back, the utilization column above
+  is a projection and nothing more.
+- Block P (the physics patch) and block D (the coupling matrix) are still not in
+  the vehicle at all and their area is on top of every number here.
+- The TDC's delay line is 32 buffers plus 32 flip flops plus a five buffer
+  sampling tree. Its area is in the numbers; its RESOLUTION is not known and
+  cannot be until silicon. If the tap delay turns out much larger than expected,
+  the 32 tap span may not cover the longer characterization paths, and the fix is
+  a shorter reference path rather than more taps.
+- Placement is not settled and cannot be requested. `tools/check_placement.py`
+  reports what the flow actually did with the three identical rings and every
+  spatial statement is quoted against that report.
+
 ## Reproducing this
 
     tools/area_sweep.sh build/area          # marginal cells per site, local, light
     python3 tools/check_netlist.py build/area/n8.json --sites 8
     python3 tools/check_constraints.py
     git push                                # the flow runs in Tiny Tapeout's CI
+
+    # after the CI run, from the gds artifact
+    python3 tools/check_placement.py <placed.def> --json placement.json
 
 The CI run is the authoritative source for area, DRC, LVS and timing. The local
 sweep is a fast cross check that costs this machine almost nothing, and it is the

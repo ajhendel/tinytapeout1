@@ -37,6 +37,46 @@ jobs:
       - name: GL test
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
 
+  placement_report:
+    # Where did the flow actually put the things whose POSITION is the result?
+    # Three of the calibration rings are byte-for-byte identical, so their
+    # difference is a placement effect and nothing else, and we cannot ask the
+    # flow for a position. This job measures what we got. It is a report and not
+    # a gate: a clustered placement is a fact about the build that has to be
+    # written down, not a reason to fail it.
+    needs: gds
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v6
+
+      - name: Download the GDS build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: tt_submission
+          path: submission
+
+      - name: Report the achieved placement
+        shell: bash
+        run: |
+          set -uo pipefail
+          def=$(find submission -name '*.def' -size +1k | sort | tail -1)
+          if [ -z "${def:-}" ]; then
+            echo "no DEF in the artifact; nothing to report"
+            exit 0
+          fi
+          echo "reporting on $def"
+          python3 tools/check_placement.py "$def" --json placement.json
+
+      - name: upload the placement report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: placement-report
+          path: placement.json
+          if-no-files-found: warn
+
   viewer:
     needs: gds
     runs-on: ubuntu-24.04

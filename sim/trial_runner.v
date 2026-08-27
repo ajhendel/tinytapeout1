@@ -28,7 +28,7 @@
 module trial_runner;
 
   localparam integer N_SITES  = `N_SITES;
-  localparam integer CHAIN_W  = 16 + 12 * N_SITES + 8;
+  localparam integer CHAIN_W  = 32 + 12 * N_SITES + 8;  // GLOBAL_W is 32
   localparam integer MAX_BITS = 1024;
 
   reg        clk = 1'b0;

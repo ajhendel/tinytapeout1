@@ -50,9 +50,11 @@ Hold a truth table fixed (full adder, majority, popcount cell, the mojolearn rou
 Circuits that keep computing under every single-cell sabotage, measured at speed and at voltage corners, not just logically.
 - Applications of the class: radiation-tolerant and safety-critical design insight; whether logical redundancy is free at the operating edge.
 
-### 9. Graceful degradation under overclock/undervolt
+### 9. Graceful degradation under overclock and reduced supply
 Arithmetic cells whose timing failures are numerically benign (lose LSBs first, stay monotonic).
 - Applications of the class: approximate computing, energy-proportional arithmetic, timing-speculation design.
+- **Corrected 2026-08-27, and the correction is a real limit on tapeout one.** Tiny Tapeout's power rails are shared infrastructure and a project cannot run at a different core voltage from the rest of the chip. There is no independent fabric supply, so "drop the supply until this configuration fails" is not an experiment this chip can run. What it can run is a whole-chip supply sweep on the demo board, which takes the scan chain, the safety controller and the counters down with the fabric, and which is usable only because those blocks report their own health. The protocol is in docs/MEASUREMENT_PROTOCOL.md. A per-block supply is now a tapeout-two requirement.
+- Overclocking has no such limit. The clock is ours and the fabric's delay is not in a clocked path at all, so the overclock half of this function is unaffected.
 
 ## What the physics patch cannot do
 No large instances (node count), no claims of beating classical solvers, no cryptographically serious TRNG certification on tapeout one, no energy-per-solution claims (instrumentation limit). Every published number states instance size beside it.

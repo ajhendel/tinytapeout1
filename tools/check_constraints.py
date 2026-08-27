@@ -31,6 +31,15 @@ ASYNC_FROM = {"FAB_A", "FAB_B", "OBS_SEL"}
 ASYNC_EXTRA_PORTS = {"ena"}
 ASYNC_TO = {"FAB_OUT", "OBS_OUT", "LOAD_MON"}
 
+# The one false path in this design that is not anchored to a package pin. The
+# fabric reaches the safety monitor through a hand-instantiated buffer whose
+# name is the only stable thing the SDC can point at, and the whole arrangement
+# is worthless if the two files stop agreeing. See the long note in
+# src/timing.sdc. This check exists because the failure is silent: a constraint
+# that matches nothing produces no error anywhere.
+ANCHOR_INSTANCE = "u_mon_iso"
+ANCHOR_PIN = "u_mon_iso.u/X"
+
 # Pin names that must stay in the timed set. These come from registers and the
 # safety argument depends on them being checked at speed.
 MUST_STAY_TIMED = {"SCAN_OUT", "CRC_OK", "MEAS_BUSY", "TRIPPED", "INERT",
@@ -47,6 +56,29 @@ def load_pinout():
         if name:
             by_name.setdefault(name, []).append(pin)
     return pins, by_name
+
+
+def check_anchor(problems):
+    sdc = open(os.path.join(ROOT, "src", "timing.sdc")).read()
+    body = "\n".join(ln for ln in sdc.splitlines()
+                     if not ln.lstrip().startswith("#"))
+    through = re.findall(
+        r"set_false_path\s+-through\s+\[get_pins\s*\{([^}]+)\}\]", body)
+    through = {t.strip() for t in through}
+    if ANCHOR_PIN not in through:
+        problems.append(
+            f"src/timing.sdc must cut the fabric-to-safety-monitor path with "
+            f"set_false_path -through [get_pins {{{ANCHOR_PIN}}}]; it has "
+            f"{sorted(through) or 'no -through constraints'}")
+
+    proj = open(os.path.join(ROOT, "src", "project.v")).read()
+    if not re.search(r"\bcell_buf_1\s+" + re.escape(ANCHOR_INSTANCE) + r"\s*\(",
+                     proj):
+        problems.append(
+            f"src/project.v no longer instantiates a cell_buf_1 named "
+            f"{ANCHOR_INSTANCE}, so the false path in src/timing.sdc matches "
+            f"nothing and the fabric-to-monitor path is silently untimed")
+    print(f"timing anchor: -through {ANCHOR_PIN}, instance {ANCHOR_INSTANCE}")
 
 
 def load_false_paths():
@@ -111,6 +143,8 @@ def main() -> int:
             problems.append(
                 f"src/timing.sdc declares {p} asynchronous but no fabric pin "
                 f"maps to it; an unexplained false path waives real timing")
+
+    check_anchor(problems)
 
     print(f"false paths from: {sorted(froms)}")
     print(f"false paths to:   {sorted(tos)}")

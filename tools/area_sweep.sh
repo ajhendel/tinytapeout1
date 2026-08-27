@@ -23,9 +23,11 @@ mkdir -p "$OUT"
 for N in 1 2 4 8 16; do
   yosys -q -p "
     read_verilog -sv $ROOT/tools/sky130_blackbox.v
-    read_verilog -sv -DN_SITES=$N $ROOT/src/cells.v $ROOT/src/fabric_site.v \
-                     $ROOT/src/calib_macro.v $ROOT/src/scan_config.v \
-                     $ROOT/src/freq_counter.v $ROOT/src/project.v
+    read_verilog -sv -DN_SITES=$N $ROOT/src/cells.v $ROOT/src/drive_node.v \
+                     $ROOT/src/fabric_site.v $ROOT/src/calib_macro.v \
+                     $ROOT/src/char_paths.v $ROOT/src/tdc.v \
+                     $ROOT/src/scan_config.v $ROOT/src/freq_counter.v \
+                     $ROOT/src/project.v
     hierarchy -top tt_um_ajhendel_evofab
     synth -top tt_um_ajhendel_evofab -flatten
     write_json $OUT/n$N.json

@@ -3,19 +3,22 @@ project:
   title:        "Evolvable electrical-realization fabric"
   author:       "Andrew Hendel"
   discord:      ""
-  description:  "A fabric whose configuration selects the electrical realization of logic (drive variant, node loading, inserted fault, feedback), plus a fixed calibration strip"
+  description:  "A fabric whose configuration selects the electrical realization of logic (drive variant, node loading, inserted fault, feedback), with fixed reference paths, ring oscillators and an on-chip time-to-digital converter to measure it against"
   language:     "Verilog"
   clock_hz:     50000000
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
-  tiles: "2x2"
+  tiles: "6x2"
 
   top_module:  "tt_um_ajhendel_evofab"
 
   source_files:
     - "cells.v"
+    - "drive_node.v"
     - "fabric_site.v"
     - "calib_macro.v"
+    - "char_paths.v"
+    - "tdc.v"
     - "scan_config.v"
     - "freq_counter.v"
     - "project.v"

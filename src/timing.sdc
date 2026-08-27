@@ -89,6 +89,63 @@ set_false_path -to [get_ports {uo_out[3]}]
 set_false_path -to [get_ports {uo_out[6]}]
 
 ###############################################################################
+# The fabric to the safety monitor
+###############################################################################
+# This is the one path into the fabric that does not start at a port, so the
+# -from constraints above cannot reach it, and it is the one that grows with the
+# site count.
+#
+# The safety controller's activity monitor watches the selected observation
+# node. That node is either the fabric column output or a calibration ring, and
+# both are asynchronous to the system clock by construction. The monitor exists
+# to count edges it cannot predict; that is why its input goes through a three
+# stage synchronizer before anything is done with it, and why a metastable
+# sample there is harmless.
+#
+# Static timing does not know that, and the path it wants to close is
+#
+#     any config register -> inert -> every drive enable in the column
+#         -> every site in series -> the observation multiplexer
+#         -> the synchronizer's first flip flop
+#
+# which is linear in the site count. It met timing at 8 sites and would not at
+# the submission size, and the correct answer is not to make the column faster.
+# It is that the path should never have been timed.
+#
+# u_mon_iso is a hand-instantiated buffer that exists solely so this constraint
+# has something stable to name. keep and dont_touch cells are the only names in
+# this design that survive synthesis and flattening verbatim. If the instance
+# were renamed, this constraint would match nothing, no tool would complain, the
+# flow would pass, and a path nobody timed would come back on a die. So
+# tools/check_netlist.py fails if the cell is missing from the netlist, and
+# tools/check_constraints.py fails if that cell and this line stop agreeing.
+#
+# Cutting THROUGH the buffer, rather than TO the synchronizer, keeps the cut
+# narrow. The frequency counter takes the same observation node directly and is
+# unaffected, because it is clocked by that node and is a clock domain crossing
+# rather than a data path.
+set_false_path -through [get_pins {u_mon_iso.u/X}]
+
+###############################################################################
+# The TDC, and what is deliberately NOT constrained here
+###############################################################################
+# The TDC's sampling flip flops are clocked by the arrival edge of the path
+# under measurement, so they sit in a clock domain that has no create_clock and
+# is therefore not analyzed. That is the same treatment src/freq_counter.v
+# already gets and it is correct for both: the arrival edge is the measurand,
+# and constraining it would mean asking the flow to make the thing we are trying
+# to measure fast.
+#
+# What that treatment does NOT do is control skew across the sampling tree, and
+# that skew lands directly on the measurement. It is handled in the design
+# instead, by building the sampling tree and the launch tree by hand and
+# balanced, and by calibrating the delay line's bins on the die. See the long
+# notes in src/tdc.v and src/char_paths.v. Do not add a create_clock here in the
+# belief that it would fix that; it would hand the shape of the tree back to
+# clock tree synthesis, which optimizes for skew against the system clock and
+# has no idea what this structure is for.
+
+###############################################################################
 # Environment
 ###############################################################################
 set_load -pin_load 0.0334 [all_outputs]

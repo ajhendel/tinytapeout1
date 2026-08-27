@@ -40,19 +40,52 @@ from cocotb.triggers import ClockCycles, Timer
 # listed in predictions/ as one.
 GATE_LEVEL = os.environ.get("GATES") == "yes"
 
-N_SITES = 8
-GLOBAL_W = 16
+# Taken from the environment, which test/Makefile exports, with the same default
+# as the `define in src/project.v. The gate-level run cannot be told a site
+# count, it simulates whatever was built, so these three defaults have to agree
+# and test_readout_selector_reaches_every_slot is what proves they do.
+N_SITES = int(os.environ.get("N_SITES", "24"))
+GLOBAL_W = 32
 PAYLOAD_W = GLOBAL_W + 12 * N_SITES
 CHAIN_W = PAYLOAD_W + 8
 
-# Global config field positions inside the 16-bit global word.
+# Global config field positions inside the 32-bit global word. This layout is
+# also in src/project.v, src/scan_config.v and harness/evofab/genome.py. Four
+# copies is three too many, and the reason it is not centralised is that this
+# file has to be able to disagree with the harness for the disagreement to mean
+# anything. Move a field and you move it in all four.
 G_FB_EN = 0
 G_CALIB_EN = 1
-G_CALIB_SEL = 2  # 2 bits
-G_CNT_SRC = 4
-G_READOUT_SEL = 5  # 3 bits
-G_WINDOW_EXP = 8  # 4 bits
-G_TRANS_EXP = 12  # 4 bits
+G_CALIB_SEL = 2  # 3 bits
+G_CNT_SRC = 5
+G_READOUT_SEL = 6  # 4 bits
+G_WINDOW_EXP = 10  # 4 bits
+G_TRANS_EXP = 14  # 4 bits
+G_TDC_EN = 18
+G_TDC_SRC = 19
+G_TDC_POL = 20
+G_CHAR_SEL = 21  # 4 bits
+G_CHAR_DRIVE = 25  # 2 bits
+
+# Readout selector codes, matching the case statement in src/project.v.
+RO_FREQ0, RO_STATUS, RO_NSITES = 0, 6, 7
+RO_TDC0, RO_TDC1, RO_TDC2, RO_TDC3 = 8, 9, 10, 11
+RO_TDC_TAPS, RO_TWIN_MASK, RO_CHAR_COUNT, RO_ALIVE = 12, 13, 14, 15
+
+# Bit positions inside the status byte, readout slot 6. The packing in
+# src/project.v is {0, tdc_valid, tdc_done, tripped, meas_busy, crc_ok, n[1:0]},
+# and getting these off by one is a mistake that reads TRIPPED as an arrival
+# flag and passes, because both are usually zero.
+ST_NSITES, ST_CRC_OK, ST_BUSY = 0, 2, 3
+ST_TRIPPED, ST_TDC_DONE, ST_TDC_VALID = 4, 5, 6
+
+# Characterization path codes, matching the table in src/char_paths.v.
+CH_INV1_D8, CH_INV1_D2, CH_INV1_D4, CH_INV1_D16 = 0, 8, 9, 10
+CH_DRIVE_ISOLATED, CH_DRIVE_SHARED = 14, 15
+
+# Sites built without drive-variant input isolation, from ISO_TWIN_MASK in
+# src/project.v.
+ISO_TWIN_MASK = 0xAA
 
 # Site config field positions inside each 12-bit site word.
 S_FUNC = 0  # 3 bits
@@ -96,12 +129,15 @@ def site_word(func=0, drive=0, load=0, sab=SAB_NONE, route=ROUTE_PREV):
 
 
 def global_word(fb_en=0, calib_en=0, calib_sel=0, cnt_src=0,
-                readout_sel=0, window_exp=2, trans_exp=15):
+                readout_sel=0, window_exp=2, trans_exp=15,
+                tdc_en=0, tdc_src=0, tdc_pol=0, char_sel=0, char_drive=0):
     """window is 2^(4+window_exp) clocks, trip limit is 2^(4+trans_exp) edges."""
     return (fb_en << G_FB_EN) | (calib_en << G_CALIB_EN) | \
-           ((calib_sel & 3) << G_CALIB_SEL) | (cnt_src << G_CNT_SRC) | \
-           ((readout_sel & 7) << G_READOUT_SEL) | \
-           ((window_exp & 15) << G_WINDOW_EXP) | ((trans_exp & 15) << G_TRANS_EXP)
+           ((calib_sel & 7) << G_CALIB_SEL) | (cnt_src << G_CNT_SRC) | \
+           ((readout_sel & 15) << G_READOUT_SEL) | \
+           ((window_exp & 15) << G_WINDOW_EXP) | ((trans_exp & 15) << G_TRANS_EXP) | \
+           (tdc_en << G_TDC_EN) | (tdc_src << G_TDC_SRC) | (tdc_pol << G_TDC_POL) | \
+           ((char_sel & 15) << G_CHAR_SEL) | ((char_drive & 3) << G_CHAR_DRIVE)
 
 
 def build_frame(gword, site_words, corrupt_crc=False):
@@ -364,21 +400,28 @@ async def test_load_ladder_is_reached(dut):
 
 @cocotb.test(skip=GATE_LEVEL)
 async def test_calibration_rings_are_distinguishable(dut):
-    """Every calibration ring must produce a nonzero count, and the four rings
-    must be told apart by that count.
+    """All eight calibration rings must run, the six DIFFERENT ones must be
+    told apart by their count, and the three IDENTICAL ones must not be.
 
-    The four rings differ only in drive variant and in whether a fixed load is
-    hung on every stage, so a count that does not separate them means the drive
-    variant is not reaching the ring, which is the whole measurement block A
-    exists to make."""
+    Rings 0 through 5 differ in drive variant, in loading, in stage count or in
+    what they are built from, so a count that does not separate them means the
+    variation is not reaching the ring, which is the whole measurement block A
+    exists to make.
+
+    Rings 0, 6 and 7 are the same circuit three times. In simulation they MUST
+    agree exactly; there is nothing in a logic simulation that could tell them
+    apart, so any difference here would be a wiring or select bug. On silicon
+    their spread is the within-die variation floor and their difference is a
+    placement effect, which is the only form the spatial experiment takes. See
+    the note in src/calib_macro.v and tools/check_placement.py."""
     await start(dut)
     counts = []
-    for sel in range(4):
+    for sel in range(8):
         # window_exp 2 is 64 clocks, 640 ns, which keeps every ring's edge
         # count inside the 8 bits that the readout byte can show. A longer
         # window aliases the counter and the test would compare wrapped values.
         gw = global_word(calib_en=1, calib_sel=sel, cnt_src=0,
-                         readout_sel=0, window_exp=2, trans_exp=15)
+                         readout_sel=RO_FREQ0, window_exp=2, trans_exp=15)
         words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
         await load_config(dut, build_frame(gw, words))
         # Wait past the end of the window so the count has been captured.
@@ -388,9 +431,146 @@ async def test_calibration_rings_are_distinguishable(dut):
     assert all(c > 0 for c in counts), (
         f"a ring produced no edges: {counts}; the select is not reaching the "
         "rings or a ring is not oscillating")
-    assert len(set(counts)) == 4, (
-        f"calibration rings are not distinguishable ({counts}), so either the "
-        "select or the drive variant is not reaching the rings")
+    distinct = counts[:6]
+    assert len(set(distinct)) == 6, (
+        f"rings 0 to 5 are not distinguishable ({distinct}), so either the "
+        "select or the property under study is not reaching the rings")
+    assert counts[6] == counts[0] and counts[7] == counts[0], (
+        f"rings 0, 6 and 7 are the same circuit and disagree in simulation "
+        f"({counts[0]}, {counts[6]}, {counts[7]}); that is a wiring bug, not a "
+        "physical effect")
+
+
+@cocotb.test()
+async def test_readout_selector_reaches_every_slot(dut):
+    """The readout multiplexer must actually decode all sixteen slots.
+
+    Four of the slots carry constants the design knows and the test knows
+    independently: the site count, the tap count, the un-isolated twin mask and
+    a fixed pattern. A readout mux that had lost its high select bit would
+    return plausible counter bytes for everything and nothing else would
+    notice."""
+    await start(dut)
+    words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
+
+    async def read(sel):
+        gw = global_word(readout_sel=sel, window_exp=0, trans_exp=15)
+        await load_config(dut, build_frame(gw, words))
+        await tick(dut, 40)
+        return dut.uio_out.value.to_unsigned()
+
+    assert await read(RO_NSITES) == N_SITES
+    assert await read(RO_TDC_TAPS) == 32, "tap count slot"
+    assert await read(RO_TWIN_MASK) == ISO_TWIN_MASK, (
+        "the chip and this test disagree about which sites are the un-isolated "
+        "controls; every isolation result would be attributed to the wrong site")
+    assert await read(RO_CHAR_COUNT) == 16, "characterization path count slot"
+    assert await read(RO_ALIVE) == 0xA5, "default slot pattern"
+
+
+async def tdc_measure(dut, char_sel, char_drive=0, tdc_src=0, tdc_pol=0):
+    """Run one TDC trial and return (taps_int, done, valid).
+
+    Thirty-two taps do not fit in an eight bit port, so the measuring trial is
+    followed by three read-only trials with the TDC disabled. That works only
+    because src/tdc.v transfers a capture into the readout register solely when
+    an arrival edge actually occurred; read the note there before changing this.
+    char_sel and tdc_pol are held fixed across all four, so the path output
+    stays static and cannot manufacture an arrival edge of its own.
+    """
+    words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
+
+    async def trial(readout_sel, tdc_en):
+        gw = global_word(readout_sel=readout_sel, window_exp=2, trans_exp=15,
+                         tdc_en=tdc_en, tdc_src=tdc_src, tdc_pol=tdc_pol,
+                         char_sel=char_sel, char_drive=char_drive)
+        await load_config(dut, build_frame(gw, words))
+        await tick(dut, 120)
+        return dut.uio_out.value.to_unsigned()
+
+    # The status byte has to be read on the MEASURING trial. tdc_done reports
+    # the last trial and nothing else, so reading it after the read-only trials
+    # reports that a read-only trial measured nothing, which is true and
+    # useless. This ordering is the host protocol, not a testbench convenience.
+    status = await trial(RO_STATUS, 1)
+    done = (status >> ST_TDC_DONE) & 1
+    valid = (status >> ST_TDC_VALID) & 1
+
+    b0 = await trial(RO_TDC0, 0)
+    b1 = await trial(RO_TDC1, 0)
+    b2 = await trial(RO_TDC2, 0)
+    b3 = await trial(RO_TDC3, 0)
+    return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24), done, valid
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_tdc_orders_the_depth_series(dut):
+    """Longer fixed paths must reach further down the delay line.
+
+    This is the calibration backbone from src/char_paths.v: the same cell at
+    depths 2, 4, 8 and 16. The absolute numbers here are an artefact of the SIM
+    delays in src/cells.v and mean nothing. The ORDER is not an artefact. A
+    delay line whose taps were captured in the wrong order, or a select that
+    did not reach the paths, would break it, and both are mistakes that a
+    fabricated chip could not be talked out of.
+
+    Skipped at gate level for the same reason the ring tests are: the sky130
+    FUNCTIONAL models carry no delay, so every path would capture identically.
+    """
+    await start(dut)
+    seen = []
+    for depth, sel in ((2, CH_INV1_D2), (4, CH_INV1_D4),
+                       (8, CH_INV1_D8), (16, CH_INV1_D16)):
+        taps, done, valid = await tdc_measure(dut, sel)
+        count = bin(taps).count("1")
+        dut._log.info(f"depth {depth:>2}: {count} taps, code {taps:#010x}")
+        assert done, f"depth {depth} produced no arrival edge at the TDC"
+        assert valid, f"depth {depth} left the tap register invalid"
+        seen.append((depth, count))
+    counts = [c for _, c in seen]
+    assert counts == sorted(counts) and len(set(counts)) == 4, (
+        f"the depth series is not ordered: {seen}. Either the taps are captured "
+        "in the wrong order or the path select is not reaching the paths")
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_tdc_is_silent_when_disabled(dut):
+    """With the TDC off, nothing launches and no arrival is recorded.
+
+    The sabotage half of the test above. Without it, a TDC that captured on
+    some unrelated toggling net would pass the depth series by accident."""
+    await start(dut)
+    words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
+    gw = global_word(readout_sel=RO_STATUS, window_exp=2, trans_exp=15,
+                     tdc_en=0, char_sel=CH_INV1_D8)
+    await load_config(dut, build_frame(gw, words))
+    await tick(dut, 120)
+    status = dut.uio_out.value.to_unsigned()
+    assert not ((status >> ST_TDC_DONE) & 1), (
+        "the TDC recorded an arrival with tdc_en low, so it is capturing on "
+        "something other than the launched edge")
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_both_drive_replicas_conduct(dut):
+    """The isolated and un-isolated drive replicas must both carry an edge.
+
+    Paths 14 and 15 are the matched pair that make the cost of drive-variant
+    input isolation a measurement rather than an argument, and they are the only
+    place in the design where the un-isolated arrangement appears outside the
+    four control sites. If either one failed to conduct, the comparison would
+    quietly become a comparison of one thing with nothing.
+
+    This checks conduction and the drive-variant select, and deliberately does
+    NOT compare the two counts. Their difference in simulation is an artefact of
+    the SIM delays; on silicon it is the result."""
+    await start(dut)
+    for sel in (CH_DRIVE_ISOLATED, CH_DRIVE_SHARED):
+        for drive in range(4):
+            taps, done, valid = await tdc_measure(dut, sel, char_drive=drive)
+            assert done and valid, (
+                f"path {sel} at drive variant {drive} produced no arrival; the "
+                "drive one-hot is not reaching the replica")
 
 
 @cocotb.test()
