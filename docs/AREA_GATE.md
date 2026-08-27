@@ -198,3 +198,41 @@ WP4 has to re-run this gate once the full block list exists.
 The CI run is the authoritative source for area, DRC, LVS and timing. The local
 sweep is a fast cross check that costs this machine almost nothing, and it is the
 only one of the two that can answer "what does one more site cost".
+
+## What gate-level simulation can and cannot verify here
+
+Added 2026-08-27, after the first gate-level run against the extracted netlist.
+This matters for WP4, because the RTL freeze will want to lean on gate-level
+simulation and there is a limit to how far it can be leaned on.
+
+**What it verified.** Eight of the ten cocotb tests run against the real netlist
+and pass in 1.3 seconds. That covers the scan chain, the CRC-gated load, the ARM
+interlock, the full function truth table across all eight codes, every sabotage
+mode, the load-ladder reach witness and default-inert behaviour, all against
+hand-instantiated sky130 cells rather than behavioural models. This is the check
+that would catch the flow having quietly rewritten the fabric.
+
+**What it cannot do: run a ring oscillator.** The sky130 FUNCTIONAL cell models
+are combinational and carry no delay, so a ring built from them is a zero-delay
+combinational loop and an event simulator cannot advance time through one. The
+first test to enable a calibration ring froze simulation time at 38,547 ns and
+ran until GitHub killed the job at its six hour limit with vvp still spinning.
+
+That is a fact about event simulators and not about the chip. It is also, exactly,
+the bar PLAN.md sets: what the calibration strip measures is unsettleable by
+simulation alone, which is why the strip is on the die rather than in a testbench.
+The two tests that start a ring are therefore skipped under `GATES=yes`, with the
+reason written where a future reader will hit it.
+
+A second limit sits behind the first. Even if the loop could be advanced, unit
+delay makes every cell take the same time regardless of drive variant, so a
+gate-level run could not distinguish the inv_1, inv_2 and inv_4 rings. That
+difference is a silicon measurement and is listed in `predictions/` as one.
+
+**One testbench bug found by the gate-level run.** The suite sampled outputs 1 ns
+after the clock edge. At RTL an output assignment is instantaneous so that works;
+in the netlist the path from a flip-flop to an output pin takes real time, and
+the sample read the previous value. It presented as the scan chain appearing to
+be one bit short, which is precisely the failure the scan test exists to catch,
+so a testbench bug was wearing the costume of a design bug. Everything now drives
+and samples at mid-period, which is correct in both modes.

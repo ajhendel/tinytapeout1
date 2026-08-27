@@ -16,12 +16,28 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, Timer
 
-# Gate-level runs use the extracted netlist with a UNIT DELAY model, where every
-# cell takes the same time regardless of its drive variant. That is exactly the
-# thing this chip exists to measure, so a gate-level run cannot tell inv_1,
-# inv_2 and inv_4 rings apart and must not be asked to. Where a test asserts a
-# property that only real timing can show, it asserts the weaker property here
-# and says so, rather than being skipped or quietly relaxed for both modes.
+# Gate-level runs simulate the extracted netlist against the PDK cell models.
+# Two tests are skipped there, and the reason is worth stating precisely because
+# it is the project's own thesis showing up in its own test suite.
+#
+# The sky130 FUNCTIONAL cell models are combinational and carry no delay. A ring
+# oscillator built from them is therefore a ZERO-DELAY combinational loop, and an
+# event simulator cannot advance time through one at all. Measured: seven tests
+# completed in 1.3 seconds, then the first test to enable a calibration ring
+# froze simulation time at 38,547 ns and ran until GitHub killed the job at its
+# six hour limit with vvp still spinning.
+#
+# This is a fact about event simulators, not about the chip. The rings are real
+# oscillators in silicon and the RTL suite exercises them through a behavioural
+# model. It is also, precisely, an instance of the bar in PLAN.md: the thing the
+# calibration strip measures is unsettleable by simulation alone, which is why
+# the strip is on the die.
+#
+# The related point, for whoever tries to relax this rather than skip it: even if
+# the loop could be advanced, unit delay makes every cell take the same time
+# regardless of drive variant, so a gate-level run could not tell the inv_1,
+# inv_2 and inv_4 rings apart. That difference is a silicon measurement and is
+# listed in predictions/ as one.
 GATE_LEVEL = os.environ.get("GATES") == "yes"
 
 N_SITES = 8
@@ -120,10 +136,27 @@ def set_ui(dut, **kw):
     dut.ui_in.value = v
 
 
+CLK_PERIOD_NS = 10
+# Where in the clock period the testbench drives inputs and samples outputs.
+# Not 1 ns. At RTL an output assignment is instantaneous, so sampling just after
+# the edge works; in the gate-level netlist the path from a flip-flop to an
+# output pin runs through real cells and takes real time, and sampling 1 ns after
+# the edge read the PREVIOUS value. That showed up as the scan chain appearing to
+# be one bit long, which is exactly the failure the scan test exists to catch, so
+# it was a testbench bug wearing the costume of a design bug.
+#
+# Mid-period is right for both. Outputs have settled by then, and an input driven
+# at mid-period still has half a clock of setup before the next edge.
+SETTLE_NS = CLK_PERIOD_NS // 2 + 1
+
+
 async def tick(dut, n=1):
-    """One or more clock edges, then settle before anything is sampled."""
+    """Advance n clock edges, then move to mid-period.
+
+    Everything drives and samples at mid-period. See SETTLE_NS.
+    """
     await ClockCycles(dut.clk, n)
-    await Timer(1, unit="ns")
+    await Timer(SETTLE_NS, unit="ns")
 
 
 async def shift_frame(dut, frame):
@@ -150,7 +183,7 @@ def uo(dut):
 
 
 async def start(dut):
-    clock = Clock(dut.clk, 10, unit="ns")
+    clock = Clock(dut.clk, CLK_PERIOD_NS, unit="ns")
     cocotb.start_soon(clock.start())
     _ui["v"] = 0
     dut.ena.value = 1
@@ -329,7 +362,7 @@ async def test_load_ladder_is_reached(dut):
         "are not reaching the ladder elements")
 
 
-@cocotb.test()
+@cocotb.test(skip=GATE_LEVEL)
 async def test_calibration_rings_are_distinguishable(dut):
     """Every calibration ring must produce a nonzero count, and the four rings
     must be told apart by that count.
@@ -355,16 +388,6 @@ async def test_calibration_rings_are_distinguishable(dut):
     assert all(c > 0 for c in counts), (
         f"a ring produced no edges: {counts}; the select is not reaching the "
         "rings or a ring is not oscillating")
-    if GATE_LEVEL:
-        # Unit delay makes all four rings the same length in time, because they
-        # are all 31 stages and drive variant costs nothing in that model. What
-        # a gate-level run CAN show is that four real oscillating rings exist in
-        # the netlist and that the select reaches each of them, which is what
-        # the assertion above checks. The variant-dependent difference is a
-        # silicon measurement and is listed in predictions/ as such.
-        dut._log.info("gate level: skipping the distinctness check by design, "
-                      "see the comment in this test")
-        return
     assert len(set(counts)) == 4, (
         f"calibration rings are not distinguishable ({counts}), so either the "
         "select or the drive variant is not reaching the rings")
@@ -383,7 +406,7 @@ async def test_calib_disabled_counts_nothing(dut):
     assert dut.uio_out.value.to_unsigned() == 0, "counter advanced with calib_en low"
 
 
-@cocotb.test()
+@cocotb.test(skip=GATE_LEVEL)
 async def test_safety_trips_on_a_hot_configuration(dut):
     """A configuration that toggles faster than the limit must trip and be
     forced inert, and the trip must be sticky."""
