@@ -100,6 +100,29 @@ along the way; see the commit for a7d494b.
   six of the eight need a physical part on a bench. tools/aws/launch_f2.sh is
   ready but deliberately not run.
 
+**Verification state, 2026-08-27.** The whole pipeline is green on commit
+87bd3bd except one cosmetic job.
+
+| job | result |
+|---|---|
+| `test` (10 cocotb RTL, 44 harness, netlist and constraint checks) | pass |
+| `docs` | pass |
+| `gds` (LibreLane: routing DRC 0, Magic DRC 0, LVS 0, hold 0) | pass |
+| `precheck` (Tiny Tapeout submission gate) | pass |
+| `gl_test` (against the extracted netlist) | 8 pass, 0 fail, 2 skip, 1.29 s |
+| `viewer` | fails, needs GitHub Pages, unavailable while the repo is private |
+
+The two gate-level skips are the tests that start a ring oscillator, and the
+reason is in docs/AREA_GATE.md: the sky130 FUNCTIONAL cell models carry no delay,
+so a ring built from them is a zero-delay combinational loop that an event
+simulator cannot advance through. Measured rather than assumed, by a run that
+froze at 38,547 ns and was killed at GitHub's six hour limit. Do not try to
+re-enable them; fix the models or accept that this is silicon-only, which is the
+bar PLAN.md sets anyway.
+
+`viewer` will start passing on its own once the repo is made public, which it is
+intended to be. Nothing depends on it.
+
 **WP4 and WP5 not started.**
 
 **WP3 item 8 CLOSED**, see docs/BITSTREAM_EVOLUTION_EVAL.md. Adapt two things,
