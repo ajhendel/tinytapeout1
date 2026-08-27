@@ -379,6 +379,58 @@ Two things follow, and they are owed rather than done.
 The 47 max fanout violations are all clock tree leaf buffers at 13 or 14 loads
 against a limit of 10. That is CTS behaving normally and is not ours.
 
+### The slew question, answered from the PDK. 2026-08-27.
+
+The section above left one thing owed: the 0.75 ns limit every violation is
+reported against is OURS, so the run did not say whether the sky130 library's
+own characterization range was exceeded. That decides whether a delay prediction
+for those nodes is an interpolation or an extrapolation, and it is answerable
+from the PDK alone, before silicon. So it was.
+
+**The library limit is 1.5 ns.** From the per-cell Liberty at the slow corner:
+
+    curl -sL https://raw.githubusercontent.com/google/skywater-pdk-libs-sky130_fd_sc_hd/main/cells/einvn/sky130_fd_sc_hd__einvn_1__ss_100C_1v60.lib.json
+    -> max_transition: 1.494088 (input pin), 1.5
+
+LibreLane's `MAX_TRANSITION_CONSTRAINT` is 0.75, from `resolved.json` in the
+build artifacts. It is exactly half the library value: a deliberately
+conservative house rule, not a physical limit.
+
+**Every measured structure is inside the characterized range.**
+
+| structure | worst slew at ss | library limit |
+|---|---|---|
+| calibration ring 5, the drive-node ring | 1.320 ns | 1.5 ns |
+| fabric sites, drive 1 and 2 output nodes | 1.177 ns | 1.5 ns |
+| characterization path 14, isolated replica | 1.014 ns | 1.5 ns |
+| TDC | none reported | 1.5 ns |
+
+So **fabric delay predictions are interpolations, not extrapolations**, and the
+caveat that was about to be attached to them is withdrawn. That was worth
+checking rather than assuming in either direction: the assumption "it violates a
+rule so the model is out of range" would have been wrong, and quietly weakened
+every prediction on the chip.
+
+**Eight pins in the whole design do exceed 1.5 ns, and none of them is ours.**
+All eight are on the `rst_n` distribution chain, which OpenROAD repaired using
+`clkdlybuf4s25_1`, a DELAY buffer, giving 1.813 ns at ss. It is a slow-corner
+effect only: 1.143 ns at tt and 0.854 ns at ff, both inside the range.
+
+That is worth recording because `rst_n` feeds the safety controller, which is
+the part PLAN.md says has to be correct, and because it means the static timing
+numbers on those particular nets are extrapolated at ss. It is not load bearing:
+
+- setup at ss has 7.18 ns of slack, so an error in an extrapolated delay there
+  has three orders of magnitude of margin to eat through
+- the worst HOLD path is at the fast corner, where the same net slews at 0.854 ns
+  and is comfortably in range, and that path is a clock-domain flip-flop-to-itself
+  path rather than anything on the reset network
+
+**No flow configuration change.** Excluding the delay buffers from resizing would
+be a fourth deviation from the stock Tiny Tapeout template, bought for a slew
+violation on a net with seven nanoseconds of margin at the one corner where the
+check that could bite is not performed. Recorded rather than fixed.
+
 ### The placement report, which says the spatial experiment did not happen
 
 `tools/check_placement.py` on the final DEF:

@@ -73,13 +73,24 @@ count, so cutting it removed a class rather than an endpoint.
    it. The load ladder exists to make that true. Path 14 and ring 5 violate the
    same way, which is evidence the replicas really replicate. None of it is a
    timing violation and nothing in signoff gates on it.
-   Two things are now owed. The 0.75 ns limit is OURS, from `set_max_transition`
-   in src/timing.sdc, so whether the sky130 Liberty's own characterization range
-   was exceeded is unanswered and has to be checked against the PDK before any
-   prediction is quoted for those nodes. And input slew is now a variable the
-   inference chain has to carry, not a detail: a fabric site is driven by slower
-   edges than a characterization path, and comparisons between them have to say
-   so. Written into docs/MEASUREMENT_PROTOCOL.md.
+   **The owed half of this is now answered, from the PDK, before any prediction
+   was written.** The sky130 library's own `max_transition` is 1.5 ns, exactly
+   twice LibreLane's 0.75 house rule, and the worst slew in any measured
+   structure is 1.320 ns on calibration ring 5. So every fabric, characterization
+   path and calibration node is INSIDE the characterized range and their delay
+   predictions are interpolations. The opposite assumption, that violating a rule
+   means the model is out of range, would have been wrong and would have quietly
+   weakened every prediction on the chip. Eight pins in the design do exceed
+   1.5 ns; all eight are on the rst_n distribution chain, which OpenROAD repaired
+   with delay buffers, at the slow corner only, with 7.18 ns of setup margin and
+   the worst hold path at a different corner on a different network. Recorded,
+   not fixed; fixing it would be a fourth deviation from the stock template
+   bought for nothing.
+   What remains is not a check but a prediction: input slew is now a variable the
+   inference chain carries. A fabric site is driven by slower edges than a
+   characterization path is, so the delay that slew alone accounts for has to be
+   predicted, or the cost of configurability gets credited with something that
+   was slew. In docs/MEASUREMENT_PROTOCOL.md and predictions/README.md.
 
 2. *The spatial experiment did not happen.* `tools/check_placement.py` on the
    final DEF puts calibration rings 0, 6 and 7 within **43 um of each other on a
@@ -101,13 +112,9 @@ contains a bracket silently found nothing, which reads exactly like "the flow
 optimized that block away". Both fixed; the next run verifies them.
 
 **Owed next, in order.**
-1. Check the sky130 Liberty characterization range against the measured slew on
-   the site output node. Answerable from the PDK alone, before silicon, and it
-   decides whether every fabric delay prediction is an interpolation or an
-   extrapolation.
-2. WP5 pre-registration. predictions/README.md lists what has to be predicted;
+1. WP5 pre-registration. predictions/README.md lists what has to be predicted;
    the depth-series slope is the one that makes the TDC falsifiable.
-3. Blocked on Andrew and only on Andrew: the SKY26c deadline and pricing at
+2. Blocked on Andrew and only on Andrew: the SKY26c deadline and pricing at
    app.tinytapeout.com, the 6x2 tile spend at about 840 EUR, and an iCE40 board.
    The 32-sites-on-8x2 option at about 1,120 EUR is also his call and stays open.
 

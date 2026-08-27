@@ -119,11 +119,18 @@ Calibration strip additions (src/calib_macro.v):
 Input slew, which the same build turned into a live variable rather than a
 detail:
 
-- **Whether the site output node's transition at the slow corner is inside the
-  sky130 Liberty characterization range.** This is a question about the model,
-  answerable before silicon from the PDK alone, and it decides whether every
-  fabric delay prediction is an interpolation or an extrapolation. It must be
-  answered before the fabric predictions are written, not after.
+- ~~Whether the site output node's transition at the slow corner is inside the
+  sky130 Liberty characterization range.~~ **Answered 2026-08-27 before any
+  prediction was written, which was the point of asking it then.** The library
+  limit is 1.5 ns and the worst measured structure slews at 1.320 ns, so every
+  fabric delay prediction is an interpolation. Not a prediction, therefore, and
+  it does not belong in this directory; it is recorded in docs/AREA_GATE.md.
+- What IS still a prediction, and a harder one: **the delay penalty of the slow
+  input edge itself**. A fabric site is driven by a slower edge than a
+  characterization path is, so predict the difference that slew alone accounts
+  for when a fabric delay is quoted against a reference path. Getting this wrong
+  is how the cost of configurability gets attributed to configurability when it
+  was slew.
 
 TDC (src/tdc.v):
 

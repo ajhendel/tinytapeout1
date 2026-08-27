@@ -128,10 +128,13 @@ carried through the inference chain rather than assumed away.
     against a reference path without that accounting attributes the slew to
     whatever else was varying.
   - The 0.75 ns limit is ours, from `set_max_transition` in `src/timing.sdc`,
-    not the library's. Whether the sky130 Liberty's own characterization range
-    was exceeded is a separate question and is **owed** before any prediction is
-    quoted for those nodes. Inside the range a prediction is an interpolation;
-    outside it, it is an extrapolation and must say so.
+    not the library's. **Answered 2026-08-27 from the PDK: the sky130 library's
+    own limit is 1.5 ns, exactly twice ours, and the worst slew in any measured
+    structure is 1.320 ns.** Every fabric, characterization path and calibration
+    strip node is inside the characterized range, so their delay predictions are
+    interpolations. Eight pins in the design do exceed 1.5 ns and all eight are
+    on the reset distribution network, which no measurement touches. Working in
+    docs/AREA_GATE.md.
 
 ## The four-stage experiment protocol
 
