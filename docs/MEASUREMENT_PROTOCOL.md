@@ -79,6 +79,85 @@ moves to tapeout two.
 The variation floor survives unchanged and does not depend on where the rings
 landed.
 
+## The TDC had no usable range, and now it does
+
+Added 2026-08-27, from a design review that asked the question nobody had asked:
+how does the converter's span compare with the paths it is pointed at?
+
+Answered from the post place-and-route SDF of the 24 site build, which is
+extraction and not a guess:
+
+| | typical corner |
+|---|---|
+| tap delay | 0.120 ns |
+| 32 tap line span | 3.835 ns |
+| **one fabric site, series path** | **3.515 ns, 92 percent of the span** |
+| **24 sites end to end** | **about 84 ns, 22 times the span** |
+| `mux4_d8`, a fixed reference path | 5.28 ns, **saturated** |
+| fixed launch and 16:1 select overhead | 1.404 ns, 37 percent of the span |
+
+A linear delay line would have returned all ones for every fabric configuration
+and for one of its own reference paths, and every sufficiently slow
+configuration would have looked identical to every other one. The chip would
+have come back and the fabric would have been unmeasurable.
+
+Four changes, all in this repo's discipline of replacing a guarantee rather than
+dropping it:
+
+1. **The line is a gated ring and the wraps are counted.** Range becomes the
+   counter's, about 2 us, at unchanged 0.12 ns resolution. The ring runs only
+   between launch and arrival and is killed by the arrival edge, so the
+   instrument does not oscillate beside the rest of the measurement window.
+2. **A per-site stop tap.** The converter can be stopped by any site's output,
+   so the per-site delay comes out as the SLOPE of a tap sweep rather than as
+   one unusable total. The tree is balanced three cells deep for every input,
+   because an unbalanced one puts a per-tap offset directly into that slope.
+3. **The output select is a one-hot tri-state merge**, not three levels of mux.
+   Only one path is ever launched, so the merge only has to be one-hot.
+4. **`mux4_d8` became `mux4_d4`.** The ring means saturation is no longer fatal,
+   but a REFERENCE path must sit inside one ring period so that nothing the
+   other measurements are quoted against depends on the coarse counter.
+
+`tools/tdc_range.py` reruns this check from any build's SDF and **exits nonzero
+if a reference path leaves the fine range**. Run it on every corner of every
+build before the submission; the typical and slow corners do not move together,
+because the line and the paths scale differently.
+
+The wrap counter SATURATES at 0xFF rather than rolling over. A rolled-over count
+is indistinguishable from a fast path, which is the one failure mode that would
+publish a slow circuit as a fast one. The host discards a saturated reading; it
+never scales it.
+
+### Reading a ring capture
+
+The tap register is not a thermometer code that grows. The ring parks with every
+tap high, the launch edge walks a 1 to 0 transition down it, then a 0 to 1, and
+so on. Taps below the edge carry the new value and the parity of the traversal
+decides which that is.
+
+A population count is therefore the WRONG decode, and it is wrong in a way that
+looks plausible: it decreases as the path gets longer on odd traversals. The
+first run of the depth series test reported a perfectly ordered series running
+backwards. `tdc_decode()` in `harness/evofab/genome.py` is the correct one, and
+`test/test.py` carries an independent reimplementation rather than importing it.
+
+### The two bugs the tests found before silicon did
+
+Recorded because both were silent and both would have produced numbers.
+
+- **A phantom wrap.** Killing the ring drives its input high, and that edge walks
+  down the line and produces one more counter posedge AFTER the measurement is
+  over. Reading the counter later reported one extra ring period, 64 taps of
+  delay that never happened, on every single reading. The count is now latched
+  by the arrival edge, exactly like the taps.
+- **Capturing the settling transient.** The configuration registers and the
+  measurement window open on the same clock edge, so at the start of every trial
+  the fabric is still settling and its outputs are transitioning. The sampler,
+  armed at that moment, captured the transient, reported a successful
+  measurement, and returned a number that looked like a very fast path. The
+  window is now divided: eight clocks of settling, then arm, then four more,
+  then launch.
+
 ## The TDC is not calibrated until it is calibrated on the die
 
 The converter reports raw tap counts. It is sampled by the arrival edge of the

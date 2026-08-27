@@ -37,7 +37,9 @@ jobs:
       - name: GL test
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
 
-  placement_report:
+  build_reports:
+    # Two questions the build artifacts can answer and the build itself does not.
+    #
     # Where did the flow actually put the things whose POSITION is the result?
     # Three of the calibration rings are byte-for-byte identical, so their
     # difference is a placement effect and nothing else, and we cannot ask the
@@ -71,12 +73,32 @@ jobs:
           echo "reporting on $def"
           python3 tools/check_placement.py "$def" --json placement.json
 
-      - name: upload the placement report
+      # And does the time-to-digital converter have usable range for the paths
+      # it is pointed at? That is answerable from extraction, before
+      # fabrication, and the first version of this design shipped without
+      # asking: the converter spanned 3.835 ns and one fabric site took 3.515 of
+      # them. This step FAILS if a reference path leaves the fine range, because
+      # a reference other measurements are quoted against must not depend on the
+      # coarse counter. See docs/MEASUREMENT_PROTOCOL.md.
+      - name: TDC range against every intended path
+        shell: bash
+        run: |
+          set -uo pipefail
+          rc=0
+          for sdf in $(find submission -path '*stapostpnr*' -name '*.sdf' | sort); do
+            echo "=============================================================="
+            python3 tools/tdc_range.py "$sdf" --markdown || rc=1
+          done | tee tdc_range.md
+          exit $rc
+
+      - name: upload the build reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: placement-report
-          path: placement.json
+          name: build-reports
+          path: |
+            placement.json
+            tdc_range.md
           if-no-files-found: warn
 
   viewer:

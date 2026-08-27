@@ -15,6 +15,7 @@ project:
   source_files:
     - "cells.v"
     - "drive_node.v"
+    - "load_ladder.v"
     - "fabric_site.v"
     - "calib_macro.v"
     - "char_paths.v"

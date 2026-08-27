@@ -7,7 +7,7 @@ same assumption.
 
 Layout, matching src/scan_config.v and src/fabric_site.v.
 
-    frame = [ GLOBAL 32 ][ SITE 0 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
+    frame = [ GLOBAL 48 ][ SITE 0 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
 
 shifted MSB first, so site 0 lands in the high bits of the site region. That
 detail is easy to get backwards and doing so silently reverses the genome, which
@@ -21,7 +21,7 @@ import hashlib
 import random
 from typing import Iterable, Sequence
 
-GLOBAL_W = 32
+GLOBAL_W = 48
 SITE_W = 12
 CRC_W = 8
 
@@ -50,15 +50,20 @@ ROUTES = ["PREV", "PI", "FEEDBACK", "ONE"]
 G_FB_EN, G_FB_EN_W = 0, 1
 G_CALIB_EN, G_CALIB_EN_W = 1, 1
 G_CALIB_SEL, G_CALIB_SEL_W = 2, 3
-G_CNT_SRC, G_CNT_SRC_W = 5, 1
-G_READOUT_SEL, G_READOUT_SEL_W = 6, 4
-G_WINDOW_EXP, G_WINDOW_EXP_W = 10, 4
-G_TRANS_EXP, G_TRANS_EXP_W = 14, 4
-G_TDC_EN, G_TDC_EN_W = 18, 1
-G_TDC_SRC, G_TDC_SRC_W = 19, 1
-G_TDC_POL, G_TDC_POL_W = 20, 1
-G_CHAR_SEL, G_CHAR_SEL_W = 21, 4
-G_CHAR_DRIVE, G_CHAR_DRIVE_W = 25, 2
+G_CNT_SRC, G_CNT_SRC_W = 5, 2
+G_READOUT_SEL, G_READOUT_SEL_W = 7, 5
+G_WINDOW_EXP, G_WINDOW_EXP_W = 12, 4
+G_TRANS_EXP, G_TRANS_EXP_W = 16, 4
+G_TDC_EN, G_TDC_EN_W = 20, 1
+G_TDC_SRC, G_TDC_SRC_W = 21, 1
+G_TDC_POL, G_TDC_POL_W = 22, 1
+G_CHAR_SEL, G_CHAR_SEL_W = 23, 5
+G_CHAR_DRIVE, G_CHAR_DRIVE_W = 28, 2
+G_TDC_TAP, G_TDC_TAP_W = 30, 5
+G_TDC_FREERUN, G_TDC_FREERUN_W = 35, 1
+
+# What the frequency counter watches.
+CNT_SRC = {"calib": 0, "fabric": 1, "tdc_ring": 2}
 
 # Readout selector codes, matching the case statement in src/project.v.
 READOUT = {
@@ -67,7 +72,67 @@ READOUT = {
     "status": 6, "n_sites": 7,
     "tdc0": 8, "tdc1": 9, "tdc2": 10, "tdc3": 11,
     "tdc_taps": 12, "twin_mask": 13, "char_count": 14, "alive": 15,
+    # The coarse half of a TDC reading. 0xFF means SATURATED: discard the
+    # measurement, never scale it. A wrapped count reads as a fast path.
+    "tdc_wraps": 16,
+    "tdc_tap_echo": 17, "char_sel_echo": 18, "global_w": 19,
 }
+TDC_WRAPS_SATURATED = 0xFF
+TDC_TAPS = 32
+
+
+def tdc_decode(taps: int, wraps: int, n_taps: int = TDC_TAPS) -> int:
+    """Turn a raw TDC capture into a delay in units of one line stage.
+
+    The delay line is a RING, so the tap register is not a thermometer code that
+    grows monotonically. The ring parks with every tap high; the launch edge
+    walks a 1 to 0 transition down it, then a 0 to 1 transition, alternating.
+    So during traversal T the taps below the edge carry the NEW value and the
+    ones above carry the old, and which is which flips with the parity of T.
+
+    Population count alone is therefore the wrong decode, and it is wrong in a
+    way that looks plausible: it DECREASES as the path gets longer on odd
+    traversals. That is what the first run of the depth-series test reported,
+    a perfectly ordered series running backwards.
+
+    wraps counts full ring periods, which is two traversals, so it fixes T only
+    to within one. The parity comes from the lowest tap, which is the first to
+    change and therefore always carries the new value once the edge has moved
+    at all.
+    """
+    full = (1 << n_taps) - 1
+    if taps == full:
+        # Nothing has moved yet: the arrival beat the first tap. Only reachable
+        # for a path shorter than one buffer, which on silicon means something
+        # is wrong, so it is not silently folded into the general case.
+        return wraps * 2 * n_taps
+    ones = bin(taps).count("1")
+    if taps & 1:
+        traversal = 2 * wraps + 1      # low taps are 1: an odd traversal
+        pos = ones
+    else:
+        traversal = 2 * wraps          # low taps are 0: an even traversal
+        pos = n_taps - ones
+    return traversal * n_taps + pos
+
+
+def tdc_bubbles(taps: int, n_taps: int = TDC_TAPS) -> int:
+    """How many bit positions disagree with a clean boundary.
+
+    Not an error measure. Bubbles are the map of which bins are wide and which
+    are narrow, and that map IS the calibration; see docs/MEASUREMENT_PROTOCOL.md.
+    This counts them so a run can report bin quality rather than assume it.
+    """
+    bits = [(taps >> i) & 1 for i in range(n_taps)]
+    first = bits[0]
+    # a clean pattern is a run of `first` followed by a run of its complement
+    boundary = n_taps
+    for i, b in enumerate(bits):
+        if b != first:
+            boundary = i
+            break
+    clean = [first] * boundary + [1 - first] * (n_taps - boundary)
+    return sum(1 for a, b in zip(bits, clean) if a != b)
 
 # The eight fixed calibration rings, by calib_sel code. See src/calib_macro.v.
 # Rings 0, 6 and 7 are the SAME circuit; their spread is the within-die
@@ -80,15 +145,29 @@ CALIB_RINGS = ["inv1", "inv2", "inv4", "inv1_loaded", "inv1_compact",
 CHAR_PATHS = [
     "inv1_d8", "inv2_d8", "inv4_d8", "inv8_d8",
     "inv1_d8_loaded", "inv2_d8_loaded", "inv4_d8_loaded", "inv8_d8_loaded",
-    "inv1_d2", "inv1_d4", "inv1_d16",
-    "nand1_d8", "nand4_d8", "mux4_d8",
+    "inv1_d2", "inv1_d4", "inv1_d16", "inv1_d32",
+    "nand1_d8", "nand4_d8", "mux4_d4",
     "drive_isolated_d4", "drive_shared_d4",
+    # The ladder mechanism in isolation. These two differ ONLY in whether the
+    # load ladder's enables are tied high or low. Liberty predicts their
+    # difference to be exactly zero because the format has one capacitance per
+    # pin; see src/load_ladder.v.
+    "ladder_off_d8", "ladder_on_d8",
+    "spare_d8",
 ]
 
 # The depth series, in stage order. A straight line through these four gives the
 # per-stage delay AND the fixed offset from the launch gate, the select tree and
 # the TDC input. Everything else in CHAR_PATHS is quoted against that offset.
-DEPTH_SERIES = [(2, "inv1_d2"), (4, "inv1_d4"), (8, "inv1_d8"), (16, "inv1_d16")]
+DEPTH_SERIES = [(2, "inv1_d2"), (4, "inv1_d4"), (8, "inv1_d8"),
+                (16, "inv1_d16"), (32, "inv1_d32")]
+
+# The two matched pairs. Each differs in exactly one construction choice, so the
+# difference is that choice and nothing else.
+MATCHED_PAIRS = {
+    "input_isolation": ("drive_isolated_d4", "drive_shared_d4"),
+    "load_ladder": ("ladder_off_d8", "ladder_on_d8"),
+}
 
 # Sites built WITHOUT drive-variant input isolation, from ISO_TWIN_MASK in
 # src/project.v. Each is paired with its even-indexed isolated neighbour.
@@ -125,7 +204,7 @@ class Site:
 
     def describe(self) -> str:
         return (f"{FUNCTIONS[self.func]} x{[1, 2, 4, 8][self.drive]} "
-                f"load{self.load} {SABOTAGE[self.sab]} src={ROUTES[self.route]}")
+                f"ladder{self.load} {SABOTAGE[self.sab]} src={ROUTES[self.route]}")
 
 
 @dataclasses.dataclass(frozen=True)
@@ -142,6 +221,8 @@ class Globals:
     tdc_pol: int = 0
     char_sel: int = 0
     char_drive: int = 0
+    tdc_tap: int = 0
+    tdc_freerun: int = 0
 
     def encode(self) -> int:
         return (_field(self.fb_en, G_FB_EN_W, "fb_en") << G_FB_EN
@@ -155,7 +236,9 @@ class Globals:
                 | _field(self.tdc_src, G_TDC_SRC_W, "tdc_src") << G_TDC_SRC
                 | _field(self.tdc_pol, G_TDC_POL_W, "tdc_pol") << G_TDC_POL
                 | _field(self.char_sel, G_CHAR_SEL_W, "char_sel") << G_CHAR_SEL
-                | _field(self.char_drive, G_CHAR_DRIVE_W, "char_drive") << G_CHAR_DRIVE)
+                | _field(self.char_drive, G_CHAR_DRIVE_W, "char_drive") << G_CHAR_DRIVE
+                | _field(self.tdc_tap, G_TDC_TAP_W, "tdc_tap") << G_TDC_TAP
+                | _field(self.tdc_freerun, G_TDC_FREERUN_W, "tdc_freerun") << G_TDC_FREERUN)
 
     @classmethod
     def decode(cls, word: int) -> "Globals":
@@ -171,7 +254,9 @@ class Globals:
                    tdc_src=m(G_TDC_SRC, G_TDC_SRC_W),
                    tdc_pol=m(G_TDC_POL, G_TDC_POL_W),
                    char_sel=m(G_CHAR_SEL, G_CHAR_SEL_W),
-                   char_drive=m(G_CHAR_DRIVE, G_CHAR_DRIVE_W))
+                   char_drive=m(G_CHAR_DRIVE, G_CHAR_DRIVE_W),
+                   tdc_tap=m(G_TDC_TAP, G_TDC_TAP_W),
+                   tdc_freerun=m(G_TDC_FREERUN, G_TDC_FREERUN_W))
 
 
 class UnsafeGenome(Exception):
@@ -276,6 +361,24 @@ class Genome:
         # category as the one above. They live here rather than in a review
         # checklist because a confound that only shows up in the analysis three
         # months later is indistinguishable from a result.
+        if self.globals.tdc_en and self.globals.window_exp < 1:
+            raise UnsafeGenome(
+                "tdc_en with window_exp=0 gives a 16 clock window, and the "
+                "converter spends the first 12 of those settling and arming. "
+                "See the note on tdc_wait in src/project.v; use window_exp >= 1")
+
+        if self.globals.tdc_freerun and not self.globals.tdc_en:
+            raise UnsafeGenome(
+                "tdc_freerun without tdc_en does nothing; the ring is gated by "
+                "the launch edge, which only fires when the TDC is enabled")
+
+        if self.globals.tdc_freerun and self.globals.cnt_src != CNT_SRC["tdc_ring"]:
+            raise UnsafeGenome(
+                "tdc_freerun exists to measure the TDC ring's own period, so "
+                "the frequency counter has to be watching the ring. Any other "
+                "counter source with the ring free-running is a measurement "
+                "taken beside an oscillator nobody is reading")
+
         if self.globals.tdc_en and self.globals.calib_en:
             raise UnsafeGenome(
                 "tdc_en with calib_en runs a ring oscillator while the TDC "
@@ -344,6 +447,12 @@ def mutate_drive(g: Genome, rng: random.Random) -> Genome:
 
 
 def mutate_load(g: Genome, rng: random.Random) -> Genome:
+    """Move one site's LOAD LADDER STATE by one step.
+
+    Not "add a unit of capacitance". The four codes are four states of a fixed
+    ladder whose loading on the node differs by a bias-dependent fraction, and
+    Liberty predicts no difference between them at all. See src/load_ladder.v.
+    """
     i = rng.randrange(g.n_sites)
     s = g.sites[i]
     step = rng.choice([-1, 1])

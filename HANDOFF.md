@@ -49,6 +49,108 @@ WP1 and WP2 complete, WP3 items 1–3 running with real numbers written back int
 
 ## Status
 
+### 2026-08-27, second design review. The instrument did not work, and now it does.
+
+Read this before anything else. A review of the built design found two things
+that a completed, DRC-clean, LVS-clean build had not mentioned, and one of them
+meant the chip could not perform its central measurement.
+
+**1. The TDC had no usable range for the fabric. This was the real defect.**
+
+Bounded from the post place-and-route SDF, which is extraction and not a guess:
+the 32 tap line spanned 3.835 ns at the typical corner, ONE fabric site's series
+path was 3.515 ns of that, and the whole 24 site column was about 84 ns, 22
+times the span. One of the converter's own reference paths, mux4_d8 at 5.28 ns,
+saturated too. A linear delay line would have returned all ones for every fabric
+configuration; every slow configuration would have looked identical to every
+other one; and none of that would have been visible until dies arrived.
+
+The question was answerable before fabrication from an artifact the build
+already produced, and it had not been asked. `tools/tdc_range.py` now asks it
+automatically from any build's SDF and FAILS if a reference path leaves the fine
+range, and it runs in CI.
+
+Four changes fixed it:
+  - the delay line is a GATED RING and the wraps are counted, so range is the
+    counter's rather than the line's, at unchanged 0.12 ns resolution. The ring
+    runs only between launch and arrival, so the instrument is not oscillating
+    beside the rest of the measurement window.
+  - a PER-SITE STOP TAP, so the converter can be stopped by any site's output.
+    The per-site delay now comes out as the SLOPE of a tap sweep rather than as
+    one unusable total. The tree is balanced three cells deep for every input,
+    because an unbalanced one puts a per-tap offset straight into that slope.
+  - the output select became a one-hot tri-state merge rather than three levels
+    of mux, recovering about a nanosecond that was being spent on every reading.
+  - mux4_d8 became mux4_d4, so no reference path depends on the coarse counter.
+
+It works. In simulation the depth series now returns 6, 8, 11, 17 and 28 taps
+for depths 2, 4, 8, 16 and 32, a slope of 0.733 taps per stage against an exact
+expected 0.727; and the fabric tap sweep returns 19, 29, 48, 88 and 172 taps for
+1, 2, 4, 8 and 16 sites, a slope of 10.2 taps per site with a linear fit. That
+second series is the measurement this chip exists to make and it could not be
+made at all a day ago.
+
+**2. The load ladder was described wrongly, and the correct description is a
+better experiment.**
+
+The config comment said "0 = switch parasitic only, then +1, +2, +4", which
+reads as four added unit loads. It is not. The sky130 einvn netlist settles it:
+the A-input devices have their DRAINS on the output and their SOURCES on
+internal nodes that the enable devices tie to the rails. So part of the input
+capacitance faces the output in every state and never disconnects, and part
+faces a node that floats when disabled. The effect is real, partial and bias
+dependent, which is what src/fabric_site.v's header had said all along while the
+field description said something else.
+
+The sharp part: Liberty has ONE capacitance number per input pin, 0.002382 pF
+for einvn_1, with no dependence on the enable, because the format cannot express
+one. **So the Liberty-layer prediction for the entire load field is exactly
+zero.** That is not a gap to apologize for, it is the cleanest
+model-discrimination test on the chip: one layer says the knob does nothing,
+extraction and SPICE say it does something specific, silicon arbitrates.
+
+The ladder is now its own module, src/load_ladder.v, shared by the fabric and by
+two new fixed characterization paths that carry the same ladder with its enables
+tied high and tied low. The mechanism is measured in isolation, and the pair
+joins the drive-isolation pair as a construction choice this chip measures
+rather than argues about.
+
+**Two bugs the new tests found before silicon did.** Both silent, both would
+have produced numbers.
+  - A PHANTOM WRAP. Killing the ring drives its input high, and that edge walks
+    the line and produces one more counter posedge after the measurement is
+    over. Reading the counter later added 64 taps of delay that never happened
+    to every reading. The count is now latched by the arrival edge.
+  - CAPTURING THE SETTLING TRANSIENT. Configuration and window open on the same
+    clock edge, so the sampler was armed while the fabric was still settling; it
+    captured the transient, reported success, and returned something that looked
+    like a very fast path. The window is now divided: eight clocks settling,
+    arm, four more, launch.
+
+**Scope claims corrected.** A full adder cannot be expressed on this chip; the
+fabric is a serial column with two inputs and one output and no per-site state,
+and that example is removed from docs/FUNCTIONS.md. Sabotage is exhaustive
+single-site OUTPUT fault injection and never gate deletion, because the function
+bank inside a site is always active. PLAN.md's stale 48-64 site and physics
+patch language is fixed and its tapeout-two list is now specific.
+
+**docs/EXPERIMENT_MATRIX.md is new**: thirteen studies with their instrument,
+configuration count, die pool, control arm and falsification condition, plus the
+six studies deliberately absent. Same rule as predictions/, committed before the
+deadline and append only, because a study list assembled after the dies arrive
+is a list of whatever turned out to work.
+
+**State.** 17 cocotb tests and 44 harness tests pass. Netlist, constraint and
+range checks pass and were sabotage-tested. Verilator clean across src/. The
+fixed instrumentation is now about half the cell count at 24 sites, which
+projects to roughly 33 percent utilization on 6x2 against 28.4 measured last
+build and 34.8 that routed clean. If the build comes back congested the answer
+is fewer sites, not less instrument.
+
+**Owed next.** Re-run tools/tdc_range.py on the new SDF and paste the table into
+docs/MEASUREMENT_PROTOCOL.md; then WP5. Andrew still owns the deadline, the
+price and the board.
+
 ### 2026-08-27, the build at 24 sites. Measured, not projected.
 
 LibreLane completed at commit becb941. gds, precheck and gl_test all pass; the

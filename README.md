@@ -13,6 +13,7 @@ Start with [PLAN.md](PLAN.md). Everything in `docs/` supports it.
 - [docs/PRIOR_ART.md](docs/PRIOR_ART.md) — enumeration checklist; no novelty claim is written until its row here is closed
 - [docs/THROUGHPUT.md](docs/THROUGHPUT.md) — evolution feasibility math (genome size, trials per second)
 - [docs/MEASUREMENT_PROTOCOL.md](docs/MEASUREMENT_PROTOCOL.md) — the inference chain, which instrument answers which question, and the four-stage experiment order
+- [docs/EXPERIMENT_MATRIX.md](docs/EXPERIMENT_MATRIX.md) — the fixed list of studies, committed before fabrication, including the ones deliberately absent
 - [docs/AREA_GATE.md](docs/AREA_GATE.md) — what the flow actually said, twice, and why the chip ships at 24 sites
 - [docs/TT_LOGISTICS.md](docs/TT_LOGISTICS.md) — shuttle facts, pricing, deadlines, sources
 - [TODO.md](TODO.md) — phase 0 checklist, in order

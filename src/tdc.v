@@ -8,6 +8,40 @@
 // number of stages the launch edge had reached by then is the path's delay,
 // measured in units of one line stage.
 //
+// THE RANGE PROBLEM, AND WHY THIS IS A RING
+//
+// A bare 32 stage line spans 3.835 ns at the typical corner, measured from the
+// post place-and-route SDF of the 24 site build, at 0.120 ns per tap. That is
+// enough for the fixed characterization paths and it is NOT enough for the
+// fabric. From the same SDF, ONE fabric site's series path is 3.515 ns, which
+// is 92 percent of the whole span, and 24 sites is about 84 ns, or 22 times it.
+// A linear line would have returned all ones for every fabric configuration and
+// every sufficiently slow configuration would have looked identical.
+//
+// So the line is closed into a GATED RING and the wraps are counted. Range
+// becomes the counter's range, about 2 us, while resolution stays one tap. This
+// is the ordinary coarse-plus-fine construction and it costs one NAND, one flip
+// flop and an eight bit counter.
+//
+// Three properties of the arrangement are load bearing.
+//
+//   1. The ring is parked until launch and is KILLED by the arrival edge, so it
+//      runs for exactly the interval being measured and never for the rest of
+//      the measurement window. An instrument that oscillates for ten
+//      milliseconds while something else is being measured is a supply
+//      disturbance, and this one is the thing we would be measuring with.
+//   2. The first traversal after launch behaves exactly as the old linear line
+//      did, because the ring parks with every tap high and the launch edge
+//      walks a single transition down it. Short paths therefore read the same
+//      as before and the wrap count is zero.
+//   3. The wrap counter SATURATES rather than wrapping. A wrapped count is
+//      indistinguishable from a fast path, which is the one failure that would
+//      publish a slow circuit as a fast one.
+//
+// The ring's period is not assumed. It is the same node the frequency counter
+// can be pointed at (cnt_src = 2 in src/project.v), so one trial measures the
+// period and another measures the path, on the same die in the same session.
+//
 // WHY THIS AND NOT A RING OSCILLATOR
 //
 // The calibration strip already answers "how fast is this die right now" with
@@ -61,11 +95,14 @@ module tdc #(
 ) (
     input  wire            clk,
     input  wire            rst_n,
-    input  wire            gate,      // measurement window plus the readout tail
+    input  wire            armed,     // released only after the fabric settles
     input  wire            capture,   // one clk pulse inside the tail
     input  wire            start,     // launch edge, clk domain
     input  wire            stop,      // arrival edge, asynchronous
+    input  wire            freerun,   // hold the ring running for the whole window
     output wire [TAPS-1:0] taps,
+    output wire      [7:0] wrap_count,// full ring periods before the arrival
+    output wire            ring,      // the ring node, for the frequency counter
     output wire            done,      // the MOST RECENT trial saw an arrival
     output wire            valid      // taps holds a real capture, not zeros
 );
@@ -76,7 +113,25 @@ module tdc #(
   // broken line. Every element is a keep/dont_touch wrapper, because a delay
   // line is exactly the structure a resizer would like to shorten.
   wire [TAPS:0] line;
-  assign line[0] = start;
+
+  // Ring closure. NAND makes the loop odd-inversion so it oscillates, and gates
+  // it: with run low the ring parks with line[0] high and every tap high.
+  //
+  // ring_kill is set by the arrival edge, which stops the ring immediately. The
+  // capture flip flops below are clocked by the same edge through a shorter
+  // path (one buffer) than the kill takes to reach line[0] and propagate, so
+  // the capture always wins the race. That ordering is the reason the kill is
+  // placed here and not inside the sampling registers.
+  // freerun suppresses the kill so the ring free-runs for the whole measurement
+  // window. That is not a measurement mode, it is how the ring's own PERIOD is
+  // measured: point the frequency counter at the ring node (cnt_src = 2 in
+  // src/project.v) and count it over a known window. Without that, the coarse
+  // count would be in units of an interval nobody had measured, and the whole
+  // coarse-plus-fine construction would rest on a Liberty number, which is
+  // exactly the circularity PLAN.md section 2 forbids for the TDC.
+  reg  ring_kill;
+  wire run = start & (~ring_kill | freerun);
+  cell_nand2 #(.DRIVE(2)) ring_close (.A(run), .B(line[TAPS]), .Y(line[0]));
 
   genvar i;
   generate
@@ -105,7 +160,18 @@ module tdc #(
   localparam integer GROUPS   = 4;
   localparam integer PER_GRP  = TAPS / GROUPS;
 
-  wire clr_n = rst_n & gate;
+  // ARMED, not the raw measurement gate. The configuration registers and the
+  // window open on the SAME clock edge, so for the first tens of nanoseconds of
+  // every trial the fabric is still settling into its new configuration and its
+  // outputs are transitioning. A sampler released at that moment captures the
+  // settling transient instead of the launched edge, reports done, and returns
+  // a number that looks like a fast path. That is what the per-site test
+  // measured before this was fixed: the first two taps reported an arrival with
+  // the delay line still parked.
+  //
+  // src/project.v holds this low for the first eight clocks of every window and
+  // fires the launch four clocks after that.
+  wire clr_n = rst_n & armed;
 
   wire samp_root;
   cell_buf #(.DRIVE(4)) samp_rt (.A(stop), .X(samp_root));
@@ -152,6 +218,37 @@ module tdc #(
   // is a fault and must not be reported as a measurement.
   wire fired = &fired_grp;
 
+  // ---------------------------------------------------- stop the ring on arrival
+  always @(posedge samp_root or negedge clr_n) begin
+    if (!clr_n) ring_kill <= 1'b0;
+    else        ring_kill <= 1'b1;
+  end
+
+  // ------------------------------------------------------------ wrap counter
+  // Counts full ring periods between launch and arrival. Clocked by the last
+  // tap, asynchronously cleared between trials, and SATURATING: an overflowed
+  // count would be indistinguishable from a fast path, and reading a saturated
+  // count as a measurement is how a slow circuit gets published as a fast one.
+  // The host is expected to check for 8'hFF and discard.
+  reg [7:0] wraps;
+  always @(posedge line[TAPS] or negedge clr_n) begin
+    if (!clr_n)              wraps <= 8'h00;
+    else if (wraps != 8'hFF) wraps <= wraps + 8'd1;
+  end
+
+  // The coarse count has to be latched by the ARRIVAL edge, exactly like the
+  // taps, and not read later in the clock domain. Killing the ring drives
+  // line[0] high, and that edge walks down the line and produces one more
+  // posedge on line[TAPS] AFTER the measurement is over. Reading the counter
+  // later therefore reports one phantom wrap, which is 64 taps of delay that
+  // never happened. The tests found this before silicon did: the shortest fixed
+  // path in the design reported a full extra ring period.
+  reg [7:0] wraps_at_arrival;
+  always @(posedge samp_root or negedge clr_n) begin
+    if (!clr_n) wraps_at_arrival <= 8'h00;
+    else        wraps_at_arrival <= wraps;
+  end
+
   // ------------------------------------------------- hand over to the clk side
   // TAPS bits do not fit in an 8 bit readout port, so the host reads the
   // capture over several trials. That only works if a trial taken purely to
@@ -172,24 +269,29 @@ module tdc #(
   // Reading bytes without checking done is how a dead path gets published as a
   // fast one.
   reg [TAPS-1:0] held;
+  reg      [7:0] held_wraps;
   reg            held_valid;
   reg            fired_last;
   always @(posedge clk) begin
     if (!rst_n) begin
       held       <= {TAPS{1'b0}};
+      held_wraps <= 8'h00;
       held_valid <= 1'b0;
       fired_last <= 1'b0;
     end else if (capture) begin
       fired_last <= fired;
       if (fired) begin
         held       <= cap;
+        held_wraps <= wraps_at_arrival;
         held_valid <= 1'b1;
       end
     end
   end
 
-  assign taps  = held;
-  assign done  = fired_last;
-  assign valid = held_valid;
+  assign taps       = held;
+  assign wrap_count = held_wraps;
+  assign ring       = line[TAPS];
+  assign done       = fired_last;
+  assign valid      = held_valid;
 
 endmodule

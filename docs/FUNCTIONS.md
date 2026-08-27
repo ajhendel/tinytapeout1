@@ -43,11 +43,12 @@ The fabric's transient dynamics (with feedback edges enabled) as a fixed random 
 ## Tier B — below-the-abstraction search (the second class)
 
 ### 7. Electrical-realization evolution
-Hold a truth table fixed (full adder, majority, popcount cell, the mojolearn rounding/sticky cell as a payload with personal resonance). Evolve drive strengths, loads, and routes against measured delay and marginal-voltage correctness. Compare with open-PDK model predictions committed before tapeout.
+Hold a truth table fixed and evolve the physical realization of it. **Corrected 2026-08-27: the payload has to be a TWO-input, one-output function, or a serial composition of them.** The fabric is a single column with two Boolean inputs, one output and no per-site state, so a full adder, which needs three inputs and two outputs, cannot be expressed on this chip and was a wrong example in an earlier draft. What fits: any two-input gate, long compositions of them, and delay chains whose truth table is the identity. Three-input payloads are a tapeout-two requirement. Evolve drive strengths, loads, and routes against measured delay and marginal-voltage correctness. Compare with open-PDK model predictions committed before tapeout.
 - Applications: this is science about the abstraction gap and about the open PDK's models; the practical beneficiary is the open-silicon toolchain community (better-calibrated models, documented failure modes).
 
 ### 8. Fault-tolerance at the physical level
-Circuits that keep computing under every single-cell sabotage, measured at speed and at voltage corners, not just logically.
+Circuits that keep computing under every single-SITE OUTPUT fault, measured at speed and at voltage corners, not just logically.
+- **Named accurately 2026-08-27.** The sabotage field alters what leaves a site: stuck at zero, stuck at one, bypass A, bypass B, invert. It does not disable individual gates inside a site, and it cannot: the function bank is always active and is not individually sabotageable. So the chip supports exhaustive single-site output fault injection, and it does NOT support deleting an arbitrary gate from the circuit. The mechanism is still the right one for the fault-tolerance question; the granularity has to be stated every time it is used.
 - Applications of the class: radiation-tolerant and safety-critical design insight; whether logical redundancy is free at the operating edge.
 
 ### 9. Graceful degradation under overclock and reduced supply

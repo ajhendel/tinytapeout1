@@ -40,8 +40,15 @@ netlist instead of being assumed.
      the sites, the control arm would quietly become a copy of the treatment
      arm and the comparison would report zero.
 
-  8. Both drive-stage replicas in the characterization block are intact, with
-     the full set of drive variants each.
+  8. Both matched pairs in the characterization block are intact: the drive
+     replicas that isolate input isolation, and the ladder replicas that
+     isolate what the load field physically does. A comparison with a dead arm
+     reports no difference, and no difference reads as a result.
+
+  9. The per-site stop tap tree is balanced, eight cells then two then one.
+     An unbalanced tree puts a different offset on different taps, and that
+     offset lands in the fitted per-site slope, which is the single number the
+     whole fabric experiment produces.
 
 Usage: tools/check_netlist.py build/area/n8.json [--sites 8] [--taps 32]
 """
@@ -77,6 +84,7 @@ def main():
     # in src/project.v; passed in rather than hardcoded so that a deliberate
     # change has to be stated in two places at once.
     ap.add_argument("--unisolated", default="1,3,5,7")
+    ap.add_argument("--char-paths", type=int, default=20)
     args = ap.parse_args()
     unisolated = {int(x) for x in args.unisolated.split(",") if x.strip()}
 
@@ -221,16 +229,52 @@ def main():
             f"{len(anchor)}; src/timing.sdc points at that name and a false "
             f"path that matches nothing waives real timing in silence")
 
-    # ------------------------------------- 8. both drive replicas are present
-    for path, label in (("p14", "isolated"), ("p15", "un-isolated")):
-        n_tri = len([n for n in tri if f"u_char.{path}." in n])
-        print(f"characterization drive replica {path} ({label}): "
-              f"{n_tri} tri-state cells (expected 16)")
-        if n_tri != 16:
+    # ---------------------------- 8. the matched pairs and the merge are intact
+    # Two pairs, each differing in exactly one construction choice, and each
+    # therefore useless if one arm is missing: a comparison with a dead arm
+    # reports zero and reads as a finding.
+    for path, n_tri, label in (("p15", 16, "drive replica, isolated"),
+                               ("p16", 16, "drive replica, un-isolated"),
+                               ("p17", 24, "ladder replica, enables low"),
+                               ("p18", 24, "ladder replica, enables high")):
+        got = len([n for n in tri if f"u_char.{path}." in n])
+        print(f"characterization {label:<28} {got:>3} tri-state cells "
+              f"(expected {n_tri})")
+        if got != n_tri:
             failures.append(
-                f"characterization path {path} has {n_tri} tri-state cells, "
-                f"expected 16 (4 stages x 4 drive variants); the matched pair "
-                f"that measures the cost of isolation is not matched")
+                f"characterization path {path} ({label}) has {got} tri-state "
+                f"cells, expected {n_tri}; a matched pair with a dead arm "
+                f"reports no difference and that reads as a result")
+
+    merge = [n for n in tri if re.search(r"u_char\.merge\[", n)]
+    print(f"characterization output merge: {len(merge)} tri-state drivers "
+          f"(expected {args.char_paths})")
+    if len(merge) != args.char_paths:
+        failures.append(
+            f"the characterization output merge has {len(merge)} drivers, "
+            f"expected one per path ({args.char_paths}); a missing driver "
+            f"leaves that path's code selecting a floating node")
+
+    # ------------------------------- 9. the per-site stop tap tree is BALANCED
+    # Every input must pass the same number of cells. An unbalanced tree puts a
+    # different offset on different taps, and a per-tap offset lands directly in
+    # the fitted per-site slope, which is the one number the fabric experiment
+    # produces.
+    l1 = len([n for n, c in cells.items()
+              if re.search(r"tapl1\[\d+\]\.u", n)
+              and c["type"] == "sky130_fd_sc_hd__mux4_1"])
+    l2 = len([n for n, c in cells.items()
+              if re.search(r"tapl2\[\d+\]\.u", n)
+              and c["type"] == "sky130_fd_sc_hd__mux4_1"])
+    l3 = len([n for n, c in cells.items()
+              if n.endswith("tapl3.u")
+              and c["type"] == "sky130_fd_sc_hd__mux2_1"])
+    print(f"stop tap tree: {l1} + {l2} + {l3} cells (expected 8 + 2 + 1)")
+    if (l1, l2, l3) != (8, 2, 1):
+        failures.append(
+            f"the per-site stop tap tree is {l1}+{l2}+{l3}, expected 8+2+1; if "
+            f"it is not balanced then different taps carry different offsets "
+            f"and the per-site slope is corrupted")
 
     print()
     if failures:

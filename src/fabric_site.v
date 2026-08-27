@@ -5,7 +5,8 @@
 //
 //   cfg[2:0]   function select  (pre-stage function, see table below)
 //   cfg[4:3]   drive select     (output stage einvn_1 / _2 / _4 / _8)
-//   cfg[6:5]   load ladder      (0 = switch parasitic only, then +1, +2, +4)
+//   cfg[6:5]   load ladder      (four states of a fixed ladder, NOT four
+//                              added unit loads; see src/load_ladder.v)
 //   cfg[9:7]   sabotage mode    (none, stuck0, stuck1, bypassA, bypassB, invert)
 //   cfg[11:10] route select     (A input source)
 //
@@ -29,11 +30,11 @@
 //      110 AND2  -> NAND2    111 OR2   -> NOR2
 //
 // 2. The load ladder elements hang on the site output node with their inputs
-//    permanently connected. Enabling an element does not connect a capacitor,
-//    it makes an already-present input switch and drive its own sink. So the
-//    disabled state is REDUCED loading, never zero loading, exactly as recorded
-//    in PLAN.md section 2. Both states must be characterized. Never describe
-//    the ladder-0 state as unloaded.
+//    permanently connected. Enabling an element does not connect a capacitor.
+//    The ladder is NOT four steps of added load and must never be described as
+//    such. What it is, transistor by transistor, and why Liberty predicts
+//    exactly zero effect from it, is in src/load_ladder.v. Both states must be
+//    characterized and neither is unloaded.
 //
 // Drive select is decoded one-hot in hardware so tri-state contention on the
 // output node is structurally impossible, not merely avoided by convention.
@@ -130,39 +131,17 @@ module fabric_site #(
   // ------------------------------------------------------------ load ladder
   // Ladder code 0 enables nothing, 1 enables L1, 2 enables L1+L2, 3 enables all.
   //
-  // Every ladder element is a tri-state inverter whose INPUT is permanently on
-  // the site output node. Enabling one does not connect a capacitor, it makes an
-  // already-connected input drive its own output. So ladder 0 is REDUCED
-  // loading and never zero loading, exactly as recorded in PLAN.md section 2,
-  // and both states have to be characterized.
-  //
-  // The permanently enabled keeper is not decoration. Without it, the shared
-  // sink node floats whenever the ladder is off, and a floating gate input on a
-  // real die is a static-current path, not merely an X in simulation. Every
-  // element here inverts the same node, so they can never disagree and the
-  // shared node can never see contention.
-  wire ld_en1 = live & (cfg[6] | cfg[5]);
-  wire ld_en2 = live & cfg[6];
-  wire ld_en4 = live & cfg[6] & cfg[5];
+  // The ladder itself, and the full argument about what enabling an element
+  // does and does not do, lives in src/load_ladder.v. Read it before writing
+  // anything about this field. The short version: enabling an element does NOT
+  // connect a capacitor, the effect on the output node is real but partial and
+  // bias dependent, and Liberty cannot express it at all, so the Liberty-layer
+  // prediction for this field is exactly zero.
+  wire [2:0] ld_en;
+  assign ld_en[0] = live & (cfg[6] | cfg[5]);
+  assign ld_en[1] = live &  cfg[6];
+  assign ld_en[2] = live &  cfg[6] & cfg[5];
 
-  wire sk;
-  cell_inv   #(.DRIVE(1))              ld_keep (.A(out), .Y(sk));
-  cell_einvn #(.DRIVE(1)) ld1 (.A(out), .EN(ld_en1), .Z(sk));
-  cell_einvn #(.DRIVE(2)) ld2 (.A(out), .EN(ld_en2), .Z(sk));
-  cell_einvn #(.DRIVE(4)) ld4 (.A(out), .EN(ld_en4), .Z(sk));
-
-  wire sk_buf;
-  cell_inv #(.DRIVE(1)) snk (.A(sk), .Y(sk_buf));
-
-  // load_mon witnesses that the ladder field is decoded and that the decode
-  // reaches this site. It cannot witness that the enables reach the einvn TE_B
-  // pins, because on a correct design every ladder element drives the same
-  // logic value; that connection is checked structurally on the synthesized
-  // netlist by tools/check_netlist.py, and electrically on the die by the
-  // delay difference between ladder 0 and ladder 3.
-  wire m1, m2;
-  cell_xor2 mon_a (.A(sk_buf), .B(ld_en1), .X(m1));
-  cell_xor2 mon_b (.A(m1),     .B(ld_en2), .X(m2));
-  cell_xor2 mon_c (.A(m2),     .B(ld_en4), .X(load_mon));
+  load_ladder u_ladder (.node(out), .en(ld_en), .mon(load_mon));
 
 endmodule

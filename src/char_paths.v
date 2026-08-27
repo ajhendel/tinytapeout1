@@ -43,22 +43,39 @@
 //     8  inv_1  x2, unloaded                           depth series
 //     9  inv_1  x4, unloaded                           depth series
 //    10  inv_1 x16, unloaded                           depth series
-//    11  nand2_1 x8                                    cell type, drive 1
-//    12  nand2_4 x8                                    cell type, drive 4
-//    13  mux4_1 x8                                     the route/function muxes
-//    14  drive_node x4, ISOLATE = 1                    the site's output stage
-//    15  drive_node x4, ISOLATE = 0                    the same, un-isolated
+//    11  inv_1 x32, unloaded                           depth series, lever arm
+//    12  nand2_1 x8                                    cell type, drive 1
+//    13  nand2_4 x8                                    cell type, drive 4
+//    14  mux4_1 x4                                     the route/function muxes
+//    15  drive_node x4, ISOLATE = 1                    the site's output stage
+//    16  drive_node x4, ISOLATE = 0                    the same, un-isolated
+//    17  inv_1 x8 + load_ladder, enables tied LOW      the ladder mechanism
+//    18  inv_1 x8 + load_ladder, enables tied HIGH     the same, other state
+//    19  unused, decodes to path 0
 //
-// Paths 0, 8, 9 and 10 are the same cell at four depths. A straight line
-// through them gives the per-stage delay AND the fixed offset contributed by
-// the launch gate, the sixteen-way select tree and the TDC input. Every other
-// path in this file is quoted against that offset rather than pretending it
-// does not exist. This is the reason the depth series is four points and not
-// two: two points give a slope with no way to check that the relationship is
-// linear, and if it is not linear the offset is not a constant and nothing
-// else here can be quoted.
+// Paths 8, 9, 0, 10 and 11 are the same cell at five depths, 2, 4, 8, 16 and
+// 32. A straight line through them gives the per-stage delay AND the fixed
+// offset contributed by the launch gate, the select merge and the TDC input.
+// Every other path in this file is quoted against that offset rather than
+// pretending it does not exist.
 //
-// Paths 14 and 15 are the matched pair. They differ in exactly one thing,
+// Five points and a 16:1 lever arm, not two points. Two points give a slope
+// with no way to check that the relationship is linear, and if it is not linear
+// the offset is not a constant and nothing else here can be quoted. The depth
+// 32 point was added after the first build's SDF showed that the depth 2 to 16
+// series spanned only 0.53 ns, about four taps of the converter, which is a
+// thin lever arm for a slope everything else is quoted against.
+//
+// Paths 17 and 18 are the second matched pair. They are the same inverter chain
+// carrying the same load ladder from src/load_ladder.v, differing ONLY in
+// whether its enables are tied high or low. Their difference is the ladder
+// mechanism with the configurable fabric removed from around it. Liberty
+// predicts that difference to be exactly zero, because the format has one
+// capacitance number per pin and cannot express an enable-dependent one, so
+// this pair is a direct test of a place where one model layer is structurally
+// unable to be right. See src/load_ladder.v.
+//
+// Paths 15 and 16 are the first matched pair. They differ in exactly one thing,
 // whether each drive variant's input is gated by its own enable, and they are
 // built from the same module the fabric sites are built from. The cost of
 // input isolation is therefore a measurement on this die and not an argument.
@@ -69,10 +86,18 @@
 //
 // ONLY THE SELECTED PATH SWITCHES. The launch edge is gated per path by a
 // one-hot decode of the select field. This is the same lesson as the drive
-// stage: sixteen paths all fed from one launch net would burn sixteen paths'
-// worth of current and put fifteen paths' worth of supply disturbance into
+// stage: twenty paths all fed from one launch net would burn twenty paths'
+// worth of current and put nineteen paths' worth of supply disturbance into
 // every measurement, which is precisely the confound the measurement exists to
 // avoid.
+//
+// THE OUTPUT IS MERGED ON A TRI-STATE NODE, NOT THROUGH A MULTIPLEXER. A 20:1
+// mux tree is three levels of mux4_1, and the first build's SDF measured that
+// tree plus the launch gate at 1.404 ns typical and 3.203 ns slow, which was 37
+// to 45 percent of the converter's whole span spent on getting the signal out.
+// Since exactly one path is ever launched, the merge only has to be one-hot,
+// which is one tri-state level. Same discipline as the drive stage, same
+// structural check in tools/check_netlist.py, about a nanosecond cheaper.
 
 `timescale 1ns / 1ps
 `default_nettype none
@@ -173,54 +198,95 @@ module char_drive_chain #(
   assign out = n[DEPTH];
 endmodule
 
+// ------------------------------------------------------- load-ladder replica
+// An inverter chain carrying the fabric's own load ladder on every stage, with
+// the ladder enables tied to a compile-time constant. Two of these, one with
+// LEN all zero and one with LEN all ones, differ in NOTHING except the enable
+// state, so their delay difference is the ladder mechanism with the
+// configurable fabric taken away from around it.
+//
+// The enables are constants, and the tri-state enable inside cell_einvn goes
+// through a keep/dont_touch inverter, so what reaches TE_B is a real net driven
+// to a rail rather than a folded constant. tools/check_netlist.py checks that
+// distinction and would fail if the flow ever collapsed it.
+module char_ladder_chain #(
+    parameter integer DEPTH = 8,    // must be even
+    parameter [2:0]   LEN   = 3'b000
+) (
+    input  wire in,
+    output wire out
+);
+  wire [DEPTH:0] n;
+  assign n[0] = in;
+  genvar i;
+  generate
+    for (i = 0; i < DEPTH; i = i + 1) begin : stage
+      cell_inv #(.DRIVE(1)) u (.A(n[i]), .Y(n[i+1]));
+      wire mon;
+      load_ladder ld (.node(n[i+1]), .en(LEN), .mon(mon));
+      // Deliberately unused. The ladder's reach is witnessed in the fabric, not
+      // here; here the ladder exists only to be a load.
+      wire unused_mon = mon;
+    end
+  endgenerate
+  assign out = n[DEPTH];
+endmodule
+
 // --------------------------------------------------------------------- block C
 module char_paths (
     input  wire       launch,       // one rising edge per trial, clk domain
-    input  wire [3:0] sel,          // which path is measured
-    input  wire [1:0] drive_sel,    // drive variant for paths 14 and 15
+    input  wire [4:0] sel,          // which path is measured
+    input  wire [1:0] drive_sel,    // drive variant for paths 15 and 16
     output wire       char_out
 );
+
+  localparam integer NPATHS = 20;
 
   // One-hot decode. Ordinary synthesized logic on purpose: it is static during
   // a measurement and is not in the timed path. The GATE it drives is a real
   // cell, because that one IS in the path.
-  wire [15:0] en;
-  assign en = 16'd1 << sel;
+  //
+  // Codes at or above NPATHS clamp to path 0. Without the clamp those codes
+  // would leave the tri-state merge below with no driver at all, and a floating
+  // node on a real die is an undefined input to whatever observes it.
+  wire [4:0]  sel_c = (sel < NPATHS[4:0]) ? sel : 5'd0;
+  wire [NPATHS-1:0] en;
+  assign en = {{(NPATHS-1){1'b0}}, 1'b1} << sel_c;
 
   // Balanced launch distribution, built by hand for the same reason as the
-  // TDC's sampling tree in src/tdc.v. Sixteen launch gates on one net would be
+  // TDC's sampling tree in src/tdc.v. Twenty launch gates on one net would be
   // buffered by the resizer into a tree of whatever shape satisfied max fanout,
   // and paths on a deeper branch would launch later than paths on a shallower
   // one. That difference is a per-path offset, and a per-path offset is exactly
   // what the depth series CANNOT extract: the series recovers a COMMON offset
-  // by fitting a line through four different paths, so an offset that varies
-  // between those four paths lands in the fitted slope and corrupts the
-  // per-stage delay itself.
+  // by fitting a line through five different paths, so an offset that varies
+  // between those five lands in the fitted slope and corrupts the per-stage
+  // delay itself.
   //
-  // One root, four branches, four launch gates each. Every path is the same
+  // One root, five branches, four launch gates each. Every path is the same
   // number of gates from the launch register. Wire delay is still the placer's
   // decision and is still in the residual; this removes the part that was ours.
   wire lroot;
   cell_buf #(.DRIVE(4)) lrt (.A(launch), .X(lroot));
 
-  wire [3:0] lbr;
+  wire [4:0] lbr;
   genvar j;
   generate
-    for (j = 0; j < 4; j = j + 1) begin : lbuf
+    for (j = 0; j < 5; j = j + 1) begin : lbuf
       cell_buf #(.DRIVE(2)) u (.A(lroot), .X(lbr[j]));
     end
   endgenerate
 
   // Per-path launch gate. Only the selected path sees an edge.
-  wire [15:0] g;
+  wire [NPATHS-1:0] g;
   genvar k;
   generate
-    for (k = 0; k < 16; k = k + 1) begin : gate
+    for (k = 0; k < NPATHS; k = k + 1) begin : gate
       cell_and2 u (.A(lbr[k/4]), .B(en[k]), .X(g[k]));
     end
   endgenerate
 
-  // Drive-variant one-hot for the two replica paths. Constant-free: every bit
+  // Drive-variant one-hot for the two drive replicas. Constant-free: every bit
   // is a decoded net, so no tri-state enable in the replicas is constant
   // folded and tools/check_netlist.py can still do its job.
   wire [3:0] den;
@@ -229,7 +295,7 @@ module char_paths (
   assign den[2] = (drive_sel == 2'd2);
   assign den[3] = (drive_sel == 2'd3);
 
-  wire [15:0] o;
+  wire [NPATHS-1:0] o;
 
   char_inv_chain #(.DRIVE(1), .DEPTH(8),  .LOAD(0)) p0  (.in(g[0]),  .out(o[0]));
   char_inv_chain #(.DRIVE(2), .DEPTH(8),  .LOAD(0)) p1  (.in(g[1]),  .out(o[1]));
@@ -244,27 +310,43 @@ module char_paths (
   char_inv_chain #(.DRIVE(1), .DEPTH(2),  .LOAD(0)) p8  (.in(g[8]),  .out(o[8]));
   char_inv_chain #(.DRIVE(1), .DEPTH(4),  .LOAD(0)) p9  (.in(g[9]),  .out(o[9]));
   char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(0)) p10 (.in(g[10]), .out(o[10]));
+  char_inv_chain #(.DRIVE(1), .DEPTH(32), .LOAD(0)) p11 (.in(g[11]), .out(o[11]));
 
-  char_nand_chain #(.DRIVE(1), .DEPTH(8)) p11 (.in(g[11]), .en(en[11]), .out(o[11]));
-  char_nand_chain #(.DRIVE(4), .DEPTH(8)) p12 (.in(g[12]), .en(en[12]), .out(o[12]));
-  char_mux_chain  #(.DEPTH(8))            p13 (.in(g[13]), .en(en[13]), .out(o[13]));
+  char_nand_chain #(.DRIVE(1), .DEPTH(8)) p12 (.in(g[12]), .en(en[12]), .out(o[12]));
+  char_nand_chain #(.DRIVE(4), .DEPTH(8)) p13 (.in(g[13]), .en(en[13]), .out(o[13]));
 
-  char_drive_chain #(.ISOLATE(1), .DEPTH(4)) p14 (.in(g[14]), .den(den), .out(o[14]));
-  char_drive_chain #(.ISOLATE(0), .DEPTH(4)) p15 (.in(g[15]), .den(den), .out(o[15]));
+  // Depth 4, not 8. At depth 8 the first build's SDF put this path at 5.28 ns
+  // typical against a 3.835 ns converter span, so it saturated and returned all
+  // ones. The ring in src/tdc.v now removes saturation as a failure mode, but a
+  // REFERENCE path should sit inside one ring period so that nothing the other
+  // paths are quoted against depends on the coarse counter.
+  char_mux_chain  #(.DEPTH(4))            p14 (.in(g[14]), .en(en[14]), .out(o[14]));
 
-  // Sixteen to one, two mux4 levels. The tree is in the measured path and is
-  // the same two levels for every path, so it lands in the fixed offset the
-  // depth series extracts. It is not subtracted by assumption anywhere.
-  wire [3:0] lvl;
-  cell_mux4 m0 (.A0(o[0]),  .A1(o[1]),  .A2(o[2]),  .A3(o[3]),
-                .S0(sel[0]), .S1(sel[1]), .X(lvl[0]));
-  cell_mux4 m1 (.A0(o[4]),  .A1(o[5]),  .A2(o[6]),  .A3(o[7]),
-                .S0(sel[0]), .S1(sel[1]), .X(lvl[1]));
-  cell_mux4 m2 (.A0(o[8]),  .A1(o[9]),  .A2(o[10]), .A3(o[11]),
-                .S0(sel[0]), .S1(sel[1]), .X(lvl[2]));
-  cell_mux4 m3 (.A0(o[12]), .A1(o[13]), .A2(o[14]), .A3(o[15]),
-                .S0(sel[0]), .S1(sel[1]), .X(lvl[3]));
-  cell_mux4 mf (.A0(lvl[0]), .A1(lvl[1]), .A2(lvl[2]), .A3(lvl[3]),
-                .S0(sel[2]), .S1(sel[3]), .X(char_out));
+  char_drive_chain #(.ISOLATE(1), .DEPTH(4)) p15 (.in(g[15]), .den(den), .out(o[15]));
+  char_drive_chain #(.ISOLATE(0), .DEPTH(4)) p16 (.in(g[16]), .den(den), .out(o[16]));
+
+  char_ladder_chain #(.DEPTH(8), .LEN(3'b000)) p17 (.in(g[17]), .out(o[17]));
+  char_ladder_chain #(.DEPTH(8), .LEN(3'b111)) p18 (.in(g[18]), .out(o[18]));
+
+  // Path 19 is spare. It is wired to a real chain rather than left dangling so
+  // that the tri-state merge always has exactly one driver for every code the
+  // clamp can produce.
+  char_inv_chain #(.DRIVE(1), .DEPTH(8),  .LOAD(0)) p19 (.in(g[19]), .out(o[19]));
+
+  // ------------------------------------------------------- one-hot tri-state merge
+  // Not a multiplexer tree. Exactly one path is ever launched, so the merge
+  // only has to be one-hot, and one tri-state level replaces three levels of
+  // mux4_1 that the first build's SDF measured at about a nanosecond typical
+  // and 2.4 ns slow. That nanosecond was being spent on every single reading.
+  //
+  // Every element inverts, so the merge inverts, so the final inverter puts the
+  // polarity back and every path stays non-inverting end to end.
+  wire char_raw;
+  generate
+    for (k = 0; k < NPATHS; k = k + 1) begin : merge
+      cell_einvn #(.DRIVE(4)) u (.A(o[k]), .EN(en[k]), .Z(char_raw));
+    end
+  endgenerate
+  cell_inv #(.DRIVE(2)) merge_out (.A(char_raw), .Y(char_out));
 
 endmodule

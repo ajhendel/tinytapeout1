@@ -6,7 +6,7 @@ SIM ?= icarus
 FST ?= -fst
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = cells.v drive_node.v fabric_site.v calib_macro.v char_paths.v tdc.v scan_config.v freq_counter.v project.v
+PROJECT_SOURCES = cells.v drive_node.v load_ladder.v fabric_site.v calib_macro.v char_paths.v tdc.v scan_config.v freq_counter.v project.v
 
 # Site count under test. The default MUST match the `define default in
 # src/project.v, because the gate-level run has no way to be told: it simulates

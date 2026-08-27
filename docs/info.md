@@ -10,8 +10,8 @@ There are five blocks.
 that its configuration selects the *electrical* realization of a gate, not only
 its truth table. Twelve bits per site choose the function, which of the four
 prefabricated drive variants of the standard cell drives the output node, how
-much load hangs on that node, whether a fault is inserted, and where the site's
-A input comes from. Nothing here resizes a transistor; the variants are library
+much load hangs on that node, what state the load ladder on its output node is in,
+whether a fault is inserted at its output, and where its A input comes from. Nothing here resizes a transistor; the variants are library
 cells whose internal sizing differs. An FPGA bitstream cannot reach any of these
 electrical choices, which is the reason this is an ASIC.
 
@@ -29,11 +29,17 @@ WITHOUT that gating, as controls, so the cost of isolation is something this
 chip measures rather than something its documentation asserts.
 
 The load ladder hangs tri-state inverters of drive 1, 2 and 4 on the site output
-node with their inputs permanently connected. Enabling one does not connect a
-capacitor, it makes an already connected input switch. So ladder code 0 is
-reduced loading and never zero loading. A permanently enabled keeper on the
-shared sink prevents a floating gate input, which on a die is a static current
-path rather than merely an X in simulation.
+node with their inputs permanently connected. **Enabling one does not connect a
+capacitor and this field is not four steps of added load.** The transistor
+netlist says why: an einvn's input devices have their drains on the output and
+their sources on internal nodes that the enable devices tie to the rails, so
+part of the input capacitance is present in every state and part of it faces a
+floating node when disabled. The effect on the node is real, partial and bias
+dependent. Liberty has one capacitance number per pin and cannot express it at
+all, so the Liberty-layer prediction for this field is exactly zero, which makes
+it the sharpest model-discrimination test on the chip rather than a weak knob.
+Two of the fixed characterization paths carry the same ladder with its enables
+tied high and low so the mechanism can be measured on its own.
 
 One combinational feedback edge runs from the column output back to the head of
 the column behind a global enable, so the fabric can be configured to oscillate.
@@ -50,17 +56,26 @@ else about them differs. Nothing in this block is configurable, because a
 configurable reference is not a reference. A ring is a joint process, voltage,
 temperature and activity monitor, not a thermometer.
 
-**The fixed characterization paths.** Sixteen non-oscillating paths carrying one
+**The fixed characterization paths.** Twenty non-oscillating paths carrying one
 transition each: inverters at four drive variants loaded and unloaded, the same
-inverter at four depths, NAND chains, a mux chain, and a matched pair of
-replicas of the site output stage that differ only in whether the drive inputs
-are isolated. They are the middle rung of the inference chain. Without them, a
+inverter at four depths, NAND chains, a mux chain, and two matched pairs: replicas of the site output
+stage differing only in whether the drive inputs are isolated, and inverter
+chains carrying the load ladder differing only in whether its enables are tied
+high or low. Each pair makes one construction choice a measurement instead of
+an argument. They are the middle rung of the inference chain. Without them, a
 disagreement between the models and an evolved circuit could be the models, the
 extraction, the cost of configurability or the search, and there would be no way
 to tell which.
 
-**The time-to-digital converter.** A 32-stage delay line sampled by the arrival
-edge of the path under test, reporting a raw thermometer code. A ring oscillator
+**The time-to-digital converter.** A 32-stage delay line, closed into a gated
+ring and sampled by the arrival edge of the path under test, reporting a raw tap
+pattern and a count of ring wraps. The ring is what gives it range: a bare line
+spans 3.8 nanoseconds and one fabric site takes 3.5 of them, so a linear line
+could not have measured the fabric at all. The ring runs only between launch and
+arrival, never for the rest of the window, so the instrument is not oscillating
+beside whatever else is being measured. A stop tap selects which site's output
+stops it, so the per-site delay comes out as a slope over the sweep rather than
+as one unusable total for the whole column. A ring oscillator
 averages over millions of transitions and heats itself while it runs; a
 combinational path delay is one transition and needed its own instrument. The
 code is raw on purpose: bubbles in it are the map of which bins are wide, and

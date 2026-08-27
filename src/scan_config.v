@@ -12,7 +12,7 @@
 // Chain order, shifted in MSB first:
 //     [ GLOBAL W ][ SITE 0 : 12 ][ SITE 1 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
 //
-// GLOBAL_W is 32 in src/project.v. The global field map lives in project.v and
+// GLOBAL_W is 48 in src/project.v. The global field map lives in project.v and
 // in harness/evofab/genome.py; the only two fields this block consumes are
 // window_exp and trans_exp, and their positions are repeated below. If you move
 // a global field, move it in all three places in one commit. Nothing here would
@@ -139,8 +139,8 @@ module scan_config #(
   // form needs a 24 bit variable shifter and a 24 bit comparator in series and
   // the bit test needs a 24 to 1 mux. The trial place and route found 136
   // endpoints with setup violations and these were two of the deep paths.
-  wire [3:0]  window_exp = gcfg[13:10];
-  wire [3:0]  trans_exp  = gcfg[17:14];
+  wire [3:0]  window_exp = gcfg[15:12];
+  wire [3:0]  trans_exp  = gcfg[19:16];
   wire [4:0]  window_bit = 5'd4 + {1'b0, window_exp};
   wire [4:0]  trans_bit  = 5'd4 + {1'b0, trans_exp};
   reg  [23:0] win_cnt;
