@@ -76,7 +76,7 @@ The one thing that IS fixed already is the list of quantities. Writing that list
 now, before any of them are known, is what stops the list quietly becoming
 "whatever turned out to be predictable".
 
-### Quantities added 2026-08-27, when the RTL froze at 24 sites
+### Quantities added 2026-08-27, when the RTL froze
 
 The blocks that produce these did not exist when the list below was fixed. They
 are added rather than substituted, and the original list stands.

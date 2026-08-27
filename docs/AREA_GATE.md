@@ -472,6 +472,48 @@ Floorplan control for the spatial experiment moves to tapeout two, where it
 needs either placement regions or hard macros, and it joins the per-block supply
 on that list.
 
+## SECOND RE-GATE, 2026-08-27. 20 sites, and the reason is the instrument.
+
+The build at 24 sites came back clean: 69,200 um2 of standard cells, 30.6
+percent utilization, DRC 0, antenna 0, setup slack +5.43 ns, hold +0.108 ns,
+precheck and gate-level test passing. Then its own reports were read, and two
+of them said the instrument did not work.
+
+**The converter had no range.** See docs/MEASUREMENT_PROTOCOL.md. Fixing it took
+a gated ring, a wrap counter, a per-site stop tap and a tri-state output merge.
+
+**The drive series could not have produced a result.** The extracted SDF measured
+54, 45, 46 and 49 picoseconds per stage for drive variants 1, 2, 4 and 8: a 76
+picosecond spread across an eightfold change in drive, not monotonic, against a
+converter tap of 121 picoseconds. The cause was structural and not instrumental.
+The chains were uniform, so every stage's driver AND the load it drove both grew
+with the variant, and the delay barely moved. A drive series has to hold the
+LOAD fixed while the driver varies; the chains now do, each stage being an
+inverter of the variant under study driving two dummy inv_1 sinks and a strong
+inv_8 restorer.
+
+Together with the load-ladder pair, that moved about 900 cells into the fixed
+column, which is the one column a site count cannot amortise.
+
+| sites | yosys cells | projected utilization in 6x2 | with the previous build's correction |
+|---|---|---|---|
+| 16 | 3,186 | 30.5 % | 28.0 % |
+| **20** | **3,473** | **33.3 %** | **30.5 %** |
+| 24 | 3,760 | 36.0 % | 33.0 % |
+
+The previous build projected 33.4 percent and measured 30.6, so the model runs
+about nine percent high; both columns are shown rather than only the flattering
+one. 34.8 percent is the highest utilization that has ever routed clean here.
+
+**Verdict: 20 sites.** Twenty-four projects past the demonstrated ceiling on the
+raw model and only just inside on the corrected one, which is not a margin.
+
+Four sites is the entire price, and it buys an instrument that can resolve the
+thing the chip exists to measure. Twenty against twenty-four barely changes what
+the fabric can express, since it is a serial column of two-input functions
+either way. This is the same rule as before, cut sites before cutting the
+strip, applied for the third time and by now clearly the right rule.
+
 ## Reproducing this
 
     tools/area_sweep.sh build/area          # marginal cells per site, local, light

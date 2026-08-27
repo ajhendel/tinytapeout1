@@ -9,6 +9,8 @@ Layout, matching src/scan_config.v and src/fabric_site.v.
 
     frame = [ GLOBAL 48 ][ SITE 0 : 12 ] ... [ SITE N-1 : 12 ][ CRC 8 ]
 
+At the shipped 20 sites that is 296 bits.
+
 shifted MSB first, so site 0 lands in the high bits of the site region. That
 detail is easy to get backwards and doing so silently reverses the genome, which
 is why it is asserted in the tests and not merely commented.
@@ -143,9 +145,12 @@ CALIB_RINGS = ["inv1", "inv2", "inv4", "inv1_loaded", "inv1_compact",
 # The sixteen fixed characterization paths, by char_sel code.
 # See the table in src/char_paths.v.
 CHAR_PATHS = [
-    "inv1_d8", "inv2_d8", "inv4_d8", "inv8_d8",
-    "inv1_d8_loaded", "inv2_d8_loaded", "inv4_d8_loaded", "inv8_d8_loaded",
-    "inv1_d2", "inv1_d4", "inv1_d16", "inv1_d32",
+    # Drive series: the DRIVER varies, its load does not. Shaped differently
+    # from the load series on purpose; see src/char_paths.v.
+    "drive_x1", "drive_x2", "drive_x4", "drive_x8",
+    # Load series: the LOAD varies, the driver does not.
+    "load_0", "load_1", "load_2", "load_4",
+    "inv1_d2", "inv1_d4", "inv1_d8", "inv1_d16",
     "nand1_d8", "nand4_d8", "mux4_d4",
     "drive_isolated_d4", "drive_shared_d4",
     # The ladder mechanism in isolation. These two differ ONLY in whether the
@@ -153,14 +158,23 @@ CHAR_PATHS = [
     # difference to be exactly zero because the format has one capacitance per
     # pin; see src/load_ladder.v.
     "ladder_off_d8", "ladder_on_d8",
-    "spare_d8",
+    "inv1_d32",
 ]
 
 # The depth series, in stage order. A straight line through these four gives the
 # per-stage delay AND the fixed offset from the launch gate, the select tree and
 # the TDC input. Everything else in CHAR_PATHS is quoted against that offset.
 DEPTH_SERIES = [(2, "inv1_d2"), (4, "inv1_d4"), (8, "inv1_d8"),
-                (16, "inv1_d16"), (32, "inv1_d32")]
+                (16, "inv1_d16"), (24, "load_0"), (32, "inv1_d32")]
+
+# The two series that answer the chip's headline questions, and the reason they
+# are shaped differently. A drive series must hold the LOAD fixed while the
+# driver varies; a load series must hold the DRIVER fixed while the load varies.
+# An earlier version used one structure for both, and extraction measured its
+# drive series at 76 ps of spread across an eightfold drive change, NOT
+# monotonic, against a converter tap of 121 ps.
+DRIVE_SERIES = ["drive_x1", "drive_x2", "drive_x4", "drive_x8"]
+LOAD_SERIES = ["load_0", "load_1", "load_2", "load_4"]
 
 # The two matched pairs. Each differs in exactly one construction choice, so the
 # difference is that choice and nothing else.

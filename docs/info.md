@@ -6,7 +6,7 @@ running against the physical die. The full plan is in PLAN.md in this
 repository and the measurement discipline is in docs/MEASUREMENT_PROTOCOL.md.
 There are five blocks.
 
-**The fabric.** A column of 24 configurable sites. What makes a site unusual is
+**The fabric.** A column of 20 configurable sites. What makes a site unusual is
 that its configuration selects the *electrical* realization of a gate, not only
 its truth table. Twelve bits per site choose the function, which of the four
 prefabricated drive variants of the standard cell drives the output node, how
@@ -83,7 +83,7 @@ that map is the calibration. The four-point depth series is what turns tap
 counts into times, on the die, after fabrication.
 
 **The infrastructure.** A scan chain carries the whole genome. The frame is
-`[global 32][site 0 .. site 23][crc 8]`, 328 bits, shifted MSB first, and a load
+`[global 48][site 0 .. site 19][crc 8]`, 296 bits, shifted MSB first, and a load
 only reaches the live configuration registers if the CRC-8 matches and ARM is
 high, so a corrupt frame cannot reach the fabric at all. A measurement window of
 2^(4+window_exp) clocks bounds every trial. A frequency counter clocked by the
@@ -98,7 +98,7 @@ clear one.
 
 1. Hold ARM (ui[3]) high.
 2. Raise SCAN_EN (ui[0]) and shift the frame in on SCAN_IN (ui[1]), MSB first,
-   one bit per clock. The frame is 32 + 12*24 + 8 = 328 bits. Watch it come back
+   one bit per clock. The frame is 48 + 12*20 + 8 = 296 bits. Watch it come back
    out on SCAN_OUT (uo[0]) exactly that many clocks later.
 3. Lower SCAN_EN, check CRC_OK (uo[1]) is high, then pulse LOAD (ui[2]).
 4. INERT (uo[7]) falls, MEAS_BUSY (uo[4]) rises and the window runs. When it

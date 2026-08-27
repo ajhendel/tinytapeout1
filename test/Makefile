@@ -14,7 +14,7 @@ PROJECT_SOURCES = cells.v drive_node.v load_ladder.v fabric_site.v calib_macro.v
 # variable with the same default, and asserts the count the chip reports back
 # through readout_sel 7, so a drift between the three fails a test instead of
 # silently rotating every genome.
-N_SITES ?= 24
+N_SITES ?= 20
 export N_SITES
 
 ifneq ($(GATES),yes)

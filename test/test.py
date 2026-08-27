@@ -44,7 +44,7 @@ GATE_LEVEL = os.environ.get("GATES") == "yes"
 # as the `define in src/project.v. The gate-level run cannot be told a site
 # count, it simulates whatever was built, so these three defaults have to agree
 # and test_readout_selector_reaches_every_slot is what proves they do.
-N_SITES = int(os.environ.get("N_SITES", "24"))
+N_SITES = int(os.environ.get("N_SITES", "20"))
 GLOBAL_W = 48
 PAYLOAD_W = GLOBAL_W + 12 * N_SITES
 CHAIN_W = PAYLOAD_W + 8
@@ -86,8 +86,9 @@ ST_NSITES, ST_CRC_OK, ST_BUSY = 0, 2, 3
 ST_TRIPPED, ST_TDC_DONE, ST_TDC_VALID = 4, 5, 6
 
 # Characterization path codes, matching the table in src/char_paths.v.
-CH_INV1_D8, CH_INV1_D2, CH_INV1_D4 = 0, 8, 9
-CH_INV1_D16, CH_INV1_D32 = 10, 11
+CH_DRIVE_X1, CH_DRIVE_X8 = 0, 3
+CH_LOAD_0, CH_LOAD_4 = 4, 7
+CH_INV1_D2, CH_INV1_D4, CH_INV1_D8, CH_INV1_D16, CH_INV1_D32 = 8, 9, 10, 11, 19
 CH_MUX4_D4 = 14
 CH_DRIVE_ISOLATED, CH_DRIVE_SHARED = 15, 16
 CH_LADDER_OFF, CH_LADDER_ON = 17, 18
@@ -563,8 +564,11 @@ async def test_tdc_orders_the_depth_series(dut):
     """
     await start(dut)
     seen = []
+    # CH_LOAD_0 is the load series' zero-sink arm and is depth 16, the same as
+    # CH_INV1_D16. That duplicate is deliberate: two names for one measurement
+    # is a repeatability check that costs no area, and it is checked below.
     for depth, sel in ((2, CH_INV1_D2), (4, CH_INV1_D4), (8, CH_INV1_D8),
-                       (16, CH_INV1_D16), (32, CH_INV1_D32)):
+                       (16, CH_INV1_D16), (16, CH_LOAD_0), (32, CH_INV1_D32)):
         taps, wraps, done, valid = await tdc_measure(dut, sel)
         count = tdc_reading(taps, wraps)
         dut._log.info(f"depth {depth:>2}: {count} taps "
@@ -576,9 +580,22 @@ async def test_tdc_orders_the_depth_series(dut):
             "never do that")
         seen.append((depth, count))
     counts = [c for _, c in seen]
-    assert counts == sorted(counts) and len(set(counts)) == 5, (
+    assert counts == sorted(counts), (
         f"the depth series is not ordered: {seen}. Either the taps are captured "
         "in the wrong order or the path select is not reaching the paths")
+    distinct = {d for d, _ in seen}
+    assert len({c for d, c in seen if d in (2, 4, 8, 32)}) == 4, (
+        f"depths 2, 4, 8 and 32 did not give four different readings: {seen}")
+
+    # The repeatability check. Two independently built chains of the same depth,
+    # selected by different codes, measured in different trials. They are the
+    # only place on the chip where the same quantity is measured twice by
+    # construction, so a disagreement here is the instrument and not the circuit.
+    at16 = [c for d, c in seen if d == 16]
+    assert abs(at16[0] - at16[1]) <= 1, (
+        f"the two depth-16 chains disagree by {abs(at16[0]-at16[1])} taps "
+        f"({at16}); they are the same circuit built twice, so this is the "
+        "converter's own repeatability and it is worse than one tap")
 
 
 @cocotb.test(skip=GATE_LEVEL)

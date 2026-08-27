@@ -45,7 +45,7 @@
 // what the silicon actually has, so a mismatch fails a test rather than
 // producing a plausible wrong genome.
 //
-// 24, on 6x2 tiles. Not 32, and the reason is in docs/AREA_GATE.md: adding the
+// 20, on 6x2 tiles. Not 32, and the reason is in docs/AREA_GATE.md: adding the
 // characterization paths, the TDC and the larger calibration strip moved about
 // 650 cells into the FIXED column, which is a little over two tiles of overhead
 // that no site count amortises. At 24 sites a 6x2 build projects to 29.5
@@ -57,7 +57,7 @@
 // calibration strip. It is applied here to the strip's own growth, which is the
 // case the rule was written for and not the case anyone expected to hit.
 `ifndef N_SITES
-  `define N_SITES 24
+  `define N_SITES 20
 `endif
 
 module tt_um_ajhendel_evofab (

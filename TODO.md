@@ -11,7 +11,7 @@ Gate: nothing in phase 2 (RTL) starts until items 1–4 are done, because each c
 7. [ ] **Physics patch design doc** (NOT on tapeout one; the area went to blocks A, C and T instead, see docs/AREA_GATE.md) — oscillator count, coupling ladder (parallel tristate drivers), phase readout method, MAX-CUT instance encoding, and the p-bit sampling mode.
 8. [x] **Pre-registration scaffold** (done 2026-08-26: predictions/README.md carries the rule and the fixed list of quantities) — predictions/ directory layout + the rule that its contents are committed before the shuttle deadline and never edited after (append-only corrections).
 
-Added 2026-08-27, after the design review that froze the RTL at 24 sites.
+Added 2026-08-27, after the design review that froze the RTL, now at 20 sites.
 
 9. [x] **Drive-variant input isolation** (src/drive_node.v) with four deliberately un-isolated control sites and a matched fixed pair in src/char_paths.v, so the cost of isolation is measured rather than asserted.
 10. [x] **Fixed non-oscillating characterization paths** (src/char_paths.v) and a **time-to-digital converter** (src/tdc.v). The missing rung of the inference chain, and the right instrument for a single edge.

@@ -32,18 +32,18 @@
 //
 //   idx  structure                                     what it isolates
 //   ---  --------------------------------------------  ----------------------
-//     0  inv_1  x8, unloaded                           drive series, reference
-//     1  inv_2  x8, unloaded                           drive series
-//     2  inv_4  x8, unloaded                           drive series
-//     3  inv_8  x8, unloaded                           drive series
-//     4  inv_1  x8, one inv_1 sink per stage           load cost at drive 1
-//     5  inv_2  x8, one inv_1 sink per stage           load cost at drive 2
-//     6  inv_4  x8, one inv_1 sink per stage           load cost at drive 4
-//     7  inv_8  x8, one inv_1 sink per stage           load cost at drive 8
+//     0  inv_1 x12 into a FIXED load                   drive series
+//     1  inv_2 x12 into the same fixed load            drive series
+//     2  inv_4 x12 into the same fixed load            drive series
+//     3  inv_8 x12 into the same fixed load            drive series
+//     4  inv_1 x16, 0 sinks per stage                  load series
+//     5  inv_1 x16, 1 sink  per stage                  load series
+//     6  inv_1 x16, 2 sinks per stage                  load series
+//     7  inv_1 x16, 4 sinks per stage                  load series
 //     8  inv_1  x2, unloaded                           depth series
 //     9  inv_1  x4, unloaded                           depth series
-//    10  inv_1 x16, unloaded                           depth series
-//    11  inv_1 x32, unloaded                           depth series, lever arm
+//    10  inv_1  x8, unloaded                           depth series
+//    11  inv_1 x16, unloaded                           depth series
 //    12  nand2_1 x8                                    cell type, drive 1
 //    13  nand2_4 x8                                    cell type, drive 4
 //    14  mux4_1 x4                                     the route/function muxes
@@ -51,10 +51,19 @@
 //    16  drive_node x4, ISOLATE = 0                    the same, un-isolated
 //    17  inv_1 x8 + load_ladder, enables tied LOW      the ladder mechanism
 //    18  inv_1 x8 + load_ladder, enables tied HIGH     the same, other state
-//    19  unused, decodes to path 0
+//    19  inv_1 x32, unloaded                           depth series, lever arm
 //
-// Paths 8, 9, 0, 10 and 11 are the same cell at five depths, 2, 4, 8, 16 and
-// 32. A straight line through them gives the per-stage delay AND the fixed
+// THE DRIVE AND LOAD SERIES ARE SHAPED DIFFERENTLY ON PURPOSE, and the reason
+// is the single most useful thing extraction told us about this block. A drive
+// series has to hold the LOAD fixed while the driver varies, or the driver and
+// its load scale together and nothing moves; see char_drive_series below for
+// what that mistake measured. A load series has to hold the DRIVER fixed while
+// the load varies, which is the plain inverter chain with sinks hung on it.
+// They are not the same structure and an earlier version of this file used one
+// structure for both.
+//
+// Paths 8, 9, 10, 11 and 19 are the same cell at five depths, 2, 4, 8, 16 and
+// 32, and path 4 adds a sixth at 24. A straight line through them gives the per-stage delay AND the fixed
 // offset contributed by the launch gate, the select merge and the TDC input.
 // Every other path in this file is quoted against that offset rather than
 // pretending it does not exist.
@@ -106,18 +115,18 @@
 module char_inv_chain #(
     parameter integer DRIVE = 1,
     parameter integer DEPTH = 8,   // must be even
-    parameter integer LOAD  = 0    // inv_1 sinks hung on every stage output
+    parameter integer LOAD  = 0    // COUNT of inv_1 sinks on every stage output
 ) (
     input  wire in,
     output wire out
 );
   wire [DEPTH:0] n;
   assign n[0] = in;
-  genvar i;
+  genvar i, q;
   generate
     for (i = 0; i < DEPTH; i = i + 1) begin : stage
       cell_inv #(.DRIVE(DRIVE)) u (.A(n[i]), .Y(n[i+1]));
-      if (LOAD != 0) begin : ld
+      for (q = 0; q < LOAD; q = q + 1) begin : ld
         wire sink;
         cell_inv #(.DRIVE(1)) l (.A(n[i+1]), .Y(sink));
         // Deliberately unused. keep/dont_touch on the wrapper is what stops
@@ -127,6 +136,58 @@ module char_inv_chain #(
     end
   endgenerate
   assign out = n[DEPTH];
+endmodule
+
+// ----------------------------------------------------- drive series, done right
+// A DRIVER OF VARYING STRENGTH INTO A LOAD THAT DOES NOT VARY.
+//
+// The first version of this block got the drive series wrong in a way that no
+// test could see and only extraction revealed. It was char_inv_chain at four
+// drive variants, which makes every stage the same size, so the driver AND the
+// load it drives both scale with the variant and the delay barely moves. The
+// post place-and-route SDF of the built chip measured 54, 45, 46 and 49
+// picoseconds per stage for drive 1, 2, 4 and 8: a 76 picosecond spread across
+// an eightfold change in drive, NOT MONOTONIC, against a converter tap of 121
+// picoseconds. The chip's headline drive experiment could not have produced a
+// result, and the structure, not the instrument, was the reason.
+//
+// Here the driver varies and its load does not. Each stage is
+//
+//     inv_DRIVE  ->  [ SINKS dummy inv_1 loads  +  one inv_8 restorer ]
+//
+// so the measured driver always faces SINKS*C(inv_1) + C(inv_8), identical for
+// every variant. The restorer is deliberately the strongest inverter in the
+// set, because it has to drive the NEXT stage's inv_DRIVE input, which is the
+// one load that does still vary; making the restorer strong keeps that
+// back-term small instead of letting it cancel the effect being measured. The
+// term is not zero, it is not subtracted by assumption, and it is small and
+// modellable, which is the most that can be said honestly.
+//
+// Two inversions per stage, so the chain is non-inverting for any STAGES.
+module char_drive_series #(
+    parameter integer DRIVE  = 1,
+    parameter integer STAGES = 12,
+    parameter integer SINKS  = 2
+) (
+    input  wire in,
+    output wire out
+);
+  wire [STAGES:0] n;
+  assign n[0] = in;
+  genvar i, q;
+  generate
+    for (i = 0; i < STAGES; i = i + 1) begin : stage
+      wire mid;
+      cell_inv #(.DRIVE(DRIVE)) drv (.A(n[i]), .Y(mid));
+      for (q = 0; q < SINKS; q = q + 1) begin : sink
+        wire y;
+        cell_inv #(.DRIVE(1)) u (.A(mid), .Y(y));
+        wire unused_sink = y;
+      end
+      cell_inv #(.DRIVE(8)) rest (.A(mid), .Y(n[i+1]));
+    end
+  endgenerate
+  assign out = n[STAGES];
 endmodule
 
 // ------------------------------------------------------------------ NAND chain
@@ -297,20 +358,28 @@ module char_paths (
 
   wire [NPATHS-1:0] o;
 
-  char_inv_chain #(.DRIVE(1), .DEPTH(8),  .LOAD(0)) p0  (.in(g[0]),  .out(o[0]));
-  char_inv_chain #(.DRIVE(2), .DEPTH(8),  .LOAD(0)) p1  (.in(g[1]),  .out(o[1]));
-  char_inv_chain #(.DRIVE(4), .DEPTH(8),  .LOAD(0)) p2  (.in(g[2]),  .out(o[2]));
-  char_inv_chain #(.DRIVE(8), .DEPTH(8),  .LOAD(0)) p3  (.in(g[3]),  .out(o[3]));
+  // Drive series: the driver varies, the load does not.
+  char_drive_series #(.DRIVE(1), .STAGES(12), .SINKS(2)) p0 (.in(g[0]), .out(o[0]));
+  char_drive_series #(.DRIVE(2), .STAGES(12), .SINKS(2)) p1 (.in(g[1]), .out(o[1]));
+  char_drive_series #(.DRIVE(4), .STAGES(12), .SINKS(2)) p2 (.in(g[2]), .out(o[2]));
+  char_drive_series #(.DRIVE(8), .STAGES(12), .SINKS(2)) p3 (.in(g[3]), .out(o[3]));
 
-  char_inv_chain #(.DRIVE(1), .DEPTH(8),  .LOAD(1)) p4  (.in(g[4]),  .out(o[4]));
-  char_inv_chain #(.DRIVE(2), .DEPTH(8),  .LOAD(1)) p5  (.in(g[5]),  .out(o[5]));
-  char_inv_chain #(.DRIVE(4), .DEPTH(8),  .LOAD(1)) p6  (.in(g[6]),  .out(o[6]));
-  char_inv_chain #(.DRIVE(8), .DEPTH(8),  .LOAD(1)) p7  (.in(g[7]),  .out(o[7]));
+  // Load series: the load varies, the driver does not. Sixteen stages, which
+  // extraction says separates zero sinks from four by about seven converter
+  // taps; twenty-four was the first choice and bought nothing but area. Path 4
+  // is also the depth 16 point measured a second time under a different name,
+  // and it is deliberately not deduplicated: two names for one measurement is a
+  // free repeatability check.
+  char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(0)) p4 (.in(g[4]), .out(o[4]));
+  char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(1)) p5 (.in(g[5]), .out(o[5]));
+  char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(2)) p6 (.in(g[6]), .out(o[6]));
+  char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(4)) p7 (.in(g[7]), .out(o[7]));
 
+  // Depth series.
   char_inv_chain #(.DRIVE(1), .DEPTH(2),  .LOAD(0)) p8  (.in(g[8]),  .out(o[8]));
   char_inv_chain #(.DRIVE(1), .DEPTH(4),  .LOAD(0)) p9  (.in(g[9]),  .out(o[9]));
-  char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(0)) p10 (.in(g[10]), .out(o[10]));
-  char_inv_chain #(.DRIVE(1), .DEPTH(32), .LOAD(0)) p11 (.in(g[11]), .out(o[11]));
+  char_inv_chain #(.DRIVE(1), .DEPTH(8),  .LOAD(0)) p10 (.in(g[10]), .out(o[10]));
+  char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(0)) p11 (.in(g[11]), .out(o[11]));
 
   char_nand_chain #(.DRIVE(1), .DEPTH(8)) p12 (.in(g[12]), .en(en[12]), .out(o[12]));
   char_nand_chain #(.DRIVE(4), .DEPTH(8)) p13 (.in(g[13]), .en(en[13]), .out(o[13]));
@@ -328,10 +397,9 @@ module char_paths (
   char_ladder_chain #(.DEPTH(8), .LEN(3'b000)) p17 (.in(g[17]), .out(o[17]));
   char_ladder_chain #(.DEPTH(8), .LEN(3'b111)) p18 (.in(g[18]), .out(o[18]));
 
-  // Path 19 is spare. It is wired to a real chain rather than left dangling so
-  // that the tri-state merge always has exactly one driver for every code the
-  // clamp can produce.
-  char_inv_chain #(.DRIVE(1), .DEPTH(8),  .LOAD(0)) p19 (.in(g[19]), .out(o[19]));
+  // The long end of the depth series. Also the reason every code the clamp can
+  // produce has a real driver on the merge rather than a floating node.
+  char_inv_chain #(.DRIVE(1), .DEPTH(32), .LOAD(0)) p19 (.in(g[19]), .out(o[19]));
 
   // ------------------------------------------------------- one-hot tri-state merge
   // Not a multiplexer tree. Exactly one path is ever launched, so the merge

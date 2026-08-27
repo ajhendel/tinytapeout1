@@ -33,12 +33,12 @@ count beside it. Until then this file states a budget.
 
 Updated 2026-08-27 to the shipped frame. The old estimate is kept below the line.
 
-- 24 sites x 12 config bits (3 function + 2 drive + 2 load + 3 sabotage + 2 route) = 288 bits
-- global word 32 bits (feedback, calibration select, counter source, readout select, window and trip limits, TDC enable, TDC source and polarity, characterization path and drive select)
+- 20 sites x 12 config bits (3 function + 2 drive + 2 load + 3 sabotage + 2 route) = 288 bits
+- global word 48 bits (feedback, calibration select, counter source, readout select, window and trip limits, TDC enable, TDC source and polarity, characterization path and drive select)
 - CRC 8 bits
-- **Total 328 bits per configuration**, against the ~1,000 the estimate assumed
+- **Total 296 bits per configuration**, against the ~1,000 the estimate assumed
 
-Smaller than budgeted, and the reason is that the site count fell from 64 to 24
+Smaller than budgeted, and the reason is that the site count fell from 64 to 20
 and the physics patch is not on tapeout one. The scan time per trial therefore
 falls with it, which moves the per-trial budget below toward its fast end.
 
@@ -140,7 +140,7 @@ fixed characterization paths, the TDC and four more calibration rings, which put
 about 650 cells into the FIXED column, a little over two tiles of overhead that
 no site count amortises. The marginal cost per site also rose from 69.75 to
 73.75 because of the drive-variant input isolation gates. The shipped size is
-**24 sites on 6x2**, not 32. Full working and the alternatives are in
+**20 sites on 6x2**. Full working and the alternatives are in
 docs/AREA_GATE.md.
 
 ---

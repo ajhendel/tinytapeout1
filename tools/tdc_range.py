@@ -42,12 +42,24 @@ import sys
 # imported so that a rename in one place shows up as a mismatch rather than
 # silently agreeing with itself.
 CHAR_PATHS = [
-    "inv1_d8", "inv2_d8", "inv4_d8", "inv8_d8",
-    "inv1_d8_loaded", "inv2_d8_loaded", "inv4_d8_loaded", "inv8_d8_loaded",
-    "inv1_d2", "inv1_d4", "inv1_d16", "inv1_d32",
+    "drive_x1", "drive_x2", "drive_x4", "drive_x8",
+    "load_0", "load_1", "load_2", "load_4",
+    "inv1_d2", "inv1_d4", "inv1_d8", "inv1_d16",
     "nand1_d8", "nand4_d8", "mux4_d4",
     "drive_isolated_d4", "drive_shared_d4",
-    "ladder_off_d8", "ladder_on_d8", "spare_d8",
+    "ladder_off_d8", "ladder_on_d8", "inv1_d32",
+]
+
+# Comparisons the chip exists to make, as (path a, path b). A difference
+# smaller than one tap cannot be read from a single trial and needs averaging;
+# the tool says which is which rather than leaving it to be discovered.
+COMPARISONS = [
+    ("drive series, x1 vs x8", "drive_x1", "drive_x8"),
+    ("drive series, x1 vs x2", "drive_x1", "drive_x2"),
+    ("load series, 0 vs 4 sinks", "load_0", "load_4"),
+    ("load series, 0 vs 1 sink", "load_0", "load_1"),
+    ("input isolation pair", "drive_shared_d4", "drive_isolated_d4"),
+    ("load ladder pair", "ladder_off_d8", "ladder_on_d8"),
 ]
 
 # The series chain inside one fabric site, in order. Load-ladder and monitor
@@ -156,6 +168,27 @@ def main():
     print("A linear line would have saturated on anything past one site. The")
     print("per-site stop tap in src/project.v is what makes the SLOPE, rather")
     print("than one unusable total, the thing being measured.")
+
+    # Which headline comparisons can be read from a SINGLE trial?
+    got = {n: t for n, _, t, _ in rows}
+    print()
+    print(f"{'comparison':<28}{'difference':>12}{'taps':>8}  single-shot")
+    for label, a, b in COMPARISONS:
+        if a not in got or b not in got:
+            continue
+        diff = abs(got[a] - got[b])
+        n_taps = diff / tap if tap else 0
+        if n_taps >= 3:
+            verdict = "yes"
+        elif n_taps >= 1:
+            verdict = "marginal, average"
+        else:
+            verdict = f"NO, needs about {int((1/max(n_taps,1e-9))**2)} repeats"
+        print(f"{label:<28}{diff*1000:>10.0f} ps{n_taps:>8.2f}  {verdict}")
+    print()
+    print("A difference below one tap is not a failure. It is a statement about")
+    print("how many trials that row of docs/EXPERIMENT_MATRIX.md needs, and it")
+    print("is better known now than after the dies arrive.")
 
     bad = [n for n, _, _, f in rows if f >= 1]
     if bad:

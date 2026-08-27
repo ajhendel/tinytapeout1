@@ -92,7 +92,7 @@ extraction and not a guess:
 | tap delay | 0.120 ns |
 | 32 tap line span | 3.835 ns |
 | **one fabric site, series path** | **3.515 ns, 92 percent of the span** |
-| **24 sites end to end** | **about 84 ns, 22 times the span** |
+| **24 sites end to end, the size then shipped** | **about 84 ns, 22 times the span** |
 | `mux4_d8`, a fixed reference path | 5.28 ns, **saturated** |
 | fixed launch and 16:1 select overhead | 1.404 ns, 37 percent of the span |
 
@@ -117,6 +117,34 @@ dropping it:
 4. **`mux4_d8` became `mux4_d4`.** The ring means saturation is no longer fatal,
    but a REFERENCE path must sit inside one ring period so that nothing the
    other measurements are quoted against depends on the coarse counter.
+
+## The drive series could not have produced a result either
+
+Found in the same report, and worse than a range problem because no instrument
+change would have fixed it.
+
+The drive series was four inverter chains at drive variants 1, 2, 4 and 8. Every
+stage of each chain was the same size, so the driver AND the load it drives both
+scaled with the variant, and the delay hardly moved. Extraction measured 54, 45,
+46 and 49 picoseconds per stage: **76 picoseconds of spread across an eightfold
+change in drive, not monotonic, against a tap of 121 picoseconds.**
+
+A drive series has to hold the LOAD fixed while the driver varies. Each stage is
+now an inverter of the variant under study driving two dummy inv_1 sinks and a
+strong inv_8 restorer, so the measured driver always faces the same load. The
+restorer is the strongest inverter available on purpose: it has to drive the
+next stage's input, which is the one load that still varies, and making it
+strong keeps that back-term small rather than letting it cancel the effect.
+
+The load series is shaped the opposite way, an inv_1 backbone with 0, 1, 2 and 4
+extra sinks per stage, holding the DRIVER fixed while the load varies. They are
+not the same structure and using one for both was the mistake.
+
+The general form of the lesson, which is worth carrying into any later block:
+**a series that varies one thing must hold everything the varied thing is
+coupled to fixed, and in CMOS a driver is coupled to its own load.** That is not
+visible in a logic simulation, it is not visible in a netlist review, and it is
+visible in one column of an extracted timing report.
 
 `tools/tdc_range.py` reruns this check from any build's SDF and **exits nonzero
 if a reference path leaves the fine range**. Run it on every corner of every

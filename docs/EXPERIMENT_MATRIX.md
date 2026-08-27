@@ -41,11 +41,11 @@ second search, or a script someone writes at midnight, will not have.
 | 1 | **Fixed-path model validation** | TDC | all 20 characterization paths, every drive variant where applicable | all | the three model layers against each other | agreement within noise at every layer, i.e. no gap to report |
 | 2 | **TDC bin calibration** | TDC | the five-point depth series plus code density from the fabric | all | linearity of the depth series itself | a non-linear depth series, which would mean the fixed offset is not a constant and nothing else can be quoted |
 | 3 | **Ring period** | frequency counter on the TDC ring | free-run, several window lengths | all | the depth series slope, independently | the two disagree, which invalidates every coarse-counted reading |
-| 4 | **Drive-variant series** | TDC | paths 0 to 3 loaded and unloaded, and the fabric at all four drive codes | all | ring oscillators 0 to 2, a different instrument on the same question | drive selection produces no resolvable delay difference |
+| 4 | **Drive-variant series** | TDC | paths 0 to 3, a fixed load with a varying driver, and the fabric at all four drive codes | all | ring oscillators 0 to 2, a different instrument on the same question | drive selection produces no resolvable delay difference |
 | 5 | **Input-isolation cost** | TDC | paths 15 and 16 at all four drive variants; fabric sites 1,3,5,7 against 0,2,4,6 | all | the fixed pair against the fabric pair | fixed and fabric pairs disagree about the sign |
 | 6 | **Load-ladder mechanism** | TDC | paths 17 and 18; fabric load field 0 to 3 | all | **Liberty predicts exactly zero**, see src/load_ladder.v | no resolvable difference, which confirms Liberty and is a publishable null |
 | 7 | **Within-die variation floor** | frequency counter | calibration rings 0, 6, 7 | all | the three against each other | the floor exceeds the effects in rows 4 to 6, which retires those rows |
-| 8 | **Per-site fabric delay** | TDC, stop-tap sweep | tap 0 to 23 at a fixed configuration, then per function and drive | all | the fixed-path prediction for the same cells | the per-site slope is not linear in tap index |
+| 8 | **Per-site fabric delay** | TDC, stop-tap sweep | tap 0 to 19 at a fixed configuration, then per function and drive | all | the fixed-path prediction for the same cells | the per-site slope is not linear in tap index |
 | 9 | **Model-disagreement search** | TDC | 10^4 to 10^6, stage 1 rules | **training only** | random configurations of matched depth | the search finds nothing that beats the random baseline's disagreement |
 | 10 | **Transfer of finalists** | TDC | 20 to 100 finalists, exhaustive re-evaluation | **holdout** | the same finalists on training dies | winners do not transfer, which is the Thompson result and is a headline either way |
 | 11 | **Fault campaign** | TDC and truth table | every site x every fault mode, on winners AND controls | winners and controls, several dies | the conventional control circuit | evolved and control degrade identically |
@@ -71,6 +71,30 @@ oversight.
   correct name is exhaustive single-site output fault injection.
 - **Energy per configuration.** Whole-chip current is the only instrument and
   PLAN.md section 2 rules the claim out.
+
+## Which comparisons a single trial can resolve
+
+The converter's tap is about 0.121 ns. A comparison smaller than that cannot be
+read from one trial, and saying so in advance is the difference between a study
+that needs repeats and a study that quietly returns noise.
+
+`tools/tdc_range.py` prints this table from every build's SDF and it is the
+authority; the numbers below are from the 24-site build and are indicative.
+
+| comparison | difference | taps | single trial? |
+|---|---|---|---|
+| input isolation pair | 372 ps | 3.1 | yes |
+| load series, 0 vs 4 sinks | see the tool | | expected yes |
+| drive series, x1 vs x8 | see the tool | | expected yes, after the redesign |
+| load ladder pair | 7 ps at Liberty plus extraction | 0.06 | **no, and that is the point** |
+
+The ladder pair is the interesting row. Liberty predicts exactly zero and
+extraction predicts 7 ps, which is a twentieth of a tap, so the physical effect
+this pair exists to find is one that neither of those layers can see. **The SPICE
+prediction is not yet computed and it is what decides whether row 6 is a
+measurement or a bound.** That is owed before the predictions are written, and
+if SPICE also says the effect is far below a tap, row 6 becomes an upper-bound
+result reported with its repeat count, which is still worth having.
 
 ## The rule that makes this a dataset rather than a demonstration
 
