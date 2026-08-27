@@ -60,12 +60,24 @@ never called a thermometer.
 
 Rings 0, 6 and 7 are the same circuit three times. Their spread is the
 within-die variation floor: **any effect smaller than that spread is not a
-result**. Their difference is a placement effect and nothing else, because
-nothing else about them differs. We cannot ask the flow for a position, so
-`tools/check_placement.py` reads the placed DEF and reports the separation the
-build actually achieved, and every spatial statement is quoted against that. If
-the three land in a cluster, the honest conclusion is that this die could not
-run the spatial experiment, not that the experiment found nothing.
+result**.
+
+Their difference was also meant to be a placement effect, because nothing else
+about them differs. **It is not, on this build.** `tools/check_placement.py` on
+the placed DEF puts all three within 43 um of each other on a 1,023 um die, 4
+percent of the diagonal, all inside the fabric column's own footprint. The
+placer minimizes wirelength, the three rings share an enable decode and an
+output multiplexer, and nothing in the Tiny Tapeout LibreLane configuration lets
+us ask for anything else.
+
+So **there is no spatial experiment on tapeout one and no spatial result will be
+reported.** Three frequencies that differ would have looked like data; the
+layout would not have supported the sentence. Finding that out from the DEF
+rather than from a reviewer is what the tool was written for. Floorplan control
+moves to tapeout two.
+
+The variation floor survives unchanged and does not depend on where the rings
+landed.
 
 ## The TDC is not calibrated until it is calibrated on the die
 
@@ -93,6 +105,33 @@ handled: the bins are calibrated on the die.
 **Until that is done, delays from this chip are quoted in raw tap counts and say
 so.** No hardware bin-width table exists and none should be added; it would be a
 guess baked into metal.
+
+## Input slew is a variable, not a constant
+
+Added 2026-08-27 from the signoff report of the 24 site build, where it turned up
+as 202 max transition violations spread evenly over all 24 fabric sites.
+
+Every site's output node carries four tri-state drivers, four load ladder
+elements and the next site's route multiplexer. At the slow corner, drive 1 and
+drive 2 cannot slew that node inside the 0.75 ns design rule. That is the fabric
+working: the ladder exists to make the drive selection matter, and if drive 1
+could slew it comfortably there would be less to measure.
+
+The consequence for measurement is that **a stage driven by a slow edge is
+slower than the same stage driven by a fast one**, so input slew has to be
+carried through the inference chain rather than assumed away.
+
+  - The characterization paths all launch from the same balanced tree, so they
+    share an input slew and differences BETWEEN them stay clean.
+  - A comparison between a characterization path and a fabric site does NOT
+    share it, and has to account for the difference. Quoting a fabric delay
+    against a reference path without that accounting attributes the slew to
+    whatever else was varying.
+  - The 0.75 ns limit is ours, from `set_max_transition` in `src/timing.sdc`,
+    not the library's. Whether the sky130 Liberty's own characterization range
+    was exceeded is a separate question and is **owed** before any prediction is
+    quoted for those nodes. Inside the range a prediction is an interpolation;
+    outside it, it is an extrapolation and must say so.
 
 ## The four-stage experiment protocol
 

@@ -51,10 +51,12 @@ jobs:
       - name: checkout repo
         uses: actions/checkout@v6
 
-      - name: Download the GDS build artifacts
+      # The DEF is in GDS_logs, not in tt_submission. tt_submission carries the
+      # GDS, LEF, SPEF and netlist, and none of those say where a cell is.
+      - name: Download the GDS build logs
         uses: actions/download-artifact@v7
         with:
-          name: tt_submission
+          name: GDS_logs
           path: submission
 
       - name: Report the achieved placement

@@ -92,7 +92,13 @@ def parse_def(path):
                 continue
             m = COMP.match(line)
             if m:
-                pending = m.group(1)
+                # DEF escapes the characters that are special in its own
+                # grammar, so a Verilog instance called sites[0].u_site.fmux
+                # appears as sites\[0\].u_site.fmux. Matching patterns against
+                # the escaped form silently found nothing for every group whose
+                # name contains a bracket, which looked exactly like "the flow
+                # optimized that block away".
+                pending = m.group(1).replace("\\", "")
             if pending:
                 p = PLACED.search(line)
                 if p:

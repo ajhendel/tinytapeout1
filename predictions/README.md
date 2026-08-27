@@ -111,7 +111,19 @@ Calibration strip additions (src/calib_macro.v):
   This is the within-die variation floor, so it is the number every other
   difference on this chip has to beat. Predict it before seeing it, or the
   temptation to accept whatever floor makes a result significant is left
-  standing.
+  standing. Note that on the 2026-08-27 build these three landed within 43 um of
+  each other, so this is a spread over a small region and not across the die,
+  and it must be described that way. There is no spatial prediction to make;
+  see docs/AREA_GATE.md.
+
+Input slew, which the same build turned into a live variable rather than a
+detail:
+
+- **Whether the site output node's transition at the slow corner is inside the
+  sky130 Liberty characterization range.** This is a question about the model,
+  answerable before silicon from the PDK alone, and it decides whether every
+  fabric delay prediction is an interpolation or an extrapolation. It must be
+  answered before the fabric predictions are written, not after.
 
 TDC (src/tdc.v):
 

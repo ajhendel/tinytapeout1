@@ -281,6 +281,145 @@ The alternatives, honestly:
   reports what the flow actually did with the three identical rings and every
   spatial statement is quoted against that report.
 
+## THE BUILD AT 24 SITES, MEASURED. 2026-08-27, commit becb941.
+
+The projection above is now a measurement. LibreLane completed, precheck passed,
+gate-level test passed.
+
+### Area, and the projection held
+
+| quantity | projected | **measured** |
+|---|---|---|
+| standard cell area | 64,300 um2 | **64,124 um2** |
+| standard cell utilization | 29.5 % | **28.4 %** |
+| standard cell instances | | 8,952 |
+| sequential cells | | 833 |
+| timing repair buffers | | 1,095 |
+| die area | | 232,623 um2 |
+| core area | | 225,802 um2 |
+| total power, nominal | | 3.87 mW |
+
+Within 0.3 percent on cell area. That is luckier than the method deserves and
+should not be read as the method being that good; it is one point.
+
+### Timing, DRC, LVS
+
+| | 8 sites, WP2 | **24 sites, WP4** |
+|---|---|---|
+| setup WNS, worst corner | **-4.49 ns** | **+7.18 ns** |
+| hold WNS, worst corner | 0 ns | **+0.107 ns** |
+| violator list | one endpoint | **empty** |
+| routing DRC | 0 | **0** |
+| Magic DRC | 0 | **0** |
+| LVS | clean | **circuits match uniquely** |
+| antenna violations | | **0** |
+
+Timing got BETTER while the fabric tripled. That is the `u_mon_iso` false path
+doing its job: the path it cuts was the one that scaled with the site count, and
+cutting it removed the whole class rather than one endpoint.
+
+### The slew report, which is the interesting finding
+
+The run reports **1,010 max transition violations at the slow corner**, against
+246 at 8 sites. They are not timing violations, there are none of those, and
+nothing in the Tiny Tapeout signoff gates on them. They still matter here,
+because this chip's entire purpose is comparing measured delay against predicted
+delay, and a transition outside the range a model was characterized over is a
+prediction on thin ice.
+
+Categorized, at `max_ss_100C_1v60`:
+
+| where | count | worst slack |
+|---|---|---|
+| synthesized infrastructure (scan, CRC, safety, counters) | 556 | -0.48 ns |
+| buffers the flow inserted to repair fanout | 226 | -1.06 ns |
+| **fabric sites** | **202** | **-0.43 ns** |
+| **characterization path 14, the isolated drive replica** | **17** | **-0.26 ns** |
+| **calibration ring 5, the drive-node ring** | **6** | **-0.57 ns** |
+| three singletons on the feedback gate and the launch mux | 3 | -0.27 ns |
+
+The 782 in the first two rows are in blocks that are static or clocked during a
+measurement, and they cost setup margin we have 7.18 ns of. They are not worth
+fighting the flow over.
+
+The 225 in the middle three rows are the ones worth reading, and they are all
+**the same violation**. The violating pins are, per site and on every one of the
+24 sites: `u_drive.drv1/Z`, `u_drive.drv2/Z`, the three ladder element inputs,
+the ladder keeper input, and the next site's route multiplexer input. All of
+those are the same net. **The drive-1 and drive-2 tri-state inverters cannot
+slew the site output node inside 0.75 ns, because the load ladder and the next
+site are hanging on it.**
+
+That is not a defect. That is the fabric. The load ladder exists to put a
+configurable, deliberately significant load on that node so that the drive
+variant selection has something to matter about. If drive 1 could slew it
+comfortably, the drive variants would barely differ and there would be less to
+measure. Path 14 and ring 5 violate for the same reason and by construction:
+they are replicas of that structure, and the fact that they violate in the same
+way is evidence that the replicas really do replicate.
+
+Two things follow, and they are owed rather than done.
+
+1. **The 0.75 ns limit is ours, not the library's.** `set_max_transition 0.75`
+   in `src/timing.sdc` is the stock Tiny Tapeout value, and every limit in the
+   report is 0.75, so the run does not say whether the sky130 Liberty's own
+   characterization range was exceeded. That has to be checked against the PDK
+   Liberty before any prediction is quoted for those nodes, and it changes what
+   the prediction means: inside the range it is an interpolation, outside it is
+   an extrapolation and should say so.
+2. **Input slew is now a variable the fixed paths have to carry.** A stage driven
+   by a slow edge is slower than the same stage driven by a fast one. The
+   characterization paths are all launched from the same balanced tree, so they
+   share an input slew and their differences are still clean, but any comparison
+   between a characterization path and a fabric site has to account for the
+   fabric's slower edges. This is exactly the sort of thing the middle rung of
+   the inference chain exists to expose, and it turned up before silicon rather
+   than after, which is the point of running the gate.
+
+The 47 max fanout violations are all clock tree leaf buffers at 13 or 14 loads
+against a limit of 10. That is CTS behaving normally and is not ours.
+
+### The placement report, which says the spatial experiment did not happen
+
+`tools/check_placement.py` on the final DEF:
+
+    placed extent: 1023.5 x 217.6 um, diagonal 1046.4 um
+
+    group                             cells         centroid (um)   radius
+    calib ro0 (reference twin)           31        (183.7, 161.5)     13.1
+    calib ro_twin_a                      31        (202.6, 122.6)     14.5
+    calib ro_twin_b                      31        (189.0, 120.0)     10.9
+    calib ro5 (drive replica)           121         (101.2, 88.9)     49.8
+    TDC delay line                       32         (31.1, 174.4)     55.2
+    TDC sampling tree                     5         (27.1, 134.4)     44.8
+    characterization paths              280         (107.6, 43.3)     55.4
+    fabric column                       968        (358.4, 95.5)     212.9
+
+    largest twin separation 43.3 um, 4 percent of the placed diagonal
+    VERDICT: CLUSTERED
+
+**The three identical rings landed within 43 um of each other on a 1,023 um
+die**, and all three sit inside the fabric column's own footprint. There is no
+"near the fabric" and "far from it" on this build. The placer minimizes
+wirelength, the three rings share an enable decode and an output multiplexer,
+and nothing in the Tiny Tapeout LibreLane configuration lets us ask for
+anything else.
+
+So **the spatial experiment is not available on tapeout one and no spatial
+result will be reported from it.** That is the correct outcome of building the
+tool: the alternative was measuring three frequencies, finding they differed,
+and writing a sentence about position that the layout would not have supported.
+
+What survives, and is arguably the more useful half anyway: three identical
+circuits still give the **within-die, same-design variation floor**, which is
+the number every other difference measured on this chip has to beat. That was
+always the first purpose of the triple and it does not depend on where they
+landed.
+
+Floorplan control for the spatial experiment moves to tapeout two, where it
+needs either placement regions or hard macros, and it joins the per-block supply
+on that list.
+
 ## Reproducing this
 
     tools/area_sweep.sh build/area          # marginal cells per site, local, light

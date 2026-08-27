@@ -17,4 +17,4 @@ Start with [PLAN.md](PLAN.md). Everything in `docs/` supports it.
 - [docs/TT_LOGISTICS.md](docs/TT_LOGISTICS.md) — shuttle facts, pricing, deadlines, sources
 - [TODO.md](TODO.md) — phase 0 checklist, in order
 
-Status (2026-08-27). RTL frozen at 24 sites on 6x2 tiles, building clean through Tiny Tapeout's CI. 14 cocotb tests and 44 harness tests pass; the structural netlist and constraint checks pass and were sabotage-tested. The remaining gate is a place-and-route run at the frozen size, which is free, and confirming the shuttle deadline and price. See the Status section of [HANDOFF.md](HANDOFF.md), which is the live record.
+Status (2026-08-27). RTL frozen at 24 sites on 6x2 tiles and built: DRC 0, LVS clean, antenna 0, setup slack +7.18 ns, precheck and gate-level test pass. 14 cocotb tests and 44 harness tests pass; the structural netlist and constraint checks pass and were sabotage-tested. Two findings from the build are recorded rather than smoothed over, one of which withdraws a planned experiment. See the Status section of [HANDOFF.md](HANDOFF.md), which is the live record.

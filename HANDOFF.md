@@ -49,6 +49,68 @@ WP1 and WP2 complete, WP3 items 1–3 running with real numbers written back int
 
 ## Status
 
+### 2026-08-27, the build at 24 sites. Measured, not projected.
+
+LibreLane completed at commit becb941. gds, precheck and gl_test all pass; the
+viewer job still fails and will keep failing until the repo is public, because
+GitHub Pages is not available on a private repo.
+
+**The area projection held to 0.3 percent.** 64,124 um2 of standard cells
+against 64,300 projected, 28.4 percent utilization against 29.5 projected, DRC 0,
+Magic DRC 0, LVS matches uniquely, antenna 0.
+
+**Timing got better while the fabric tripled.** Setup WNS went from -4.49 ns at 8
+sites to **+7.18 ns** at 24, hold +0.107 ns, violator list empty. That is the
+`u_mon_iso` false path: the path it cuts was the one that scaled with the site
+count, so cutting it removed a class rather than an endpoint.
+
+**Two findings that no one asked for and both are worth having.**
+
+1. *The fabric violates the max transition rule on every site, and that is the
+   fabric.* 1,010 slew violations at the slow corner, of which 202 are the same
+   violation repeated on all 24 sites: drive 1 and drive 2 cannot slew the site
+   output node inside 0.75 ns because the load ladder and the next site hang on
+   it. The load ladder exists to make that true. Path 14 and ring 5 violate the
+   same way, which is evidence the replicas really replicate. None of it is a
+   timing violation and nothing in signoff gates on it.
+   Two things are now owed. The 0.75 ns limit is OURS, from `set_max_transition`
+   in src/timing.sdc, so whether the sky130 Liberty's own characterization range
+   was exceeded is unanswered and has to be checked against the PDK before any
+   prediction is quoted for those nodes. And input slew is now a variable the
+   inference chain has to carry, not a detail: a fabric site is driven by slower
+   edges than a characterization path, and comparisons between them have to say
+   so. Written into docs/MEASUREMENT_PROTOCOL.md.
+
+2. *The spatial experiment did not happen.* `tools/check_placement.py` on the
+   final DEF puts calibration rings 0, 6 and 7 within **43 um of each other on a
+   1,023 um die**, 4 percent of the diagonal, all three inside the fabric
+   column's own footprint. The placer minimizes wirelength, the three rings share
+   an enable decode and an output multiplexer, and the Tiny Tapeout flow exposes
+   no placement regions. **No spatial result will be reported from tapeout one.**
+   Three frequencies that differed would have looked like data and the layout
+   would not have supported the sentence; finding that out from a DEF rather than
+   from a reviewer is the entire reason the tool exists. The triple survives as
+   the within-die variation floor, which was always its first purpose. Floorplan
+   control joins the per-block supply on the tapeout-two list.
+
+**One tooling bug found and fixed.** The placement job downloaded the wrong
+artifact: the DEF lives in GDS_logs, and tt_submission carries only the GDS, LEF,
+SPEF and netlist, none of which say where a cell is. The report script also
+matched instance names against DEF-escaped text, so every group whose name
+contains a bracket silently found nothing, which reads exactly like "the flow
+optimized that block away". Both fixed; the next run verifies them.
+
+**Owed next, in order.**
+1. Check the sky130 Liberty characterization range against the measured slew on
+   the site output node. Answerable from the PDK alone, before silicon, and it
+   decides whether every fabric delay prediction is an interpolation or an
+   extrapolation.
+2. WP5 pre-registration. predictions/README.md lists what has to be predicted;
+   the depth-series slope is the one that makes the TDC falsifiable.
+3. Blocked on Andrew and only on Andrew: the SKY26c deadline and pricing at
+   app.tinytapeout.com, the 6x2 tile spend at about 840 EUR, and an iCE40 board.
+   The 32-sites-on-8x2 option at about 1,120 EUR is also his call and stays open.
+
 ### 2026-08-27, design-review session. WP4 RTL freeze, at 24 sites.
 
 Read this first. It changes the shipped size, adds two blocks, and withdraws
