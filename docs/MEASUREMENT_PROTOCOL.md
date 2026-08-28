@@ -366,9 +366,9 @@ handled: the bins are calibrated on the die.
     and it is not a sixth point on the fit. This document said depth 24 for it
     until 2026-08-28, and so did the harness and the pre-registration generator,
     while the RTL built 16 and said so in a comment. Fitting five delays against
-    six x values, one of them wrong, drags the per-stage slope to about 0.89 of
-    the true one and inflates the very residual the pre-registration predicts
-    will stay under a tap. Nothing failed. The depths are now parsed out of
+    six x values, one of them wrong, drags the per-stage slope low and inflates
+    the very residual the pre-registration predicts will stay under a tap.
+    Measured rather than estimated, on two builds: the per-stage slope comes out 9.7 and 11.6 percent low, and the maximum residual of the straight line fit goes from 0.29 taps to 1.67 on one build and from 0.15 to 1.79 on the other. The pre-registration predicts that residual stays under one tap, so the wrong depth would have pre-registered a falsification of its own linearity claim. Nothing failed. The depths are now parsed out of
     src/char_paths.v by harness/tests/test_char_paths_match_rtl.py.
   - Bin widths come from CODE DENSITY, and the stop source for it is a free
     running calibration ring (`tdc_src = calib`), not the fabric. This matters

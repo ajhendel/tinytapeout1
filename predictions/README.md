@@ -124,7 +124,8 @@ Fixed characterization paths (src/char_paths.v), measured by the TDC:
   (the intercept), separately, with intervals. Path 4 is depth 16 built a second
   time under another name and is a repeatability check, NOT a sixth point; this
   file said depth 24 for it until 2026-08-28 and was wrong, which would have
-  biased the slope about 11 percent low. **This one is load bearing: without a
+  biased the slope 9.7 percent low on one build and 11.6 on another, and taken
+  the fit's maximum residual from 0.29 taps to 1.67 and from 0.15 to 1.79. **This one is load bearing: without a
   predicted slope the TDC calibration is unfalsifiable**, because any measured
   tap count can be turned into any delay by choosing a tap width afterwards.
 - **The linearity of that series.** Predict the residual of a straight-line fit.

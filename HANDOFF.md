@@ -67,10 +67,9 @@ two days. Pricing genuinely does need the login and stays Andrew's.
 harness/evofab/genome.py and tools/prereg.py both said depth 24 for `load_0`.
 src/char_paths.v builds it at 16 and says so in a comment two lines above. The
 per-stage slope from that series is the number every other delay on this chip is
-quoted against, and fitting five real depths against six x values with one wrong
-drags it to about 0.89 of the true slope, roughly 11 percent low, while
-inflating the very residual the pre-registration predicts will stay under one
-tap. So it could have pre-registered a falsification of its own linearity claim.
+quoted against, and fitting five real depths against six x values with one
+wrong drags it low while inflating the very residual the pre-registration
+predicts will stay under one tap. Measured rather than estimated, on two builds: the per-stage slope comes out 9.7 and 11.6 percent low, and the maximum residual of the straight line fit goes from 0.29 taps to 1.67 on one build and from 0.15 to 1.79 on the other. The pre-registration predicts that residual stays under one tap, so the wrong depth would have pre-registered a falsification of its own linearity claim.
 Nothing failed: the RTL was right, the cocotb test was right by coincidence of
 being written separately, and two copies of a list were wrong.
 harness/tests/test_char_paths_match_rtl.py now parses the DEPTH, DRIVE, LOAD,
