@@ -330,6 +330,20 @@ def main():
                   f"is the check that the two arms of the matched pair differ "
                   f"only in the enable state and not in anything about how the "
                   f"deck was written.", ""]
+        st = d.get("steps")
+        if st:
+            L += ["The four ladder codes, so the per-step change is measured "
+                  "rather than assumed linear. src/load_ladder.v is explicit "
+                  "that this is not four steps of added load, so the SHAPE of "
+                  "the inequality below is itself the prediction.",
+                  "",
+                  "| code | enables | vs code 0 | step from the previous |",
+                  "|---|---|---|---|"]
+            for r in st:
+                L.append(f"| {r['code']} | "
+                         f"{''.join(str(e) for e in r['enables'])} | "
+                         f"{r['vs_code0_ps']:+.1f} ps | {r['step_ps']:+.1f} ps |")
+            L.append("")
         dec = d.get("decomposition")
         if dec:
             L += [f"Mechanism split at the typical corner: about "

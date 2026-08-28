@@ -18,6 +18,8 @@ import subprocess
 import sys
 import textwrap
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 TOOLS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "tools")
 
@@ -67,14 +69,20 @@ def _ic(src, dst, d):
             f"({d}:{d}:{d}) ({f}:{f}:{f}))")
 
 
-def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True, taps=4,
-              branches=2, per_branch=2, branch_ic=0.02):
+def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True,
+              branches=2, per_branch=2, branch_ic=0.02, causal_kill=False):
     """A miniature of src/tdc.v: a sampling tree, a kill path and a ring.
 
+    Every delay line stage drives the DATA pin of the flip flop that samples it,
+    because that is what the race analysis has to follow: the kill reaches stage
+    0 long before stage 31, so each stage has to be matched to its own flip flop
+    rather than to the worst one anywhere in the tree. An earlier version of
+    this fixture left the line and the flops unconnected, and could not exercise
+    that at all.
+
     Numbers are round so the expected answer can be worked out on paper.
-    Capture is 0.10 + 0.02 + 0.08 + 0.02 = 0.22 ns from the root output.
-    Kill is 0.02 + kill_flop_cq + the guard buffers + the NAND + stage 0.
     """
+    taps = branches * per_branch
     cells = []
     ics = []
 
@@ -82,26 +90,46 @@ def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True, taps=4,
     cells.append(_cell("sky130_fd_sc_hd__buf_4", root,
                        [_iopath("A", "X", 0.10)]))
 
-    clk_pins = []
+    # the ring: NAND plus `taps` buffers, closed back on itself
+    nand = "u_tdc.ring_close.g2.u"
+    cells.append(_cell("sky130_fd_sc_hd__nand2_2", nand,
+                       [_iopath("A", "Y", 0.07), _iopath("B", "Y", 0.07)]))
+    prev = f"{nand}/Y"
+    stage_out = {}
+    for t in range(taps):
+        di = f"u_tdc.dl[{t}].u.g1.u"
+        cells.append(_cell("sky130_fd_sc_hd__buf_1", di,
+                           [_iopath("A", "X", 0.12)]))
+        ics.append(_ic(prev, f"{di}/A", 0.02))
+        prev = f"{di}/X"
+        stage_out[t] = prev
+    ics.append(_ic(prev, f"{nand}/B", 0.02))          # close the ring
+
+    # the sampling tree, and one flop per tap plus one fired flag per branch
     for b in range(branches):
         bi = f"u_tdc.sampbuf[{b}].u.g2.u"
         cells.append(_cell("sky130_fd_sc_hd__buf_2", bi,
                            [_iopath("A", "X", 0.08)]))
         ics.append(_ic(f"{root}/X", f"{bi}/A", 0.02))
-        for f in range(per_branch):
+        for f in range(per_branch + 1):
             flop = f"_1{b}{f}_"
             cells.append(_cell("sky130_fd_sc_hd__dfxtp_1", flop,
                                [_iopath("CLK", "Q", 0.25)]))
             ics.append(_ic(f"{bi}/X", f"{flop}/CLK", branch_ic))
-            clk_pins.append(f"{flop}/CLK")
+            if f < per_branch:                 # the last one is the fired flag
+                t = b * per_branch + f
+                if t in stage_out:
+                    ics.append(_ic(stage_out[t], f"{flop}/D", 0.01))
 
-    # the ring kill: a flop clocked by the same root, then the guard buffers,
-    # then an inverter and an AND the flow named itself, then the ring NAND
-    cells.append(_cell("sky130_fd_sc_hd__dfxtp_1", "_200_",
-                       [_iopath("CLK", "Q", kill_flop_cq)]))
-    ics.append(_ic(f"{root}/X", "_200_/CLK", 0.02))
-
-    tail_src = "_200_/Q"
+    # the kill: either its own flop clocked by the root (the old racing
+    # arrangement) or driven from the fired flags (the causal one)
+    if causal_kill:
+        tail_src = f"_1{branches-1}{per_branch}_/Q"
+    else:
+        cells.append(_cell("sky130_fd_sc_hd__dfxtp_1", "_200_",
+                           [_iopath("CLK", "Q", kill_flop_cq)]))
+        ics.append(_ic(f"{root}/X", "_200_/CLK", 0.02))
+        tail_src = "_200_/Q"
     if guard_buffers:
         for i in (0, 1):
             gi = f"u_tdc.kill_b{i}.g1.u"
@@ -115,20 +143,7 @@ def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True, taps=4,
     cells.append(_cell("sky130_fd_sc_hd__and2_1", "_202_",
                        [_iopath("A", "X", 0.09)]))
     ics.append(_ic("_201_/Y", "_202_/A", 0.02))
-
-    nand = "u_tdc.ring_close.g2.u"
-    cells.append(_cell("sky130_fd_sc_hd__nand2_2", nand,
-                       [_iopath("A", "Y", 0.07), _iopath("B", "Y", 0.07)]))
     ics.append(_ic("_202_/X", f"{nand}/A", 0.02))
-
-    prev = f"{nand}/Y"
-    for t in range(taps):
-        di = f"u_tdc.dl[{t}].u.g1.u"
-        cells.append(_cell("sky130_fd_sc_hd__buf_1", di,
-                           [_iopath("A", "X", 0.12)]))
-        ics.append(_ic(prev, f"{di}/A", 0.02))
-        prev = f"{di}/X"
-    ics.append(_ic(prev, f"{nand}/B", 0.02))          # close the ring
 
     top = _cell("tt_um_ajhendel_evofab", "", ics)
     with open(path, "w") as fh:
@@ -154,7 +169,7 @@ def test_the_race_tool_finds_the_two_paths_and_passes(tmp_path):
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"))
     # The fixture builds 2 branches of 2 flops, so 4 clock pins in all, which
     # the tool reads as `taps` + one fired flag per branch.
-    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "4")
     assert r.returncode == 0, r.stdout + r.stderr
     # Worked out by hand from the fixture's own delays, which is the point:
     # the capture is taken at MAX, so it uses the fall numbers, which _iopath
@@ -180,7 +195,7 @@ def test_the_race_tool_fails_when_the_kill_gets_there_first(tmp_path):
     (tmp_path / "typ").mkdir()
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"),
                     kill_flop_cq=0.01, guard_buffers=False, branch_ic=0.60)
-    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "4")
     assert r.returncode == 1, r.stdout + r.stderr
     assert "FAIL" in r.stderr
 
@@ -190,7 +205,7 @@ def test_the_race_tool_fails_when_the_sampling_tree_is_gone(tmp_path):
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"))
     text = open(sdf).read().replace("sampbuf", "somethingelse")
     open(sdf, "w").write(text)
-    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "4")
     assert r.returncode == 1
     assert "sampling tree" in r.stderr or "branch buffers" in r.stderr
 
@@ -372,7 +387,7 @@ def test_the_race_tool_fails_when_half_the_tree_was_optimised_away(tmp_path):
     only measured would report a healthier race on a broken converter."""
     (tmp_path / "typ").mkdir()
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"), branches=1, per_branch=2)
-    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "4")
     assert r.returncode == 1, r.stdout + r.stderr
     assert "branch buffers, expected 2" in r.stderr, r.stderr
 
@@ -380,6 +395,40 @@ def test_the_race_tool_fails_when_half_the_tree_was_optimised_away(tmp_path):
 def test_the_race_tool_fails_when_capture_registers_are_missing(tmp_path):
     (tmp_path / "typ").mkdir()
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"), branches=2, per_branch=1)
-    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "4")
     assert r.returncode == 1, r.stdout + r.stderr
-    assert "flip flops, expected 4" in r.stderr, r.stderr
+    assert "flip flops, expected 6" in r.stderr, r.stderr
+
+
+def test_the_race_tool_sees_the_causal_kill_as_a_larger_margin(tmp_path):
+    """The design change this analysis forced, checked as a change.
+
+    With the kill on its own flip flop clocked by the arrival edge, the two
+    paths start together and the margin is whatever the routing happened to
+    give. With the kill taken from the branches' own fired flags it cannot
+    begin until every branch has clocked, so the margin includes a whole
+    clock-to-Q that the racing arrangement did not have.
+    """
+    (tmp_path / "raced").mkdir()
+    (tmp_path / "causal").mkdir()
+    # Guard buffers off in BOTH, so the only difference between the two is
+    # where the kill is started from.
+    raced = write_sdf(str(tmp_path / "raced" / "x.sdf"), kill_flop_cq=0.05,
+                      guard_buffers=False, branch_ic=0.35)
+    causal = write_sdf(str(tmp_path / "causal" / "x.sdf"), causal_kill=True,
+                       guard_buffers=False, branch_ic=0.35)
+
+    def margin(p):
+        r = run("tdc_race.py", p, "--branches", "2", "--taps", "4")
+        for line in r.stdout.splitlines():
+            if line.startswith("MARGIN"):
+                return float(line.split()[1])
+        raise AssertionError(r.stdout + r.stderr)
+
+    m_raced, m_causal = margin(raced), margin(causal)
+    assert m_causal > m_raced, (
+        f"the causal kill gave {m_causal:+.4f} ns and the raced one "
+        f"{m_raced:+.4f} ns; the change did not buy what it was made for")
+    assert m_raced < 0.10, (
+        "the raced fixture was supposed to be the tight case and is not, so "
+        "this test is not comparing what it says it is")

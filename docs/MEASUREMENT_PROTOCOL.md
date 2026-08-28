@@ -229,10 +229,39 @@ walked. Short, which is the direction that looks like a result.
 The design's argument for why the capture wins was that the capture is one buffer
 from the arrival edge and the kill is a flip flop and three gates from it. That
 is a short argument about a race, and a short argument about a race is not a
-margin. Two dont_touch buffers now sit in the kill path on purpose, delaying only
-the shutdown of an instrument whose reading is already latched, and
-`tools/tdc_race.py` reads both paths out of the extracted timing at every corner
-and fails the build if the margin falls below a guard band.
+margin. `tools/tdc_race.py` reads both paths out of the extracted timing at every
+corner, per delay line stage, and fails the build below a guard band.
+
+**It measured the race as LOST at every fast corner.** From the shipped build:
+
+| corners | margin |
+|---|---|
+| slow | +0.16 to +0.21 ns |
+| typical | -0.02 to +0.01 ns |
+| fast | -0.04 to -0.06 ns |
+
+and the worst stage is always stage 0, because the kill reaches it first. A
+negative margin means the flip flop sampling tap 0 can latch line[1] after the
+kill has driven it back to its parked value, which reads as the launch edge not
+having arrived yet. That is a reading short by a tap or two: systematic, corner
+dependent, and in the direction that looks like a fast circuit.
+
+Two things had to be true for this to be found at all. The tool had to ask the
+question **per stage**, because the kill reaches stage 31 a whole traversal after
+stage 0 and comparing every flip flop against stage 0's corruption charges the
+late ones with a corruption that cannot reach them. And it had to read the
+**fall** delays, which an earlier version of the parser silently discarded; with
+rise only, the same build reported a comfortable positive margin.
+
+**The fix is not more buffers.** More buffers buy margin and leave it a race.
+The kill is now taken from `fired`, the AND of the four branches' own fired
+flags, which are set by the same edges as the capture registers beside them. So
+the kill cannot begin until every branch has clocked: the ordering is a
+clock-to-Q plus an AND tree plus the guard buffers, all of it after the
+captures, rather than a comparison between two paths that happen to start
+together. What it gives up is that a trial where one branch fails to fire does
+not stop the ring early; it still stops when the window closes, and that trial
+was void anyway.
 
 ### The two bugs the tests found before silicon did
 

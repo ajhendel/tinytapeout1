@@ -272,6 +272,27 @@ class SdfGraph:
                 out[node] = (d, list(reversed(path)))
         return out
 
+    def distances(self, start):
+        """{pin: min delay} from `start` to everything reachable. Dijkstra.
+
+        One pass instead of one search per target, because the race has to be
+        asked TAP BY TAP: the kill reaches delay line stage i later than stage
+        0, so comparing every sampling flop against stage 0 charges each flop
+        with a corruption that cannot reach it yet.
+        """
+        best = {start: 0.0}
+        q = [(0.0, start)]
+        while q:
+            d, node = heapq.heappop(q)
+            if d > best.get(node, float("inf")):
+                continue
+            for nxt, (lo, _hi) in self.edges.get(node, {}).items():
+                nd = d + lo
+                if nd < best.get(nxt, float("inf")):
+                    best[nxt] = nd
+                    heapq.heappush(q, (nd, nxt))
+        return best
+
     def hop_max(self, src, dst):
         e = self.edges.get(src, {}).get(dst)
         return None if e is None else e[1]

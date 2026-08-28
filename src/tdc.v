@@ -117,11 +117,10 @@ module tdc #(
   // Ring closure. NAND makes the loop odd-inversion so it oscillates, and gates
   // it: with run low the ring parks with line[0] high and every tap high.
   //
-  // ring_kill is set by the arrival edge, which stops the ring immediately. The
-  // capture flip flops below are clocked by the same edge through a shorter
-  // path (one buffer) than the kill takes to reach line[0] and propagate, so
-  // the capture always wins the race. That ordering is the reason the kill is
-  // placed here and not inside the sampling registers.
+  // ring_kill is asserted once the sampling registers have CAPTURED, not on the
+  // arrival edge itself. See the long note at the kill below: the two used to
+  // be started by the same edge and raced, and extraction says the race was
+  // lost at every fast corner.
   // freerun suppresses the kill so the ring free-runs for the whole measurement
   // window. That is not a measurement mode, it is how the ring's own PERIOD is
   // measured: point the frequency counter at the ring node (cnt_src = 2 in
@@ -132,19 +131,17 @@ module tdc #(
   //
   // THE KILL GUARD
   //
-  // The kill and the capture race, and the capture has to win. If line[1]
-  // changed before the sampling flip flops closed, the converter would record a
-  // line that the arrival edge never saw, and the error would be one tap on
-  // some dies and not others. The ordering argument is short (the capture is
-  // one buffer from the arrival edge; the kill is a flip flop, three gates and
-  // a buffer from it) and a short argument about a race is not a margin.
+  // If line[1] changed before the sampling flip flops closed, the converter
+  // would record a line that the arrival edge never saw, and the error would be
+  // a SHORT reading on some dies and not others.
   //
-  // So two dont_touch buffers are put in the kill path on purpose. They cost
-  // two cells, they delay only the shutdown of an instrument whose reading is
-  // already latched, and they turn the ordering from an argument into a number
-  // that tools/tdc_race.py reads out of the extracted timing at every corner
-  // and fails the build over. See the guard band there.
-  reg  ring_kill;
+  // The kill is now caused by the capture rather than racing it, so the
+  // ordering holds by construction. These two dont_touch buffers stay anyway.
+  // They cost two cells, they delay only the shutdown of an instrument whose
+  // reading is already latched, and they keep the margin large enough that
+  // tools/tdc_race.py can measure it out of extracted timing at every corner
+  // instead of asking whether a few picoseconds went the right way.
+  wire ring_kill;
   wire kill_d0, kill_d1;
   cell_buf #(.DRIVE(1)) kill_b0 (.A(ring_kill), .X(kill_d0));
   cell_buf #(.DRIVE(1)) kill_b1 (.A(kill_d0),   .X(kill_d1));
@@ -237,10 +234,39 @@ module tdc #(
   wire fired = &fired_grp;
 
   // ---------------------------------------------------- stop the ring on arrival
-  always @(posedge samp_root or negedge clr_n) begin
-    if (!clr_n) ring_kill <= 1'b0;
-    else        ring_kill <= 1'b1;
-  end
+  //
+  // THE KILL IS CAUSED BY THE CAPTURE, NOT RACED AGAINST IT.
+  //
+  // This used to be its own flip flop clocked by samp_root, in parallel with
+  // the sampling registers, with two guard buffers behind it to make the
+  // ordering comfortable. Extraction says it was not comfortable. Measured on
+  // the shipped build, per delay line stage, at every corner:
+  //
+  //     slow corners    +0.16 to +0.21 ns of margin
+  //     typical         -0.02 to +0.01
+  //     fast corners    -0.04 to -0.06
+  //
+  // and the worst stage is always stage 0, because the kill reaches it first.
+  // A negative margin means the flip flop sampling tap 0 can latch line[1]
+  // AFTER the kill has driven it back to the parked value, which reads as the
+  // launch edge not having arrived yet, which is a reading that is SHORT by a
+  // tap or two. Systematic, corner dependent, and in the direction that looks
+  // like a fast circuit.
+  //
+  // Adding more buffers would buy margin and would leave it a race. So the kill
+  // is taken from `fired` instead, which is the AND of the four branches' own
+  // fired flags. Those flags are set by the same edges as the capture registers
+  // beside them, so the kill cannot begin until every branch has clocked: the
+  // ordering is now clock-to-Q plus an AND tree plus the guard buffers, all of
+  // it AFTER the captures, rather than a comparison between two paths that
+  // happen to start together.
+  //
+  // What this gives up: on a trial where one branch fails to fire, `fired`
+  // never rises and the ring is not killed early. It still stops, because `run`
+  // is gated by `start`, which falls when the window closes. A partial capture
+  // is already reported as no arrival, so the trial was void either way; the
+  // cost is that the ring runs to the end of that window instead of stopping.
+  assign ring_kill = fired;
 
   // ------------------------------------------------------------ wrap counter
   // Counts full ring periods between launch and arrival. Clocked by the last

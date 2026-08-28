@@ -70,7 +70,8 @@ jobs:
           echo "sky130 open_pdks ${{ steps.pdk.outputs.version }}" | tee spice_ladder.md
           python3 tools/spice_ladder.py \
             --pdk "$HOME/.volare/sky130A" \
-            --sweep --json spice_ladder.json | tee -a spice_ladder.md
+            --sweep --steps --decompose \
+            --json spice_ladder.json | tee -a spice_ladder.md
 
       - name: upload the result
         if: always()

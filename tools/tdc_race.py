@@ -45,11 +45,45 @@ fail; passing quietly is how a constraint that matches nothing gets shipped.
 """
 
 import argparse
+import re
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sdf_graph import load  # noqa: E402
+
+
+def sampled_by(g, stage_out, reach, max_hops=6):
+    """The sampling flip flop data pins fed by one delay line stage output.
+
+    Followed through the graph rather than assumed adjacent. The flow inserts
+    repeaters wherever it likes, and on this build the LAST stage's output
+    reaches its flip flop through two of them (`fanout15` and `max_cap16`) while
+    the other thirty-one are direct. A tool that looked only one hop would have
+    reported the last tap's capture register as missing.
+
+    The delay line itself is never traversed, or the search would walk down it
+    and collect every later stage's flip flop as well.
+    """
+    found, seen = set(), {stage_out}
+    frontier = [(stage_out, 0)]
+    while frontier:
+        node, depth = frontier.pop()
+        if depth >= max_hops:
+            continue
+        for nxt in g.edges.get(node, {}):
+            if nxt in seen:
+                continue
+            seen.add(nxt)
+            if nxt.endswith("/D"):
+                clk = nxt.rsplit("/", 1)[0] + "/CLK"
+                if clk in reach:
+                    found.add(nxt)
+                continue
+            if nxt.endswith("/CLK") or ".dl[" in nxt:
+                continue
+            frontier.append((nxt, depth + 1))
+    return sorted(found)
 
 
 def find_one(g, *needles, endswith=None):
@@ -175,38 +209,75 @@ def main():
           f"flops the arrival edge has to reach")
 
     # ------------------------------------------------------------ the kill
-    # Searched, not named. Between the kill flop and the ring NAND sit an
-    # inverter and an AND that the flow created and named itself, and the first
-    # tap the kill can corrupt is the delay line's own first buffer output.
-    first_tap = [p for p in g.pins("dl") if ".dl" in p and p.endswith("/X")]
-    first_tap = [p for p in first_tap if "[0]" in p or ".dl.0." in p]
-    if not first_tap:
-        print("FAIL: no delay line stage 0 output in the SDF.", file=sys.stderr)
+    # ASKED TAP BY TAP, and that is not a refinement, it is the difference
+    # between a true and a false answer.
+    #
+    # The kill walks the delay line. It corrupts stage 0 first and stage 31 a
+    # whole traversal later. Comparing every sampling flip flop against stage
+    # 0's corruption charges the flop that samples stage 31 with a corruption
+    # that cannot reach its data for another thirty buffers, and at the fast
+    # corner on this design that produced a margin of -0.064 ns for a race that
+    # is not actually lost.
+    #
+    # So each stage is matched to the flip flop that samples IT, found through
+    # the graph rather than by name: stage i's output drives exactly one D pin,
+    # and that flop's clock pin is the one whose arrival has to beat it.
+    kill_dist = g.distances(root)
+    stages = {}
+    for p in g.pins("dl"):
+        if ".dl" not in p or not p.endswith("/X"):
+            continue
+        m = re.search(r"\.dl\[(\d+)\]", p)
+        if m:
+            stages[int(m.group(1))] = p
+    if not stages:
+        print("FAIL: no delay line stage outputs in the SDF.", file=sys.stderr)
         return 1
-    target = set(first_tap)
-    kill, path = g.fastest(root, lambda p: p in target)
-    if kill is None:
-        print("FAIL: no path at all from the sampling root to the delay line. "
-              "The ring kill is not connected, which means the ring never "
-              "stops and every long measurement is a supply disturbance.",
-              file=sys.stderr)
-        return 1
-    print(f"kill, fastest         {kill:.4f} ns  ({len(path)} pins)")
-    for p in path:
-        print(f"                        {p}")
 
-    margin = kill - worst_capture - args.hold
+    rows = []
+    for i in sorted(stages):
+        out = stages[i]
+        if out not in kill_dist:
+            continue
+        d_pins = sampled_by(g, out, reach)
+        if len(d_pins) != 1:
+            print(f"FAIL: delay line stage {i} drives {len(d_pins)} data pins, "
+                  f"expected exactly one sampling flip flop. The capture "
+                  f"register for that tap is missing or doubled.",
+                  file=sys.stderr)
+            return 1
+        clk = d_pins[0].rsplit("/", 1)[0] + "/CLK"
+        if clk not in reach:
+            print(f"FAIL: the flip flop sampling stage {i} is not reachable "
+                  f"from the sampling root, so that tap is clocked by "
+                  f"something else.", file=sys.stderr)
+            return 1
+        rows.append((i, kill_dist[out], reach[clk][0]))
+
+    if len(rows) != args.taps:
+        print(f"FAIL: matched {len(rows)} of {args.taps} delay line stages to "
+              f"their sampling flip flops.", file=sys.stderr)
+        return 1
+
+    worst_i, kill_i, cap_i = min(rows, key=lambda r: r[1] - r[2])
+    margin = kill_i - cap_i - args.hold
+    print(f"kill, per stage       stage 0 at {rows[0][1]:.4f} ns, "
+          f"stage {rows[-1][0]} at {rows[-1][1]:.4f} ns")
+    print(f"worst stage           {worst_i}: kill {kill_i:.4f} ns (min) "
+          f"against capture {cap_i:.4f} ns (max)")
     print(f"hold allowance        {args.hold:.4f} ns")
     print(f"MARGIN                {margin:+.4f} ns   "
           f"(guard band {args.guard:.4f} ns)")
 
     if args.markdown:
         print()
-        print("| corner | capture (max) | kill (min) | hold | margin | verdict |")
-        print("|---|---|---|---|---|---|")
+        print("| corner | capture (max) | kill (min) | hold | margin | "
+              "worst stage | verdict |")
+        print("|---|---|---|---|---|---|---|")
         verdict = "pass" if margin >= args.guard else "FAIL"
-        print(f"| {corner} | {worst_capture:.4f} ns | {kill:.4f} ns | "
-              f"{args.hold:.4f} ns | {margin:+.4f} ns | {verdict} |")
+        print(f"| {corner} | {cap_i:.4f} ns | {kill_i:.4f} ns | "
+              f"{args.hold:.4f} ns | {margin:+.4f} ns | {worst_i} | "
+              f"{verdict} |")
 
     if margin < args.guard:
         print(f"\nFAIL: the capture beats the kill by only {margin:+.4f} ns "
