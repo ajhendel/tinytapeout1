@@ -81,20 +81,38 @@ that needs repeats and a study that quietly returns noise.
 `tools/tdc_range.py` prints this table from every build's SDF and it is the
 authority; the numbers below are from the 24-site build and are indicative.
 
+Measured from the 20-site build's own extracted timing, typical corner, tap
+0.082 ns:
+
 | comparison | difference | taps | single trial? |
 |---|---|---|---|
-| input isolation pair | 372 ps | 3.1 | yes |
-| load series, 0 vs 4 sinks | see the tool | | expected yes |
-| drive series, x1 vs x8 | see the tool | | expected yes, after the redesign |
-| load ladder pair | 7 ps at Liberty plus extraction | 0.06 | **no, and that is the point** |
+| drive series, x1 vs x8 | 1035 ps | 12.6 | yes |
+| load series, 0 vs 4 sinks | 919 ps | 11.2 | yes |
+| drive series, x1 vs x2 | 607 ps | 7.4 | yes |
+| load series, 0 vs 1 sink | 238 ps | 2.9 | marginal, about 2 trials per arm |
+| input isolation pair | 216 ps | 2.6 | marginal, about 3 trials per arm |
+| **load ladder pair** | **57 ps** | **0.69** | **no; see below** |
 
-The ladder pair is the interesting row. Liberty predicts exactly zero and
-extraction predicts 7 ps, which is a twentieth of a tap, so the physical effect
-this pair exists to find is one that neither of those layers can see. **The SPICE
-prediction is not yet computed and it is what decides whether row 6 is a
-measurement or a bound.** That is owed before the predictions are written, and
-if SPICE also says the effect is far below a tap, row 6 becomes an upper-bound
-result reported with its repeat count, which is still worth having.
+The drive series row is the one to look at. Before the structure was fixed it
+was 76 picoseconds and not monotonic; it is now 1035 and clean. That is the
+difference between a headline experiment and a row that could never have
+produced a result.
+
+**The ladder pair needs SPICE and cannot use these numbers.** The same pair
+measured 7 ps on the previous build and 57 ps on this one, an eightfold change
+in a circuit that did not change. That spread is routing, not mechanism: the SDF
+comes from Liberty plus extraction, Liberty's pin capacitance has no enable
+dependence at all, so what varies between builds is wire and not the physical
+effect the pair exists to find. **The SPICE prediction is owed before row 6's
+prediction is written**, and if SPICE also puts the effect far below a tap then
+row 6 is an upper bound reported with its repeat count, which is still a result
+and still worth having.
+
+The repeat counts assume DITHER. Averaging only beats quantization if the
+arrival time moves across tap boundaries between trials; if it does not, every
+trial returns the same code and no number of them helps. Whether this die
+dithers is study 2, code density, and it gates every row above that depends on
+averaging.
 
 ## The rule that makes this a dataset rather than a demonstration
 

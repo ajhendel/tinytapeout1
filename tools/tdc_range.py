@@ -178,17 +178,28 @@ def main():
             continue
         diff = abs(got[a] - got[b])
         n_taps = diff / tap if tap else 0
+        # Quantization of a single reading is uniform over one tap, so its
+        # standard deviation is 1/sqrt(12) taps. Separating two means by three
+        # standard errors needs N > 18 * sigma^2 / d^2 trials per arm.
+        need = max(1, int(18 * (1.0 / 12.0) / max(n_taps, 1e-9) ** 2 + 0.5))
         if n_taps >= 3:
             verdict = "yes"
         elif n_taps >= 1:
-            verdict = "marginal, average"
+            verdict = f"marginal, about {need} trials per arm"
         else:
-            verdict = f"NO, needs about {int((1/max(n_taps,1e-9))**2)} repeats"
+            verdict = f"NO, about {need} trials per arm IF dithered"
         print(f"{label:<28}{diff*1000:>10.0f} ps{n_taps:>8.2f}  {verdict}")
     print()
     print("A difference below one tap is not a failure. It is a statement about")
     print("how many trials that row of docs/EXPERIMENT_MATRIX.md needs, and it")
     print("is better known now than after the dies arrive.")
+    print()
+    print("THE REPEAT COUNTS ASSUME DITHER. Averaging only beats quantization if")
+    print("the arrival time moves across tap boundaries between trials. If it")
+    print("does not, every trial returns the identical code and no number of")
+    print("them helps. Whether this die dithers is study 2 in the experiment")
+    print("matrix, code density, and it has to be answered before any row that")
+    print("depends on averaging is believed.")
 
     bad = [n for n, _, _, f in rows if f >= 1]
     if bad:

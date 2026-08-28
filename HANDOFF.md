@@ -49,6 +49,72 @@ WP1 and WP2 complete, WP3 items 1–3 running with real numbers written back int
 
 ## Status
 
+### 2026-08-27, third round. The drive series could not have worked either. Fixed, 20 sites, built clean.
+
+The 24-site build with the ring converter came back clean and its own extracted
+timing said the chip's headline drive experiment was structurally unable to
+produce a result.
+
+**The drive series measured 54, 45, 46 and 49 picoseconds per stage for drive
+variants 1, 2, 4 and 8.** Seventy-six picoseconds of spread across an eightfold
+change in drive, not monotonic, against a converter tap of 121. The chains were
+uniform, so each stage's driver AND the load it drove both scaled with the
+variant and the delay barely moved. No instrument change would have fixed it. It
+is invisible in logic simulation, invisible in a netlist review, and visible in
+one column of an extracted timing report.
+
+A drive series has to hold the LOAD fixed while the driver varies. Each stage is
+now the variant under study driving two dummy inv_1 sinks and a strong inv_8
+restorer; the restorer is the strongest available on purpose, because it drives
+the one load that still varies. The load series is shaped the opposite way, an
+inv_1 backbone with 0, 1, 2 and 4 sinks. Using one structure for both was the
+mistake, and the general form is worth carrying into any later block: **a series
+that varies one thing has to hold fixed everything that thing is coupled to, and
+in CMOS a driver is coupled to its own load.**
+
+**It works.** From the 20-site build's extracted timing, typical corner:
+
+| comparison | before | after |
+|---|---|---|
+| drive x1 vs x8 | 76 ps, not monotonic | **1035 ps, 12.6 taps** |
+| drive x1 vs x2 | within noise | 607 ps, 7.4 taps |
+| load, 0 vs 4 sinks | not a series | 919 ps, 11.2 taps |
+| input isolation pair | 372 ps | 216 ps, 2.6 taps, needs a few trials |
+| load ladder pair | 7 ps | 57 ps, 0.69 taps, needs SPICE |
+
+**The ladder pair cannot use these numbers and that is itself the finding.** The
+same unchanged circuit measured 7 ps on one build and 57 on the next, an
+eightfold change from routing alone. The SDF is Liberty plus extraction and
+Liberty's pin capacitance has no enable dependence at all, so what moves between
+builds is wire, not the mechanism. **The SPICE prediction is owed before that
+row's prediction is written.** If SPICE also puts it far below a tap, the row
+becomes an upper bound reported with its repeat count, which is still a result.
+
+**20 sites, and the build is clean.** 63,627 um2, 28.2 percent utilization
+against a 33.3 projection, DRC 0, antenna 0, setup +5.60 ns, hold +0.108 ns,
+precheck and gate-level passing. The redesign plus the ladder pair put about 900
+cells into the fixed column and 24 sites would have projected past the 34.8
+percent that has ever routed clean here. Four sites is the price of an
+instrument that works, and it is the third application of "cut sites before
+cutting the strip".
+
+One free thing: the load series' zero-sink arm and the depth series' 16-stage
+point are the same circuit built twice under different select codes, so a
+disagreement between them is the converter and not the circuit. They agree
+exactly in simulation and it is now an assertion.
+
+**Owed next, in order.**
+1. **SPICE on the load-ladder pair.** It decides whether that row is a
+   measurement or a bound, and it cannot be answered from Liberty or the SDF.
+2. **WP5 pre-registration**, against docs/EXPERIMENT_MATRIX.md row by row. The
+   depth-series slope is what makes the converter falsifiable; the repeat counts
+   in that file are what make the marginal rows honest.
+3. Andrew still owns the SKY26c deadline and price, the 6x2 spend, and a board.
+
+I consider the instrument design converged here. Three rounds of review each
+found a real defect, and each was found by reading what the build itself
+reported rather than by a test.
+
 ### 2026-08-27, second design review. The instrument did not work, and now it does.
 
 Read this before anything else. A review of the built design found two things

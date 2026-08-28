@@ -508,6 +508,27 @@ one. 34.8 percent is the highest utilization that has ever routed clean here.
 **Verdict: 20 sites.** Twenty-four projects past the demonstrated ceiling on the
 raw model and only just inside on the corrected one, which is not a margin.
 
+### Built, 2026-08-27
+
+| quantity | projected | **measured** |
+|---|---|---|
+| standard cell area | | **63,627 um2** |
+| utilization in 6x2 | 33.3 %, or 30.5 % corrected | **28.2 %** |
+| setup WNS, worst corner | | **+5.60 ns** |
+| hold WNS, worst corner | | **+0.108 ns** |
+| routing DRC / antenna | | **0 / 0** |
+| total power, nominal | | 3.59 mW |
+
+More headroom than either column predicted, and the projection is now known to
+run high twice in a row. gds, precheck, gate-level test and the build reports
+all pass; the viewer job fails and will keep failing until the repo is public.
+
+**The drive series works now.** From the same build's extracted timing, drive
+variant 1 against 8 differs by 1035 ps, 12.6 converter taps, against 76 ps and
+not monotonic before the redesign. The load sweep is 919 ps across zero to four
+sinks. Both are readable from a single trial. The full comparison table, and
+which rows still need averaging, is in docs/EXPERIMENT_MATRIX.md.
+
 Four sites is the entire price, and it buys an instrument that can resolve the
 thing the chip exists to measure. Twenty against twenty-four barely changes what
 the fabric can express, since it is a serial column of two-input functions
