@@ -478,8 +478,8 @@ async def test_readout_selector_reaches_every_slot(dut):
     await start(dut)
     words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
 
-    async def read(sel):
-        gw = global_word(readout_sel=sel, window_exp=0, trans_exp=15)
+    async def read(sel, **kw):
+        gw = global_word(readout_sel=sel, window_exp=0, trans_exp=15, **kw)
         await load_config(dut, build_frame(gw, words))
         await tick(dut, 40)
         return dut.uio_out.value.to_unsigned()
@@ -497,6 +497,22 @@ async def test_readout_selector_reaches_every_slot(dut):
         "is the point of the slot: a host reading an unfamiliar die finds out "
         "rather than decoding it with the wrong field map")
     assert await read(RO_SITE_W) == 12, "site word width slot"
+
+    # Slot 21 echoes the TDC's own select fields, and it is the ONLY readout
+    # that can prove tdc_src landed where it was moved to. The field used to be
+    # one bit at gcfg[21]; it is now two bits at gcfg[37:36], and a host, a
+    # test and the RTL disagreeing about that would silently select the wrong
+    # stop source and time the wrong thing. Every value is exercised, because a
+    # field stuck at zero also reads back correctly for the zero case.
+    for src in (SRC_CHAR, SRC_FABRIC, SRC_CALIB, SRC_EXTERNAL):
+        for pol in (0, 1):
+            got = await read(RO_TDC_CFG_ECHO, tdc_src=src, tdc_pol=pol)
+            want = (pol << 2) | src
+            assert got == want, (
+                f"asked for tdc_src={src} tdc_pol={pol} and the chip echoed "
+                f"{got:#04x}, expected {want:#04x}. The global field map in "
+                f"this test and in src/project.v disagree about where the TDC "
+                f"select fields live")
 
 
 async def tdc_measure(dut, char_sel=0, char_drive=0, tdc_src=0, tdc_pol=0,
@@ -754,7 +770,6 @@ async def test_external_stop_times_a_pin_edge(dut):
     listening to when scan_en goes low, which it is for the whole window.
     """
     await start(dut)
-    words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
 
     def at(offset_ns):
         async def inject(d):
@@ -789,7 +804,6 @@ async def test_no_pin_edge_is_no_arrival(dut):
     exist in the window, and the readings would be ordered by something other
     than what was injected."""
     await start(dut)
-    words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
 
     async def nothing(d):
         set_ui(d, scan_in=0)
@@ -799,6 +813,50 @@ async def test_no_pin_edge_is_no_arrival(dut):
     assert not done, (
         "the converter reported an arrival with nothing driving the external "
         "stop, so the previous test is timing something it did not inject")
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_polarity_does_not_corrupt_an_asynchronous_stop(dut):
+    """tdc_pol must not touch the edge-armed sources, and this proves it.
+
+    The bug this guards was silent and produced a plausible number. The arming
+    flip flop is cleared when the launch falls at the end of the window, and the
+    sampler is still armed then, because tdc_wait is held by meas_gate and
+    meas_gate stays high through the readout tail. With the polarity bit applied
+    AFTER the source multiplexer, that falling edge became a rising one at the
+    converter, re-fired all four sampling groups on a parked delay line, and the
+    capture pulse two clocks later transferred it over the real reading. Every
+    flag the host checks would have said the trial was good.
+
+    So the same injected edge is timed with tdc_pol clear and with tdc_pol set,
+    and the two readings have to agree. They agree because the polarity bit is
+    now applied before the multiplexer, to the two MEASUREMENT sources only,
+    which is where it means something.
+    """
+    await start(dut)
+
+    def at(offset_ns):
+        async def inject(d):
+            set_ui(d, scan_in=0)
+            await Timer(offset_ns, unit="ns")
+            set_ui(d, scan_in=1)
+            await Timer(1, unit="ns")
+            set_ui(d, scan_in=0)
+        return inject
+
+    seen = {}
+    for pol in (0, 1):
+        taps, gray, done, valid = await tdc_measure(
+            dut, tdc_src=SRC_EXTERNAL, tdc_pol=pol, inject=at(4.0))
+        assert done and valid, f"no arrival with tdc_pol={pol}"
+        seen[pol] = tdc_reading(taps, gray)
+        dut._log.info(f"external stop, tdc_pol={pol}: {seen[pol]} taps, "
+                      f"gray {gray:#04x}, code {taps:#010x}")
+    assert seen[0] == seen[1], (
+        f"the same injected edge read {seen[0]} taps with tdc_pol=0 and "
+        f"{seen[1]} with tdc_pol=1. The polarity bit is reaching an "
+        f"asynchronous stop source, where it has nothing to mean and where its "
+        f"end-of-window edge destroys the capture")
 
 
 @cocotb.test(skip=GATE_LEVEL)

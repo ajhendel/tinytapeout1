@@ -65,6 +65,9 @@ def main():
                     help="ns of margin required beyond the hold allowance")
     ap.add_argument("--hold", type=float, default=0.05,
                     help="ns allowed for the sampling flip flop's own hold")
+    ap.add_argument("--taps", type=int, default=32,
+                    help="how many sampling flops the tree must reach")
+    ap.add_argument("--branches", type=int, default=4)
     ap.add_argument("--markdown", action="store_true")
     args = ap.parse_args()
 
@@ -92,45 +95,84 @@ def main():
     print(f"root                  {root}")
 
     # --------------------------------------------------------- the capture
-    # Two hops by construction: the root feeds four branch buffers and each
-    # branch buffer feeds eight flop clock pins. The tree is built by hand in
-    # src/tdc.v precisely so this is short enough to state.
-    branch_ins = [p for p in g.pins("sampbuf") if p.endswith("/A")]
-    if not branch_ins:
+    # SEARCHED, not counted in hops. The tree is built by hand in src/tdc.v as
+    # one root and four branch buffers, and that is NOT what the flow built:
+    # it inserted a fanout repeater, so the arrival edge reaches a sampling flop
+    # through root, repeater, branch, flop. A tool that assumed the hop count
+    # finds nothing here, which is what the first version of this one did.
+    branch_outs = [p for p in g.pins("sampbuf") if p.endswith("/X")]
+    if not branch_outs:
         print("FAIL: no sampbuf branch buffers in the SDF. The balanced "
               "sampling tree is not in the netlist.", file=sys.stderr)
         return 1
 
-    worst_capture = None
-    worst_desc = None
-    for bin_pin in branch_ins:
-        hop1 = g.hop_max(root, bin_pin)
-        if hop1 is None:
-            continue
-        inst = bin_pin.rsplit("/", 1)[0]
-        bout = f"{inst}/X"
-        cell = g.hop_max(bin_pin, bout)
-        if cell is None:
-            continue
-        hop2, dest = g.out_max(bout, lambda p: p.endswith("/CLK"))
-        if hop2 is None:
-            continue
-        total = hop1 + cell + hop2
-        if worst_capture is None or total > worst_capture:
-            worst_capture = total
-            worst_desc = f"{bin_pin} -> {dest}"
-    if worst_capture is None:
+    samp_clks = set()
+    for b in branch_outs:
+        samp_clks |= {p for p in g.edges.get(b, {}) if p.endswith("/CLK")}
+    if not samp_clks:
         print("FAIL: the sampling tree in the SDF does not reach any flip flop "
               "clock pin. Either the branch buffers were merged away or the "
               "capture registers were.", file=sys.stderr)
         return 1
 
-    n_clk = len({p for b in branch_ins
-                 for p in g.edges.get(b.rsplit('/', 1)[0] + "/X", {})
-                 if p.endswith("/CLK")})
-    print(f"capture, worst        {worst_capture:.4f} ns  ({worst_desc})")
-    print(f"                      {len(branch_ins)} branches, "
-          f"{n_clk} clock pins reached")
+    reach = g.slowest(root, lambda p: p.endswith("/CLK"))
+    captured = {p: reach[p] for p in samp_clks if p in reach}
+    if not captured:
+        print("FAIL: no path from the sampling root to any sampling flip flop.",
+              file=sys.stderr)
+        return 1
+    worst_capture, worst_path = max(captured.values())
+    worst_desc = worst_path[-1]
+
+    # SIZE IS GATED, NOT JUST PRINTED. If three of four branches vanished, or
+    # thirty of thirty-two sampling flops did, the capture time computed from
+    # whatever survived would be SMALLER, the margin would be LARGER, and this
+    # tool would pass a converter that had mostly been optimised away.
+    if len(branch_outs) != args.branches:
+        print(f"FAIL: {len(branch_outs)} sampling branch buffers, expected "
+              f"{args.branches}. The hand-built tree is not in the netlist and "
+              f"a smaller tree makes this gate's margin look better.",
+              file=sys.stderr)
+        return 1
+    # TAPS sampling flops plus one fired flag per branch.
+    want_flops = args.taps + args.branches
+    if len(samp_clks) != want_flops:
+        print(f"FAIL: the sampling tree reaches {len(samp_clks)} flip flops, "
+              f"expected {want_flops} ({args.taps} taps plus one fired flag per "
+              f"branch). A capture register that is not there cannot be timed "
+              f"and cannot be sampled.", file=sys.stderr)
+        return 1
+
+    # The four branches must be fed from ONE node, or the repeater the flow
+    # inserted has unbalanced the tree that was hand built to be balanced.
+    feeds = set()
+    for b in branch_outs:
+        inst = b.rsplit("/", 1)[0]
+        feeds |= set(g.ins.get(f"{inst}/A", {}))
+    print(f"capture, worst        {worst_capture:.4f} ns  (to {worst_desc})")
+    print(f"                      {len(branch_outs)} branches, "
+          f"{len(samp_clks)} sampling flops, fed from {len(feeds)} node(s)")
+    for f in sorted(feeds):
+        print(f"                        via {f}")
+    if len(feeds) != 1:
+        print(f"FAIL: the four branch buffers are driven from {len(feeds)} "
+              f"different nodes. The tree is hand built balanced so that every "
+              f"sampling flop is the same distance from the arrival edge; if "
+              f"the branches are fed unequally then the skew is back to being "
+              f"an accident of a tool run and it lands on the measurement.",
+              file=sys.stderr)
+        return 1
+
+    # Flops clocked straight off the root rather than through a branch are the
+    # ring kill and the coarse capture, which are meant to be there. Reported so
+    # that a change in that population is visible rather than assumed.
+    direct = {p for p in g.edges.get(root, {}) if p.endswith("/CLK")}
+    print(f"                      {len(direct)} flops clocked directly from "
+          f"the root (ring kill and the coarse capture)")
+    spread = max(d for d, _ in captured.values()) - \
+        min(d for d, _ in captured.values())
+    print(f"sampling skew, spread {spread:.4f} ns  across the {len(captured)} "
+          f"flops the arrival edge has to reach")
 
     # ------------------------------------------------------------ the kill
     # Searched, not named. Between the kill flop and the ring NAND sit an

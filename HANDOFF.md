@@ -49,6 +49,122 @@ WP1 and WP2 complete, WP3 items 1–3 running with real numbers written back int
 
 ## Status
 
+### 2026-08-28, fifth round. Two independent reviews, and nine of the findings were real.
+
+Two reviewers were run against the fourth round before any of its numbers were
+written down: one adversarially checking the SPICE deck, one reading the whole
+commit. Between them they found eleven real defects. Three were in the SPICE
+tool, five in the SDF tools, one in the RTL, and the worst one was in a list.
+
+**The deadline is 2026-09-07 at 20:00 UTC. Ten days.** It needed no portal
+login: the tinytapeout.com countdown renders from JavaScript, so fetching the
+page returns a placeholder, but the value driving it sits in the markup as
+`data-shuttle="ttsky26c" data-deadline="2026-09-07T20:00:00Z"`. Recorded in
+docs/TT_LOGISTICS.md, where this file said "TBD via the submission portal" for
+two days. Pricing genuinely does need the login and stays Andrew's.
+
+**The depth series was pre-registered against a depth the RTL does not build.**
+harness/evofab/genome.py and tools/prereg.py both said depth 24 for `load_0`.
+src/char_paths.v builds it at 16 and says so in a comment two lines above. The
+per-stage slope from that series is the number every other delay on this chip is
+quoted against, and fitting five real depths against six x values with one wrong
+drags it to about 0.89 of the true slope, roughly 11 percent low, while
+inflating the very residual the pre-registration predicts will stay under one
+tap. So it could have pre-registered a falsification of its own linearity claim.
+Nothing failed: the RTL was right, the cocotb test was right by coincidence of
+being written separately, and two copies of a list were wrong.
+harness/tests/test_char_paths_match_rtl.py now parses the DEPTH, DRIVE, LOAD,
+STAGES and SINKS parameters out of the Verilog and checks the depth series, the
+repeat point, both series' shapes and both matched pairs against them.
+
+**tdc_pol destroyed the capture on the asynchronous stop sources.** The arming
+flip flop is cleared when the launch falls at the end of the window, and the
+sampler is still armed then because tdc_wait is held by meas_gate, which stays
+high through the readout tail. With the polarity bit applied AFTER the source
+multiplexer, that falling edge arrived at the converter as a RISING one, re-fired
+all four sampling groups on a parked delay line, and the capture pulse two clocks
+later transferred it over the real reading. Measured with the old RTL: the same
+injected edge reads 184 taps with tdc_pol clear and **9447 taps with it set**,
+with done and valid both asserted. The polarity bit is now applied before the
+multiplexer to the two MEASUREMENT sources only, where it means something; an
+edge-armed source always presents a rising edge and polarity has nothing to say
+about it. One extra xor2, and the class is gone rather than documented.
+
+**The SDF tools were reading a graph that was not connected.** OpenSTA names an
+INTERCONNECT endpoint as one string, instance and pin joined by a dot with the
+dots already inside the hierarchical name escaped; an IOPATH names them
+separately. So the same physical pin arrived as `...g4.u/X` from one record type
+and `...g4.u.X` from the other, cell arcs and wire arcs landed in disjoint halves
+of the graph, and no search ever crossed between them. The synthetic fixture used
+the slash form for both, which is why four passing tests did not see it. The
+fixture now writes the real encoding, escaping and all.
+
+**And every IOPATH's fall delay was being discarded.** The regex stopped at the
+second-to-last close paren, so the fall triple lost its bracket and the triple
+matcher never saw it. Every delay was silently the rise delay. In a race that is
+unsafe in both directions at once: the capture was taken from a max that omitted
+the slower transition and the kill from a min that omitted the faster one, so
+the margin was reported larger than any die has to honour. The tell was
+tools/stop_tree.py printing rise-against-fall as exactly 0.0000 ns at every
+corner. The fixture now writes rise and fall as different numbers, so a parser
+that confuses them cannot pass.
+
+**The three instrument gate steps in CI always exited 0.** `for ...; done | tee`
+runs the loop in a subshell, so `rc=1` never reached the parent. They are the
+same defect as the continue-on-error they had just been split out to avoid. An
+empty find would have passed vacuously too; both now fail.
+
+Also fixed: the race gate printed the tree's size and never gated it, so three
+missing branches would have made its own margin look better; the stop-tree gate
+dropped a tap's wire term silently whenever the driver was not unique, which it
+never is, because a fabric site output is a four-driver tri-state node by
+construction; the retraction half of the documentation audit had gone inert when
+paragraph mode arrived, exempting 40 percent of all paragraphs and every single
+one containing a retracted phrase; the audit never read .github at all, because
+".git" is a substring of ".github"; the readout table named 0xFF as the coarse
+saturation code where the wire carries 0x80; and the decoder's boundary guard
+had a floor at zero and no ceiling, so a capture at 0xFE could be offered the
+saturation code as a candidate delay.
+
+**What the gates then said, on a real SDF, for the first time.**
+
+    capture beats the ring kill    +0.445 ns margin, guard band 0.100
+    sampling skew across 36 flops  0.033 ns
+    branch balance                 4 branches, all fed from one node
+    stop selector trend            -0.044 taps/site, limit 0.25
+    stop selector rise vs fall     0.713 ns, six taps
+
+The flow inserted a fanout repeater in front of the hand-built sampling tree,
+and it feeds all four branches from one node, so the balance survived. The
+selector's rise and fall offsets differ by six taps, which makes its correction
+table polarity dependent; a per-site series must not mix the two.
+
+**SPICE on the ladder pair came back at +220 ps, and then the reviewer found
+three reasons not to publish that number yet.** The taps column divided a
+corner-dependent delay by a fixed typical-corner tap, and on this build the tap
+runs 0.078 ns fast to 0.219 ns slow, nearly three to one. The sweep varied one
+factor at a time and never simulated the combination that MINIMISES the effect,
+which is the one the category decision turns on. And the measurement was taken
+on the first edge after the DC solution, in a circuit whose disabled arm has
+genuinely floating internal nodes, so the least settled number in the table was
+the one closest to the boundary. The deck now carries a reference buffer chain
+that scales the tap to each corner, runs the two extreme combinations, measures
+the third edge, and refuses to report anything until a NULL CONTROL with both
+arms configured identically comes out at zero. It also sweeps the keeper
+strength to separate the two mechanisms src/load_ladder.v names, which will say
+whether that comment is right.
+
+The extraction number for the same pair is now 3 ps, having been 7 and then 57
+on the two previous builds of the unchanged circuit. Three values spanning
+twentyfold settles it: extraction has no mechanism to report there.
+
+Verification: 22 cocotb tests, 75 harness tests, verilator clean, netlist and
+constraint checks pass. New sabotage runs this round: shipping binary instead of
+Gray, the depth series set back to 24, the polarity XOR moved back after the
+mux, a fixture whose rise and fall are equal, three of four sampling branches
+removed, half the capture registers removed, and a fresh unqualified claim added
+to README.md.
+
 ### 2026-08-28, fourth round. Hardening the instrument, and everything the last round owed.
 
 The direction taken: **keep 20 sites, add the instrumentation, and let explicit

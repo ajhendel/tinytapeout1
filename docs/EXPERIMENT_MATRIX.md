@@ -81,44 +81,31 @@ quietly returns noise.
 
 `tools/tdc_range.py` prints this table from every build's SDF and it is the
 authority. The table below is that tool's output on the shipped build, at the
-typical corner, where the tap is 0.082 ns.
+typical corner.
 
 | comparison | difference | taps | single trial? |
 |---|---|---|---|
-| drive series, x1 vs x8 | 1035 ps | 12.6 | yes |
-| load series, 0 vs 4 sinks | 919 ps | 11.2 | yes |
-| drive series, x1 vs x2 | 607 ps | 7.4 | yes |
-| load series, 0 vs 1 sink | 238 ps | 2.9 | marginal, about 2 trials per arm |
-| input isolation pair | 216 ps | 2.6 | marginal, about 3 trials per arm |
-| **load ladder pair** | **57 ps** | **0.69** | **no; see below** |
+| drive series, x1 vs x8 | 1025 ps | 13.1 | yes |
+| load series, 0 vs 4 sinks | 921 ps | 11.8 | yes |
+| drive series, x1 vs x2 | 604 ps | 7.7 | yes |
+| input isolation pair | 270 ps | 3.5 | yes |
+| load series, 0 vs 1 sink | 196 ps | 2.5 | marginal, about 2 trials per arm |
+| **load ladder pair** | **3 ps** | **0.04** | **no; and not from this table at all** |
 
-The drive series row is the one to look at. Before the structure was fixed it
-was 76 picoseconds and not monotonic; it is now 1035 and clean. That is the
-difference between a headline experiment and a row that could never have
-produced a result.
+**The tap is not one number.** On this build it is 0.078 ns at the fast corner
+and 0.219 ns at the slow one, nearly three to one, because the delay line is
+built from the same cells as everything else and moves with them. Every ratio
+above is quoted at the typical corner and a comparison must be re-quoted against
+its own corner's tap before it is believed. A tool that divided a slow-corner
+delay by a typical-corner tap would overstate its own resolution by a factor of
+nearly three, and one of ours did.
 
-**The ladder pair needs SPICE and cannot use these numbers.** The same pair
-measured 7 ps on the previous build and 57 ps on this one, an eightfold change
-in a circuit that did not change. That spread is routing, not mechanism: the SDF
-comes from Liberty plus extraction, the released Liberty view gives that pin one
-capacitance with no enable dependence at all, so what varies between builds is
-wire and not the physical effect the pair exists to find.
-
-`tools/spice_ladder.py` runs the pair at the transistor level across corners,
-supplies and temperatures, and the `spice` workflow runs it on every push. Row 6
-is written as **one of exactly three categories, chosen from that output before
-any die is measured**:
-
-| category | when | how row 6 is then reported |
-|---|---|---|
-| resolvable measurement | the effect exceeds one tap at every corner simulated | a delay difference, one trial per configuration |
-| repeated statistical measurement | it exceeds one tap at some corners and not others | a delay difference with a preregistered repeat count, and only if study 2 shows the arrival dithers across bin boundaries |
-| upper bound | it is below one tap everywhere simulated | a bound, at a preregistered confidence level, with the repeat count that establishes it |
-
-The third is a legitimate result and this design will not be changed to amplify
-a secondary mechanism into the first. If SPICE also reports that the SIGN of the
-effect changes with corner, row 6 names the condition rather than quoting one
-number.
+**The ladder pair cannot use these numbers, and three builds now say so.** The
+same unchanged circuit extracted at 7 ps, then 57 ps, then 3 ps. That is not a
+measurement converging, it is routing noise around a structural zero: the
+released Liberty view gives that pin one capacitance with no enable dependence,
+so extraction has no mechanism there to report and what varies between builds is
+wire.
 
 The repeat counts assume DITHER. Averaging only beats quantization if the
 arrival time moves across tap boundaries between trials; if it does not, every

@@ -374,15 +374,38 @@ module tt_um_ajhendel_evofab (
     else         async_stop <= 1'b1;
   end
 
+  // POLARITY IS APPLIED BEFORE THE MUX, TO THE TWO MEASUREMENT SOURCES ONLY.
+  //
+  // tdc_pol exists because a fabric configuration can invert the edge, so the
+  // arrival may be falling where the launch was rising. That is a property of
+  // the thing being measured. The two asynchronous sources are not measured;
+  // they are edge armed by a flip flop, so their arrival is ALWAYS a rising
+  // edge and polarity has nothing to mean.
+  //
+  // Applying it to them anyway was a live bug, and the failure was silent. The
+  // arming flop is cleared when launch falls at the end of the window, and the
+  // sampler is still armed at that instant because tdc_wait is held by
+  // meas_gate, which stays high through the readout tail. With tdc_pol set,
+  // async_stop falling makes tdc_stop RISE, which re-fires all four sampling
+  // groups on a parked delay line and sets the ring kill, and the capture pulse
+  // two clocks later then transfers THAT over the real reading. The host would
+  // see done, valid, an unsaturated coarse count and a plausible number, for a
+  // trial that measured nothing.
+  //
+  // One extra xor2 removes the whole class rather than documenting it. The two
+  // measurement sources still carry identical select delay as each other, which
+  // is the pair that is ever quoted against itself.
+  wire char_pol, tap_pol;
+  cell_xor2 u_pol_char (.A(char_out), .B(tdc_pol), .X(char_pol));
+  cell_xor2 u_pol_tap  (.A(tap_out),  .B(tdc_pol), .X(tap_pol));
+
   // One four way cell rather than a chain of twos, so that every source carries
   // the SAME select delay. An unequal select tree would put a different fixed
   // offset on the characterization paths than on the fabric taps, and those two
   // are quoted against each other.
-  wire tdc_stop_raw;
-  cell_mux4 u_tdc_src (.A0(char_out), .A1(tap_out), .A2(async_stop), .A3(async_stop),
-                       .S0(tdc_src[0]), .S1(tdc_src[1]), .X(tdc_stop_raw));
   wire tdc_stop;
-  cell_xor2 u_tdc_pol (.A(tdc_stop_raw), .B(tdc_pol), .X(tdc_stop));
+  cell_mux4 u_tdc_src (.A0(char_pol), .A1(tap_pol), .A2(async_stop), .A3(async_stop),
+                       .S0(tdc_src[0]), .S1(tdc_src[1]), .X(tdc_stop));
 
   wire [TDC_TAPS-1:0] tdc_taps;
   wire [7:0]          tdc_gray;

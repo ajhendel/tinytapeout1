@@ -17,7 +17,11 @@ width, an edge walking it, the taps below the edge holding the new value, and a
 counter ticking once per two traversals.
 """
 
+import os
 import random
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
 

@@ -22,19 +22,49 @@ TOOLS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))), "tools")
 
 
+def _esc(inst):
+    """Escape a hierarchical instance name the way OpenSTA writes it.
+
+    THE FIXTURE HAS TO USE THE REAL ENCODING OR IT PROVES NOTHING.
+
+    The first version of this file wrote INTERCONNECT endpoints as `inst/pin`,
+    which is the form an IOPATH record implies but NOT the form OpenSTA emits.
+    It emits `inst.pin`, with every dot already inside the hierarchical name
+    escaped as a backslash-dot, and brackets escaped too. Because the fixture
+    used a convention nothing else uses, the parser passed every test here and
+    connected nothing at all on a real SDF.
+    """
+    out = inst.replace(".", "\\.").replace("[", "\\[").replace("]", "\\]")
+    return out
+
+
 def _cell(celltype, inst, records):
     body = "\n".join(f"      {r}" for r in records)
     return (f'  (CELL (CELLTYPE "{celltype}")\n'
-            f'    (INSTANCE {inst})\n'
+            f'    (INSTANCE {_esc(inst)})\n'
             f'    (DELAY (ABSOLUTE\n{body}\n    ))\n  )\n')
 
 
-def _iopath(frm, to, d):
-    return f"(IOPATH {frm} {to} ({d}:{d}:{d}) ({d}:{d}:{d}))"
+def _iopath(frm, to, d, fall=None):
+    """Rise and fall are DIFFERENT by default, and that is the point.
+
+    The first fixture used the same number for both, so it could not detect that
+    the parser was dropping the fall list entirely and reporting every delay as
+    the rise delay. A fixture whose two halves are identical cannot catch a bug
+    that confuses them.
+    """
+    f = d * 1.3 if fall is None else fall
+    return f"(IOPATH {frm} {to} ({d}:{d}:{d}) ({f}:{f}:{f}))"
 
 
 def _ic(src, dst, d):
-    return f"(INTERCONNECT {src} {dst} ({d}:{d}:{d}) ({d}:{d}:{d}))"
+    """src and dst are given as `inst/pin` and written as OpenSTA writes them."""
+    def conv(p):
+        inst, pin = p.rsplit("/", 1)
+        return f"{_esc(inst)}.{pin}"
+    f = d * 1.3
+    return (f"(INTERCONNECT {conv(src)} {conv(dst)} "
+            f"({d}:{d}:{d}) ({f}:{f}:{f}))")
 
 
 def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True, taps=4,
@@ -54,7 +84,7 @@ def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True, taps=4,
 
     clk_pins = []
     for b in range(branches):
-        bi = f"u_tdc.sampbuf\\[{b}\\].u.g2.u"
+        bi = f"u_tdc.sampbuf[{b}].u.g2.u"
         cells.append(_cell("sky130_fd_sc_hd__buf_2", bi,
                            [_iopath("A", "X", 0.08)]))
         ics.append(_ic(f"{root}/X", f"{bi}/A", 0.02))
@@ -93,7 +123,7 @@ def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True, taps=4,
 
     prev = f"{nand}/Y"
     for t in range(taps):
-        di = f"u_tdc.dl\\[{t}\\].u.g1.u"
+        di = f"u_tdc.dl[{t}].u.g1.u"
         cells.append(_cell("sky130_fd_sc_hd__buf_1", di,
                            [_iopath("A", "X", 0.12)]))
         ics.append(_ic(prev, f"{di}/A", 0.02))
@@ -122,14 +152,24 @@ def run(tool, *argv):
 def test_the_race_tool_finds_the_two_paths_and_passes(tmp_path):
     (tmp_path / "typ").mkdir()
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"))
-    r = run("tdc_race.py", sdf)
+    # The fixture builds 2 branches of 2 flops, so 4 clock pins in all, which
+    # the tool reads as `taps` + one fired flag per branch.
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
     assert r.returncode == 0, r.stdout + r.stderr
-    # capture: 0.02 + 0.08 + 0.02 = 0.12 from the root output
-    assert "0.1200 ns" in r.stdout, r.stdout
-    # kill: 0.02 + 0.30 + 2*(0.02+0.12) + 0.02+0.06 + 0.02+0.09 + 0.02+0.07
-    #       + 0.02+0.12 = 1.02
+    # Worked out by hand from the fixture's own delays, which is the point:
+    # the capture is taken at MAX, so it uses the fall numbers, which _iopath
+    # makes 1.3 times the rise. From the root OUTPUT (the last node the two
+    # paths share) that is 1.3 * (0.02 + 0.08 + 0.02) = 0.156.
+    assert "0.1560 ns" in r.stdout, r.stdout
+    # The kill is taken at MIN, so it uses the rise numbers:
+    # 0.02 + 0.30 + 2*(0.02+0.12) + 0.02+0.06 + 0.02+0.09 + 0.02+0.07
+    #      + 0.02+0.12 = 1.02
     assert "1.0200 ns" in r.stdout, r.stdout
-    assert "MARGIN                +0.8500" in r.stdout, r.stdout
+    assert "MARGIN                +0.8140" in r.stdout, r.stdout
+    # and the two sides must be taken from OPPOSITE bounds, or the margin is
+    # not a margin. If both used the same bound these would be equal.
+    assert "0.1200 ns" not in r.stdout, (
+        "the capture was taken at the rise delay, so it is not the worst case")
 
 
 def test_the_race_tool_fails_when_the_kill_gets_there_first(tmp_path):
@@ -140,7 +180,7 @@ def test_the_race_tool_fails_when_the_kill_gets_there_first(tmp_path):
     (tmp_path / "typ").mkdir()
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"),
                     kill_flop_cq=0.01, guard_buffers=False, branch_ic=0.60)
-    r = run("tdc_race.py", sdf)
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
     assert r.returncode == 1, r.stdout + r.stderr
     assert "FAIL" in r.stderr
 
@@ -150,9 +190,9 @@ def test_the_race_tool_fails_when_the_sampling_tree_is_gone(tmp_path):
     sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"))
     text = open(sdf).read().replace("sampbuf", "somethingelse")
     open(sdf, "w").write(text)
-    r = run("tdc_race.py", sdf)
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
     assert r.returncode == 1
-    assert "sampling tree" in r.stderr
+    assert "sampling tree" in r.stderr or "branch buffers" in r.stderr
 
 
 def test_the_race_tool_fails_on_a_file_that_is_not_an_sdf(tmp_path):
@@ -176,7 +216,7 @@ def write_tap_sdf(path, *, sites=8, base=0.11, trend=0.0, taps=4):
     cells.append(_cell("sky130_fd_sc_hd__nand2_2", "u_tdc.ring_close.g2.u",
                        [_iopath("A", "Y", 0.07)]))
     for t in range(taps):
-        di = f"u_tdc.dl\\[{t}\\].u.g1.u"
+        di = f"u_tdc.dl[{t}].u.g1.u"
         cells.append(_cell("sky130_fd_sc_hd__buf_1", di,
                            [_iopath("A", "X", 0.12)]))
         ics.append(_ic(prev, f"{di}/A", 0.01))
@@ -184,26 +224,26 @@ def write_tap_sdf(path, *, sites=8, base=0.11, trend=0.0, taps=4):
 
     n_l1 = (sites + 3) // 4
     for k in range(n_l1):
-        inst = f"tapl1\\[{k}\\].u.u"
+        inst = f"tapl1[{k}].u.u"
         cells.append(_cell("sky130_fd_sc_hd__mux4_1", inst,
                            [_iopath(f"A{m}", "X", 0.11) for m in range(4)]))
         for m in range(4):
             t = 4 * k + m
-            ics.append(_ic(f"sites\\[{t}\\].u_site.u_drive.drv1.g1.u/Z",
+            ics.append(_ic(f"sites[{t}].u_site.u_drive.drv1.g1.u/Z",
                            f"{inst}/A{m}", base + trend * t))
     n_l2 = (n_l1 + 3) // 4
     for j in range(n_l2):
-        inst = f"tapl2\\[{j}\\].u.u"
+        inst = f"tapl2[{j}].u.u"
         cells.append(_cell("sky130_fd_sc_hd__mux4_1", inst,
                            [_iopath(f"A{i}", "X", 0.11) for i in range(4)]))
         for i in range(4):
             k = 4 * j + i
             if k < n_l1:
-                ics.append(_ic(f"tapl1\\[{k}\\].u.u/X", f"{inst}/A{i}", 0.02))
+                ics.append(_ic(f"tapl1[{k}].u.u/X", f"{inst}/A{i}", 0.02))
     cells.append(_cell("sky130_fd_sc_hd__mux2_1", "tapl3.u",
                        [_iopath("A0", "X", 0.09), _iopath("A1", "X", 0.09)]))
     for j in range(min(2, n_l2)):
-        ics.append(_ic(f"tapl2\\[{j}\\].u.u/X", f"tapl3.u/A{j}", 0.02))
+        ics.append(_ic(f"tapl2[{j}].u.u/X", f"tapl3.u/A{j}", 0.02))
 
     top = _cell("tt_um_ajhendel_evofab", "", ics)
     with open(path, "w") as fh:
@@ -262,27 +302,28 @@ def test_prereg_generates_every_file_from_a_build(tmp_path):
     cells.append(_cell("sky130_fd_sc_hd__nand2_2", "u_tdc.ring_close.g2.u",
                        [_iopath("A", "Y", 0.07)]))
     for t in range(32):
-        di = f"u_tdc.dl\\[{t}\\].u.g1.u"
+        di = f"u_tdc.dl[{t}].u.g1.u"
         cells.append(_cell("sky130_fd_sc_hd__buf_1", di,
                            [_iopath("A", "X", 0.08)]))
         ics.append(_ic(prev, f"{di}/A", 0.004))
         prev = f"{di}/X"
 
     # the fixed launch and merge overhead the generator charges to every path
-    for inst in ("u_char.lrt.g4.u", "u_char.lbuf\\[0\\].u.g2.u",
-                 "u_char.gate\\[0\\].u.u", "u_char.merge\\[0\\].u.g4.u",
+    for inst in ("u_char.lrt.g4.u", "u_char.lbuf[0].u.g2.u",
+                 "u_char.gate[0].u.u", "u_char.merge[0].u.g4.u",
                  "u_char.merge_out.g2.u"):
         cells.append(_cell("sky130_fd_sc_hd__buf_2", inst,
                            [_iopath("A", "X", 0.06)]))
 
-    depths = {"inv1_d2": 2, "inv1_d4": 4, "inv1_d8": 8, "inv1_d16": 16,
-              "load_0": 24, "inv1_d32": 32}
+    from evofab.genome import DEPTH_SERIES
+    depths = dict((n, d) for d, n in DEPTH_SERIES)
+    depths["load_0"] = 16          # the repeat point, same depth, second name
     for i, name in enumerate(tr.CHAR_PATHS):
         n = depths.get(name, 8 + i)
         for k in range(n):
             cells.append(_cell(
                 "sky130_fd_sc_hd__inv_1",
-                f"u_char.p{i}.stage\\[{k}\\].u.g1.u",
+                f"u_char.p{i}.stage[{k}].u.g1.u",
                 [_iopath("A", "Y", 0.05 + 0.001 * i)]))
 
     sdf = tmp_path / "tt" / "x.sdf"
@@ -322,3 +363,23 @@ def test_prereg_generates_every_file_from_a_build(tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
     pairs = (out / "series_and_pairs.md").read_text()
     assert "Category: upper bound" in pairs, pairs[-1500:]
+
+
+def test_the_race_tool_fails_when_half_the_tree_was_optimised_away(tmp_path):
+    """A smaller tree makes this gate's own margin look BETTER, which is why
+    the size has to be gated and not merely printed. With three of four
+    branches gone the capture is shorter, the margin is wider, and a tool that
+    only measured would report a healthier race on a broken converter."""
+    (tmp_path / "typ").mkdir()
+    sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"), branches=1, per_branch=2)
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "branch buffers, expected 2" in r.stderr, r.stderr
+
+
+def test_the_race_tool_fails_when_capture_registers_are_missing(tmp_path):
+    (tmp_path / "typ").mkdir()
+    sdf = write_sdf(str(tmp_path / "typ" / "x.sdf"), branches=2, per_branch=1)
+    r = run("tdc_race.py", sdf, "--branches", "2", "--taps", "2")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "flip flops, expected 4" in r.stderr, r.stderr

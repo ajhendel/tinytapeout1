@@ -56,10 +56,15 @@ def find_inst(g, needle):
 
 
 def leg(g, inst, in_pin, out_pin="X"):
-    """(rise, fall) through one cell, and the wire that feeds it."""
+    """(rise, fall) through one cell, and the SLOWEST route into it.
+
+    The slowest route, not the only one. The first input of this tree is a
+    fabric site's output, which is a one-hot tri-state node carrying four drive
+    variants, so it has four drivers by construction and asking for exactly one
+    returned nothing for nineteen of the twenty taps.
+    """
     cell = g.edge(f"{inst}/{in_pin}", f"{inst}/{out_pin}")
-    src = g.sole_driver(f"{inst}/{in_pin}")
-    wire = g.edge(src, f"{inst}/{in_pin}") if src else None
+    wire = g.in_worst(f"{inst}/{in_pin}")
     return cell, wire
 
 
@@ -124,17 +129,27 @@ def main():
         if None in (c1, c2, c3):
             missing.append(t)
             continue
-        wires = [w for w in (w1, w2, w3) if w]
+        # THE WIRE IS THE MEASUREMENT. Equal logical depth already removes the
+        # cell contribution's dependence on which input was selected; what is
+        # left, and the only thing that can put a trend into the fitted slope,
+        # is routing. Dropping a missing wire silently would collapse the trend
+        # toward zero and pass the gate for the wrong reason, so a tap whose
+        # wires cannot all be found is a failure and not a row.
+        wires = [w1, w2, w3]
+        if any(w is None for w in wires):
+            missing.append(t)
+            continue
         rise = c1[0] + c2[0] + c3[0] + sum(w[0] for w in wires)
         fall = c1[1] + c2[1] + c3[1] + sum(w[1] for w in wires)
-        rows.append((t, rise, fall, sum(w[0] for w in wires),
-                     len(wires)))
+        rows.append((t, rise, fall, sum(w[0] for w in wires), len(wires)))
 
     if missing or not rows:
-        print(f"FAIL: the stop selector tree is not in the SDF for taps "
-              f"{missing or 'any'}. The tree is built out of keep/dont_touch "
-              f"multiplexers in src/project.v; if it cannot be found here it "
-              f"was flattened, and a flattened tree is an unbalanced one.",
+        print(f"FAIL: the stop selector tree could not be measured for taps "
+              f"{missing or 'any'}. Either the keep/dont_touch multiplexers in "
+              f"src/project.v were flattened, or an input's incoming route "
+              f"could not be resolved to a single driver. Routing is the whole "
+              f"non-cancelling part of this measurement; a tap missing its "
+              f"wire term would drag the trend toward zero and pass.",
               file=sys.stderr)
         return 1
 

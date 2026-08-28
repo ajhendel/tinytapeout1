@@ -28,13 +28,48 @@ import re
 
 CELL = re.compile(r'\(CELL\s*\(CELLTYPE\s*"([^"]+)"\)\s*\(INSTANCE\s*([^)]*)\)(.*?)\n\s*\)\n',
                   re.S)
-IOPATH = re.compile(r'\(IOPATH\s+(\S+)\s+(\S+)\s+([^)]*\)[^)]*)\)')
+# Anchored at end of line, because an IOPATH record carries TWO delay lists,
+# rise and fall, and each is parenthesised. A pattern that stopped at the first
+# balanced-looking close swallowed the rise list and left the fall list without
+# its closing paren, so the triple regex below never matched it. Every delay
+# this module reported was then the RISE delay, silently, and the rise-against-
+# fall column of tools/stop_tree.py read exactly 0.0000 ns at every corner,
+# which is what gave it away.
+IOPATH = re.compile(r'\(IOPATH\s+(\S+)\s+(\S+)\s+(.*?)\)\s*$', re.M)
 INTERCONNECT = re.compile(r'\(INTERCONNECT\s+(\S+)\s+(\S+)\s+(.*?)\)\s*$', re.M)
 TRIPLE = re.compile(r'\(([-\d.]*):([-\d.]*):([-\d.]*)\)')
 
 
 def _unescape(name):
     return name.replace("\\", "").strip()
+
+
+def _split_pin(raw):
+    """`instance.pin` -> the same `instance/pin` form an IOPATH record gives.
+
+    THIS IS THE WHOLE REASON THE FIRST VERSION OF THIS MODULE CONNECTED NOTHING.
+
+    An IOPATH record names its instance and its pins separately, so a pin from
+    one is assembled here as `inst` + `/` + `pin`. An INTERCONNECT record names
+    both ends as a single string, and OpenSTA joins them with a DOT while
+    escaping the dots that are already inside the hierarchical name. So the same
+    physical pin arrives as
+
+        u_tdc.samp_rt.genblk1.genblk1.g4.u/X      from IOPATH
+        u_tdc\\.samp_rt\\.genblk1\\.genblk1\\.g4\\.u.X    from INTERCONNECT
+
+    Those are different strings, so cell arcs and wire arcs landed in disjoint
+    halves of the graph and no path crossed between them. Every search returned
+    nothing, and the tools that use this module correctly refused to pass, which
+    is the only reason it was found rather than shipped.
+
+    The split has to happen BEFORE unescaping, because after unescaping there is
+    no way to tell a separator dot from a dot inside a name.
+    """
+    for i in range(len(raw) - 1, -1, -1):
+        if raw[i] == "." and (i == 0 or raw[i - 1] != "\\"):
+            return f"{_unescape(raw[:i])}/{raw[i + 1:].strip()}"
+    return _unescape(raw)
 
 
 def _triples(body):
@@ -94,7 +129,7 @@ class SdfGraph:
                 b = _bounds(rec)
                 if b is None:
                     continue
-                a, z = _unescape(src), _unescape(dst)
+                a, z = _split_pin(src), _split_pin(dst)
                 self._add(a, z, b)
                 self._detail(a, z, _triples(rec))
                 self.n_interconnect += 1
@@ -128,6 +163,28 @@ class SdfGraph:
         if len(srcs) != 1:
             return None
         return next(iter(srcs))
+
+    def in_worst(self, pin):
+        """(rise, fall) of the SLOWEST route into `pin`, over every driver.
+
+        Not the sole driver. A fabric site's output is a one-hot tri-state node
+        with four drive variants on it, so asking for exactly one driver there
+        returns nothing and a tool that treats that as "no wire" silently drops
+        the routing term. Which is the term that matters: equal logical depth
+        already removes the cell contribution's dependence on the selected
+        input, and routing is all that is left to put a trend into a fit.
+
+        Returns None only when nothing at all drives the pin, which is a real
+        fault and should be reported as one.
+        """
+        srcs = self.ins.get(pin, {})
+        if not srcs:
+            return None
+        rf = [self.detail.get((a, pin)) for a in srcs]
+        rf = [x for x in rf if x]
+        if not rf:
+            return None
+        return max(r for r, _ in rf), max(f for _, f in rf)
 
     # ------------------------------------------------------------- queries
     def pins(self, *needles):
@@ -167,6 +224,53 @@ class SdfGraph:
                     prev[nxt] = node
                     heapq.heappush(q, (nd, nxt))
         return None, None
+
+    def slowest(self, start, stop_at):
+        """Longest MAX-delay path from `start` to every pin `stop_at` accepts.
+
+        The capture side of a race has to be taken at its worst, and it is not
+        a fixed number of hops: this flow inserts fanout repeaters, so the
+        hand-built two level sampling tree came back as root, repeater, branch,
+        flop. A tool that assumed the hop count would have found nothing here,
+        and one that assumed it loosely would have found the wrong path.
+
+        Terminates because it never expands OUT of a pin `stop_at` accepts, and
+        on this design every route into the ring's own cycle passes through a
+        flip flop clock pin. Returns {pin: (delay, path)}.
+        """
+        best = {}
+        order = []
+        seen = set()
+
+        def visit(node, stack):
+            if node in seen or node in stack:
+                return
+            stack.add(node)
+            if not stop_at(node):
+                for nxt in self.edges.get(node, {}):
+                    visit(nxt, stack)
+            stack.discard(node)
+            seen.add(node)
+            order.append(node)
+
+        visit(start, set())
+        dist = {start: (0.0, None)}
+        for node in reversed(order):
+            if node not in dist or stop_at(node):
+                continue
+            d, _ = dist[node]
+            for nxt, (_lo, hi) in self.edges.get(node, {}).items():
+                if nxt not in dist or d + hi > dist[nxt][0]:
+                    dist[nxt] = (d + hi, node)
+        out = {}
+        for node, (d, _) in dist.items():
+            if node != start and stop_at(node):
+                path, cur = [], node
+                while cur is not None:
+                    path.append(cur)
+                    cur = dist[cur][1]
+                out[node] = (d, list(reversed(path)))
+        return out
 
     def hop_max(self, src, dst):
         e = self.edges.get(src, {}).get(dst)

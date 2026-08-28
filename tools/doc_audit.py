@@ -58,16 +58,48 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TEXT = (".md", ".v", ".py", ".yaml", ".sdc")
-SKIP = ("test/sim_build", ".git", "__pycache__", "build/", "docs/sweeps",
-        "tools/doc_audit.py")
+# Matched as PATH COMPONENTS, not as substrings. ".git" as a substring also
+# matches ".github", so the workflows were in scope by intent and out of scope
+# in fact: files() returned nothing under .github at all. The artifact
+# directories are here because CI downloads a copy of this repository into them
+# and the audit then reported the copy.
+SKIP = {"sim_build", ".git", "__pycache__", "build", "sweeps",
+        "artifacts", "submission", "runs", "node_modules"}
+SKIP_FILES = ("tools/doc_audit.py",)
 
 # Retracted claims. Each was written in this repository and then withdrawn, and
 # the reason is in HANDOFF.md next to the date it was withdrawn.
-# A line that negates the phrase, or cites someone else using it, is allowed.
-ALLOWED = re.compile(
-    r"\bnot\b|\bno\b|\bnever\b|\bnothing\b|retract|withdraw|wrong|"
-    r"must not|cannot|does not|do not|stale|prior art|github\.com|"
-    r"WobblyBits|doc_audit|\bsaid\b|\bcalled\b", re.I)
+# A retracted phrase is allowed where the sentence around it is retracting it
+# or citing someone else using it.
+#
+# THE WINDOW IS THE POINT. This started as a whole-line test and then paragraph
+# mode arrived, which quietly turned it into a whole-PARAGRAPH test: measured on
+# this repository, the pattern below matches 40 percent of all paragraphs and
+# exempted every single paragraph containing a retracted phrase. The rule could
+# no longer fire at all. A fresh claim two sentences away from an unrelated
+# "not" would have been reported as clean.
+#
+# So the exemption is searched in a window of ALLOWED_WINDOW characters either
+# side of the match, which is about a sentence, and the tool prints how often it
+# fires so that it going inert again is visible rather than silent.
+# There are TWO reasons a retracted phrase may legitimately appear, and they
+# have different scopes, which is why one pattern could not serve both.
+#
+# A RETRACTION is a property of the sentence: "this is not an Ising machine".
+# Searched in a window around the match, because a "not" three sentences away
+# is not retracting anything.
+#
+# A CITATION is a property of the paragraph: a passage whose subject is someone
+# else's published work, which this repository is required to enumerate rather
+# than avoid mentioning. Searched over the whole paragraph, because the marker
+# that makes it a citation (a repository URL, a project name, a pointer to
+# docs/PRIOR_ART.md) is often nowhere near the phrase itself.
+NEGATION = re.compile(
+    r"\bnot\b|\bnever\b|\bnothing\b|retract|withdraw|\bwrong\b|"
+    r"no longer|must not|cannot|does not|do not|\bno claim\b", re.I)
+CITATION = re.compile(r"github\.com|WobblyBits|prior art|PRIOR_ART|"
+                      r"\bet al\b|its own authors", re.I)
+NEGATION_WINDOW = 120
 
 # Retracted claims. Each was written in this repository and then withdrawn, and
 # the reason is in HANDOFF.md next to the date it was withdrawn.
@@ -113,17 +145,15 @@ ARITH_ADD = re.compile(_LEAD + r"(\d[\d,]*)\s*\+\s*(\d[\d,]*)\s*=\s*(\d[\d,]*)" 
 
 def files():
     for base, dirs, names in os.walk(ROOT):
-        rel = os.path.relpath(base, ROOT)
-        if any(s.rstrip("/") in rel.replace(os.sep, "/") for s in SKIP):
-            dirs[:] = []
-            continue
+        dirs[:] = sorted(d for d in dirs if d not in SKIP)
         for n in sorted(names):
-            if n.endswith(TEXT):
-                p = os.path.join(base, n)
-                r = os.path.relpath(p, ROOT)
-                if any(s in r for s in SKIP):
-                    continue
-                yield r, p
+            if not n.endswith(TEXT):
+                continue
+            p = os.path.join(base, n)
+            r = os.path.relpath(p, ROOT).replace(os.sep, "/")
+            if r in SKIP_FILES:
+                continue
+            yield r, p
 
 
 def num(s):
@@ -163,8 +193,11 @@ def main():
     n_sites = int(re.search(r"`define N_SITES (\d+)",
                             open(os.path.join(ROOT, "src/project.v")).read()).group(1))
     problems = []
+    exempted = [0]
+    scanned = 0
 
     for rel, path in files():
+        scanned += 1
         text = open(path, errors="replace").read()
         for i, line in blocks(text):
             for a, b, c in ARITH_MUL.findall(line):
@@ -178,10 +211,18 @@ def main():
             if rel in CLAIM_EXEMPT:
                 continue
             for pat, why in RETRACTED:
-                if re.search(pat, line, re.I) and not ALLOWED.search(line):
-                    m = re.search(pat, line, re.I)
+                if CITATION.search(line):
+                    exempted[0] += len(re.findall(pat, line, re.I))
+                    continue
+                for m in re.finditer(pat, line, re.I):
+                    window = line[max(0, m.start() - NEGATION_WINDOW):
+                                  m.end() + NEGATION_WINDOW]
+                    if NEGATION.search(window):
+                        exempted[0] += 1
+                        continue
                     problems.append(f"{rel}:~{i}  retracted phrasing "
                                     f"/{pat}/: {why}\n      {near(line, m)}")
+                    break
             for m in SITE_CLAIM.finditer(line):
                 got = next(g for g in m.groups() if g)
                 if num(got) != n_sites:
@@ -195,6 +236,8 @@ def main():
     if rc.returncode != 0:
         problems.append("docs/CONSTANTS.md has drifted; see above")
 
+    print(f"scanned {scanned} files; {exempted[0]} retracted phrases exempted "
+          f"as citations or retractions")
     if problems:
         print(f"\n{len(problems)} documentation problems:\n", file=sys.stderr)
         for p in problems:
@@ -202,7 +245,9 @@ def main():
         print("\nNone of these break a simulation. All of them are what the "
               "next reader will believe.", file=sys.stderr)
         return 1
-    print("documentation audit clean")
+    print(f"documentation audit clean over {scanned} files, "
+          f"{exempted[0]} retracted phrases exempted as citations or "
+          f"retractions")
     return 0
 
 

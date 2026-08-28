@@ -112,10 +112,13 @@ are added rather than substituted, and the original list stands.
 
 Fixed characterization paths (src/char_paths.v), measured by the TDC:
 
-- **The depth series slope and intercept.** Paths 8, 9, 10, 11, 4 and 19 are
-  inv_1 at depths 2, 4, 8, 16, 24 and 32. Predict the per-stage delay (the
-  slope) and the fixed offset from the launch gate, the select merge and the
-  converter input (the intercept), separately, with intervals. **This one is load bearing: without a
+- **The depth series slope and intercept.** Paths 8, 9, 10, 11 and 19 are inv_1
+  at depths 2, 4, 8, 16 and 32. Predict the per-stage delay (the slope) and the
+  fixed offset from the launch gate, the select merge and the converter input
+  (the intercept), separately, with intervals. Path 4 is depth 16 built a second
+  time under another name and is a repeatability check, NOT a sixth point; this
+  file said depth 24 for it until 2026-08-28 and was wrong, which would have
+  biased the slope about 11 percent low. **This one is load bearing: without a
   predicted slope the TDC calibration is unfalsifiable**, because any measured
   tap count can be turned into any delay by choosing a tap width afterwards.
 - **The linearity of that series.** Predict the residual of a straight-line fit.

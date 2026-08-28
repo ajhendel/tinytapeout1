@@ -82,8 +82,10 @@ READOUT = {
     "status": 6, "n_sites": 7,
     "tdc0": 8, "tdc1": 9, "tdc2": 10, "tdc3": 11,
     "tdc_taps": 12, "twin_mask": 13, "char_count": 14, "alive": 15,
-    # The coarse half of a TDC reading. 0xFF means SATURATED: discard the
-    # measurement, never scale it. A wrapped count reads as a fast path.
+    # The coarse half of a TDC reading, GRAY CODED on the wire. The saturation
+    # value there is 0x80, which is gray(0xFF), and NOT 0xFF: a host working
+    # from this table and discarding 0xFF would be throwing away coarse count
+    # 85, a perfectly good reading, and keeping the saturated one.
     "tdc_gray": 16,
     "tdc_tap_echo": 17, "char_sel_echo": 18, "global_w": 19,
     "instr_version": 20, "tdc_cfg_echo": 21, "site_w": 22,
@@ -271,7 +273,11 @@ def tdc_reading(taps: int, coarse_gray: int, done: bool = True,
     alt = None
     if parity == 1 and pos >= n_taps - guard and coarse >= 1:
         alt = coarse - 1
-    elif parity == 0 and pos <= guard:
+    elif parity == 0 and pos <= guard and coarse < TDC_WRAPS_SATURATED - 1:
+        # The ceiling matches the floor above. Without it, a capture at coarse
+        # 0xFE would be offered 0xFF as its alternative candidate, and 0xFF is
+        # the saturation code rather than a count, so one of the two candidates
+        # would not be a delay at all.
         alt = coarse + 1
     if alt is not None:
         return mk(TdcStatus.BOUNDARY_AMBIGUOUS,
@@ -323,11 +329,33 @@ CHAR_PATHS = [
     "inv1_d32",
 ]
 
-# The depth series, in stage order. A straight line through these four gives the
-# per-stage delay AND the fixed offset from the launch gate, the select tree and
-# the TDC input. Everything else in CHAR_PATHS is quoted against that offset.
+# The depth series, in stage order. A straight line through these gives the
+# per-stage delay AND the fixed offset from the launch gate, the select merge
+# and the TDC input. Everything else in CHAR_PATHS is quoted against that
+# offset, which makes the slope the single most load bearing number the chip
+# produces.
+#
+# THIS LIST SAID 24 FOR load_0 AND THE RTL BUILDS IT AT 16.
+#
+# src/char_paths.v:373 is char_inv_chain #(.DRIVE(1), .DEPTH(16), .LOAD(0)) p4,
+# and the comment above it says so: twenty-four was the first choice, bought
+# nothing but area, and was cut. Fitting delays measured at depths
+# [2, 4, 8, 16, 16, 32] against x values [2, 4, 8, 16, 24, 32] pulls the fitted
+# slope to about 0.89 of the true one, roughly 11 percent low, AND inflates the
+# residual that the same pre-registration predicts will stay under one tap. So
+# it could have pre-registered a falsification of its own linearity claim.
+#
+# Nothing would have failed. The RTL was right, one test was right, and two
+# copies of this list were wrong. harness/tests/test_char_paths_match_rtl.py now
+# reads the parameters out of the Verilog and fails if they ever disagree again.
 DEPTH_SERIES = [(2, "inv1_d2"), (4, "inv1_d4"), (8, "inv1_d8"),
-                (16, "inv1_d16"), (24, "load_0"), (32, "inv1_d32")]
+                (16, "inv1_d16"), (32, "inv1_d32")]
+
+# load_0 is the depth 16 point measured a SECOND time under a different name,
+# deliberately not deduplicated in the RTL. Two names for one measurement is a
+# free repeatability check: they must agree within a tap, and if they do not,
+# the disagreement is about the instrument and not about depth.
+DEPTH_REPEAT = (16, "inv1_d16", "load_0")
 
 # The two series that answer the chip's headline questions, and the reason they
 # are shaped differently. A drive series must hold the LOAD fixed while the

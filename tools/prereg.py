@@ -191,8 +191,12 @@ def main():
     write(os.path.join(args.out, "char_paths.md"), "\n".join(L))
 
     # ------------------------------------------------------------ depth series
-    depths = [(2, "inv1_d2"), (4, "inv1_d4"), (8, "inv1_d8"), (16, "inv1_d16"),
-              (24, "load_0"), (32, "inv1_d32")]
+    # Imported rather than restated. The previous copy of this list said depth
+    # 24 for load_0 where the RTL builds 16, which biased the fitted slope by
+    # about 11 percent, and it survived precisely because it was a third copy.
+    sys.path.insert(0, os.path.join(ROOT, "harness"))
+    from evofab.genome import DEPTH_SERIES, DEPTH_REPEAT
+    depths = list(DEPTH_SERIES)
     pts = [(d, paths[n]) for d, n in depths if n in paths]
     L = [HEAD.format(title="Depth series, predicted", **head),
          "**This is the load bearing one.** Without a predicted slope the",
@@ -228,10 +232,11 @@ def main():
               "invalidate the method is predicted rather than assumed away. The",
               "residual above is predicted to stay under one tap.",
               "",
-              "**Depths 16 and 24 are reached by two structurally different paths**",
-              "and are predicted to agree within one tap. That is a free",
-              "repeatability check with no extra silicon, and a disagreement there",
-              "is a disagreement about the instrument, not about depth.",
+              f"**Depth {DEPTH_REPEAT[0]} is built twice under two names**, "
+              f"`{DEPTH_REPEAT[1]}` and `{DEPTH_REPEAT[2]}`, and the two are",
+              "predicted to agree within one tap. That is a free repeatability",
+              "check with no extra silicon, and a disagreement there is a",
+              "disagreement about the instrument, not about depth.",
               "",
               "**Falsified by:** a measured slope outside its interval; a residual",
               "above one tap, which would retire the constant intercept and with",
@@ -297,23 +302,50 @@ def main():
     if args.spice and os.path.exists(args.spice):
         d = json.load(open(args.spice))
         L += ["### The load ladder pair, from transistor level SPICE", "",
-              "| corner | V | C | delta rise | delta fall |",
-              "|---|---|---|---|---|"]
-        for c in d["cases"]:
-            L.append(f"| {c['corner']} | {c['vdd']:.2f} | {c['temp']:.0f} | "
-                     f"{c['d_rise_ps']:+.1f} ps | {c['d_fall_ps']:+.1f} ps |")
-        worst = max(max(abs(c["d_rise_ps"]), abs(c["d_fall_ps"]))
-                    for c in d["cases"])
-        best = min(min(abs(c["d_rise_ps"]), abs(c["d_fall_ps"]))
-                   for c in d["cases"])
+              f"Every delta is for the whole {d.get('depth', 8)} stage chain, "
+              f"not per stage.",
+              "",
+              "| corner | V | C | delta rise | delta fall | tap here | taps |",
+              "|---|---|---|---|---|---|---|"]
         tap_ps = tap * 1000
+        for c in d["cases"]:
+            # Each corner is quoted against ITS OWN tap. The converter's delay
+            # line is built from the same cells as everything else and moves
+            # with corner too; dividing a slow-corner delay by a typical-corner
+            # tap overstates the answer at ss and understates it at ff.
+            t = c.get("tap_ps", tap_ps)
+            L.append(f"| {c['corner']} | {c['vdd']:.2f} | {c['temp']:.0f} | "
+                     f"{c['d_rise_ps']:+.1f} ps | {c['d_fall_ps']:+.1f} ps | "
+                     f"{t:.1f} ps | {c.get('worst_taps', 0):.2f} |")
+        worst = max(c.get("worst_taps", 0) for c in d["cases"])
+        best = min(min(abs(c["d_rise_ps"]), abs(c["d_fall_ps"]))
+                   / c.get("tap_ps", tap_ps) for c in d["cases"])
+        nc = d.get("null_control_ps")
         L += ["",
-              f"Worst case {worst:.1f} ps ({worst/tap_ps:.2f} taps), best case "
-              f"{best:.1f} ps ({best/tap_ps:.2f} taps).", ""]
-        if best / tap_ps >= 1:
+              f"Worst case {worst:.2f} taps, best case {best:.2f} taps, each "
+              f"against its own corner's tap.", ""]
+        if nc:
+            L += [f"Null control, both arms configured identically: "
+                  f"{nc['rise']:+.4f} ps rise, {nc['fall']:+.4f} ps fall. That "
+                  f"is the check that the two arms of the matched pair differ "
+                  f"only in the enable state and not in anything about how the "
+                  f"deck was written.", ""]
+        dec = d.get("decomposition")
+        if dec:
+            L += [f"Mechanism split at the typical corner: about "
+                  f"{dec['mechanism_a_ps']:+.1f} ps from the gate to source "
+                  f"term and {dec['mechanism_b_ps']:+.1f} ps from the Miller "
+                  f"term, recovered by sweeping the keeper strength. See "
+                  f"src/load_ladder.v for what those two are.", ""]
+        L += ["**This is a pre-layout deck.** No wire RC and no supply "
+              "parasitics, so the die is not required to land on these numbers; "
+              "the enabled chain draws several times the sink current and would "
+              "droop a real local rail. The prediction is the CATEGORY and the "
+              "sign, quoted with this stated.", ""]
+        if best >= 1:
             L.append("**Category: resolvable measurement.** One trial per "
                      "configuration reads it.")
-        elif worst / tap_ps >= 1:
+        elif worst >= 1:
             L.append("**Category: repeated statistical measurement**, and only "
                      "if study 2 shows the arrival dithers. Otherwise it drops "
                      "to an upper bound.")

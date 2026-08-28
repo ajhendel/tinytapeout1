@@ -263,15 +263,22 @@ That residual is a **per-tap distortion, not a constant offset, and it does not
 cancel in a difference.** It is handled the way delay-line converters are always
 handled: the bins are calibrated on the die.
 
-  - The depth series is the same cell at six depths, 2, 4, 8, 16, 24 and 32,
-    across characterization paths 8, 9, 10, 11, 4 and 19. A straight line
-    through them gives the per-stage delay and the fixed offset contributed by
-    the launch gate, the select merge and the converter input.
-  - Six points and a 16:1 lever arm, not two. Two points give a slope with no
+  - The depth series is the same cell at five depths, 2, 4, 8, 16 and 32,
+    across characterization paths 8, 9, 10, 11 and 19. A straight line through
+    them gives the per-stage delay and the fixed offset contributed by the
+    launch gate, the select merge and the converter input.
+  - Five points and a 16:1 lever arm, not two. Two points give a slope with no
     way to check that the relationship is linear, and if it is not linear then
     the offset is not a constant and nothing else can be quoted against it.
-    Depths 16 and 24 are reached by two structurally different paths that should
-    agree, so the series carries a free repeatability check as well as a fit.
+  - Path 4 is depth 16 built a SECOND time under another name, deliberately not
+    deduplicated. Two names for one measurement is a free repeatability check
+    and it is not a sixth point on the fit. This document said depth 24 for it
+    until 2026-08-28, and so did the harness and the pre-registration generator,
+    while the RTL built 16 and said so in a comment. Fitting five delays against
+    six x values, one of them wrong, drags the per-stage slope to about 0.89 of
+    the true one and inflates the very residual the pre-registration predicts
+    will stay under a tap. Nothing failed. The depths are now parsed out of
+    src/char_paths.v by harness/tests/test_char_paths_match_rtl.py.
   - Bin widths come from CODE DENSITY, and the stop source for it is a free
     running calibration ring (`tdc_src = calib`), not the fabric. This matters
     and the earlier version of this document had it wrong. Code density recovers
@@ -295,6 +302,20 @@ handled: the bins are calibrated on the die.
     host chooses rather than measures. It is for bring up and for deliberate
     stimulus, and it is not for quoting a delay against: board timing at a
     hundred picoseconds is not something to trust.
+
+**Measured on the shipped build, typical corner:** the selector's mean offset is
+1.649 ns, about 14 taps, with a standard deviation of 1.01 taps across the
+twenty inputs and a worst residual of 1.30 taps about a straight line. Its TREND
+with tap index, which is the only part that lands in a fitted slope, is
+**-0.044 taps per site**, against a limit of 0.25. The offsets are grouped in
+fours, which is the level-one multiplexer's own structure, and within a group
+they agree to a few picoseconds.
+
+**The rise and fall offsets differ by 0.713 ns, six taps.** That is the largest
+single correction on this instrument and it means the selector table is
+polarity dependent: a measurement taken with tdc_pol set is quoted against a
+different offset than one taken without it. Study 8 applies the correction for
+the polarity actually used, and a per-site series must not mix the two.
 
 **The selector offset is measured, not assumed to cancel.** The per-site result
 is a SLOPE over the stop tap index, so anything that varies WITH the tap index is
