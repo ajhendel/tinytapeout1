@@ -66,6 +66,12 @@ def commit():
         return "unknown"
 
 
+def pts_names(pts, depths):
+    """(depth, path name) for the points that survived into `pts`."""
+    have = {d for d, _ in pts}
+    return [(d, n) for d, n in depths if d in have]
+
+
 def fit(xs, ys):
     n = len(xs)
     mx, my = sum(xs) / n, sum(ys) / n
@@ -245,10 +251,52 @@ def main():
          "predicts a delay per stage in TAPS, and the tap width predicted in",
          "`tdc.md` turns it into picoseconds. Both have to be right.",
          ""]
+    # THE LAUNCH AND MERGE OFFSETS ARE SUBTRACTED BEFORE THE FIT.
+    #
+    # src/char_paths.v launches all twenty paths from one hand-built tree and
+    # merges them back through a one-hot tri-state. Every path is the same
+    # number of GATES from the launch register and not the same DELAY, and the
+    # four short points of this series sit on launch branch 2 while the 32
+    # stage point sits on branch 4. A per-branch difference therefore lands
+    # almost entirely on the longest lever arm, which moves the SLOPE rather
+    # than the intercept. Measured at nine corners it is 3.2 to 4.5 percent.
+    #
+    # The offsets are a fixed property of the build and they are in this same
+    # SDF, so they are subtracted, the way tools/stop_tree.py's per-tap selector
+    # offsets are subtracted before the per-site fit. Both slopes are printed
+    # because the raw one is what a host that did not know about this would
+    # measure, and the difference between them is itself a prediction.
+    try:
+        from char_offsets import offsets as _char_offsets
+        from sdf_graph import load as _load_graph
+        _off, _oerr = _char_offsets(_load_graph(args.sdf))
+    except Exception as e:                                    # noqa: BLE001
+        _off, _oerr = None, str(e)
+    name_to_idx = {n: i for i, n in enumerate(tr.CHAR_PATHS)}
+    corr = {}
+    if _off and not _oerr:
+        for _d, _n in depths:
+            i = name_to_idx.get(_n)
+            if i is not None and i in _off:
+                corr[_n] = _off[i][0] + _off[i][1]
+
     if len(pts) >= 3:
         xs = [d for d, _ in pts]
         ys = [v for _, v in pts]
         m, b, resid = fit(xs, ys)
+        names = pts_names(pts, depths)
+        if corr and all(n in corr for _, n in names):
+            # The DEVIATION from the series mean, not the whole offset. The
+            # totals in `paths` already carry one fixed overhead, taken from
+            # path 0's branch, so subtracting each path's full launch and merge
+            # time would remove it twice and drive the intercept negative. What
+            # biases the slope is the part that differs between paths.
+            mean_off = sum(corr[n] for _, n in names) / len(names)
+            ysc = [v - (corr[n] - mean_off)
+                   for (_d, v), (_e, n) in zip(pts, names)]
+            mc, bc, residc = fit(xs, ysc)
+        else:
+            mc, bc, residc = m, b, resid
         L += ["| quantity | predicted | interval |",
               "|---|---|---|",
               f"| per stage delay, the slope | {m*1000:.1f} ps "
@@ -259,6 +307,19 @@ def main():
               f"{b*(1+INTERVAL):.3f} ns |",
               f"| worst residual of the straight line fit | {resid*1000:.1f} ps "
               f"({resid/tap:.2f} taps) | under 1 tap |",
+              "",
+              f"**Slope with the launch and merge offsets subtracted: "
+              f"{mc*1000:.1f} ps per stage ({mc/tap:.3f} taps), intercept "
+              f"{bc:.3f} ns, residual {residc*1000:.1f} ps "
+              f"({residc/tap:.2f} taps).** The raw slope above is "
+              f"{(m - mc) / mc * 100:+.1f} percent against it. The four short "
+              f"points of this series launch from tree branch 2 and the 32 "
+              f"stage point from branch 4, so a per-branch delay difference "
+              f"lands on the longest lever arm and moves the slope rather than "
+              f"the intercept. **The corrected slope is the prediction**; the "
+              f"raw one is what a host that did not know about the tree would "
+              f"measure, and the gap between them is predicted too. "
+              f"tools/char_offsets.py writes the per-path table.",
               "",
               "| depth | path | predicted |",
               "|---|---|---|"]

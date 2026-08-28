@@ -510,3 +510,159 @@ def test_the_bin_tool_fails_on_a_file_that_is_not_an_sdf(tmp_path):
     p.write_text("this is not an SDF\n")
     r = run("tdc_bins.py", str(p))
     assert r.returncode == 2
+
+
+# ------------------------------------------------------------ char_offsets.py
+
+def write_char_sdf(path, *, branch_skew=0.0, skew_branch=4, en_inv_delay=0.05,
+                   merge_delay=0.05,
+                   drop_root=False, drop_path=None, npaths=20,
+                   series=((8, 2), (9, 4), (10, 8), (11, 16), (19, 32))):
+    """A miniature of src/char_paths.v: launch tree, chains, one-hot merge.
+
+    The launch tree is the point. Twenty paths hang off five branch buffers,
+    four each, and the depth series puts its four short points on branch 2 and
+    its 32 stage point on branch 4. `branch_skew` is what a per-branch delay
+    difference looks like, and putting it on branch 4 is what moves the SLOPE
+    rather than the intercept.
+    """
+    cells, ics = [], []
+
+    # a delay line, so the tool has a tap to quote against
+    for i in range(32):
+        cells.append(_cell("sky130_fd_sc_hd__buf_1", f"u_tdc.dl[{i}].u.g1.u",
+                           [_iopath("A", "X", 0.10)]))
+
+    # When the root is gone it is gone from the INTERCONNECT records too. An
+    # earlier version of this fixture dropped only the CELL, so every record
+    # still named the pin, the tool still found it, and the sabotage was inert.
+    root = "_merged_away_" if drop_root else "u_char.lrt.g4.u"
+    cells.append(_cell("sky130_fd_sc_hd__buf_4", root,
+                       [_iopath("A", "X", 0.05)]))
+    for j in range(5):
+        bi = f"u_char.lbuf[{j}].u.g2.u"
+        cells.append(_cell("sky130_fd_sc_hd__buf_2", bi,
+                           [_iopath("A", "X", 0.04)]))
+        ics.append(_ic(f"{root}/X", f"{bi}/A",
+                       0.01 + (branch_skew if j == skew_branch else 0.0)))
+    depth = dict(series)
+    for k in range(npaths):
+        gi = f"u_char.gate[{k}].u.u"
+        cells.append(_cell("sky130_fd_sc_hd__and2_1", gi,
+                           [_iopath("A", "X", 0.06), _iopath("B", "X", 0.06)]))
+        if k != drop_path:
+            ics.append(_ic(f"u_char.lbuf[{k // 4}].u.g2.u/X", f"{gi}/A", 0.01))
+        for stg in range(depth.get(k, 2)):
+            cells.append(_cell("sky130_fd_sc_hd__inv_1",
+                               f"u_char.p{k}.stage[{stg}].u.g1.u",
+                               [_iopath("A", "Y", 0.03)]))
+        # the merge element, and beside it the enable inverter whose /A pin is
+        # the trap: a tool that searched for "an /A pin under merge[k]" could
+        # pick either.
+        # THE ENABLE INVERTER IS EMITTED FIRST, on purpose. The parser keeps
+        # insertion order, so a tool that asks for "an /A pin under merge[k]"
+        # and takes the first hit gets THIS one. Emitting it second made the
+        # trap unreachable and the test inert, which is exactly the failure it
+        # was written to catch.
+        cells.append(_cell("sky130_fd_sc_hd__inv_1",
+                           f"u_char.merge[{k}].u.en_inv.g1.u",
+                           [_iopath("A", "Y", en_inv_delay)]))
+        mi = f"u_char.merge[{k}].u.g4.u"
+        cells.append(_cell("sky130_fd_sc_hd__einvn_4", mi,
+                           [_iopath("A", "Z", merge_delay)]))
+        ics.append(_ic(f"{mi}/Z", "u_char.merge_out.g2.u/A", 0.02))
+    cells.append(_cell("sky130_fd_sc_hd__inv_2", "u_char.merge_out.g2.u",
+                       [_iopath("A", "Y", 0.03)]))
+
+    with open(path, "w") as fh:
+        fh.write(textwrap.dedent('''\
+            (DELAYFILE
+              (SDFVERSION "3.0")
+              (DESIGN "tt_um_ajhendel_evofab")
+              (TIMESCALE 1ns)
+            '''))
+        fh.write("".join(cells))
+        fh.write(_cell("tt_um_ajhendel_evofab", "", ics))
+        fh.write(")\n")
+    return path
+
+
+def test_char_offsets_passes_a_balanced_launch_tree(tmp_path):
+    sdf = write_char_sdf(str(tmp_path / "c.sdf"))
+    r = run("char_offsets.py", sdf)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "PASS" in r.stdout
+
+
+def test_a_slow_launch_branch_biases_the_depth_series_slope(tmp_path):
+    # Branch 4 carries the 32 stage point and nothing else in the series, so a
+    # delay there lands on the longest lever arm. This is the real topology.
+    sdf = write_char_sdf(str(tmp_path / "s.sdf"),
+                         branch_skew=0.60, skew_branch=4)
+    r = run("char_offsets.py", sdf)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "bias the depth series slope" in r.stderr
+
+
+def test_which_branch_is_slow_flips_the_sign_of_the_bias(tmp_path):
+    # Branch 4 carries only the 32 stage point; branch 2 carries the other
+    # four. With five points those two are complements, so the same delay on
+    # either produces the SAME magnitude and the OPPOSITE sign. Worth pinning
+    # because the obvious intuition, that loading the four short points matters
+    # less, is wrong, and a tool that reported only a spread would say nothing
+    # about the direction the unit moves.
+    a = write_char_sdf(str(tmp_path / "a.sdf"), branch_skew=0.60, skew_branch=4)
+    b = write_char_sdf(str(tmp_path / "b.sdf"), branch_skew=0.60, skew_branch=2)
+
+    def bias(p):
+        out = run("char_offsets.py", p).stdout
+        line = [x for x in out.splitlines() if x.startswith("slope bias")][0]
+        return float(line.split()[2])
+
+    assert bias(a) > 0 and bias(b) < 0, (bias(a), bias(b))
+    assert abs(abs(bias(a)) - abs(bias(b))) < 0.02, (bias(a), bias(b))
+
+
+def test_char_offsets_does_not_measure_the_enable_inverter(tmp_path):
+    # The einvn wrapper has a second /A pin, on its enable inverter, and a tool
+    # that asks for "an /A pin under merge[k]" can pick either. Asserting a
+    # bound on the answer did not catch it, because picking the wrong pin makes
+    # the merge term SHORTER rather than absurd. So the fixture is built twice
+    # with the enable inverter at two very different delays: the data path did
+    # not move between them, so a tool reading the data path must report the
+    # same number, and one reading the enable path cannot.
+    def offset(**kw):
+        tag = "_".join(f"{k}{v}" for k, v in kw.items())
+        sdf = write_char_sdf(str(tmp_path / f"e{tag}.sdf"), **kw)
+        r = run("char_offsets.py", sdf)
+        assert r.returncode == 0, r.stdout + r.stderr
+        line = [x for x in r.stdout.splitlines()
+                if x.startswith("per-path offset")][0]
+        return float(line.split()[2])
+
+    # Moving the ENABLE inverter must not move the answer.
+    assert offset(en_inv_delay=0.05) == offset(en_inv_delay=5.0)
+    # Moving the DATA pin must, by exactly its own change. A tool reading the
+    # enable pin instead reports the merge element's own delay as zero, so this
+    # is the assertion that fails when the wrong pin is picked. Sorted order
+    # puts `en_inv` ahead of `g4`, so the wrong pin is the one a first-hit
+    # lookup returns.
+    a = offset(merge_delay=0.05)
+    b = offset(merge_delay=0.40)
+    assert abs((b - a) - 0.35 * 1.3 * 1000) < 1.0, (a, b)
+
+
+def test_char_offsets_fails_without_the_launch_root(tmp_path):
+    sdf = write_char_sdf(str(tmp_path / "r.sdf"), drop_root=True)
+    r = run("char_offsets.py", sdf)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "launch tree root" in r.stderr
+
+
+def test_char_offsets_fails_when_a_path_is_unreachable(tmp_path):
+    # A path the launch edge cannot reach would otherwise shorten the table and
+    # leave the remaining nineteen looking well behaved.
+    sdf = write_char_sdf(str(tmp_path / "u.sdf"), drop_path=7)
+    r = run("char_offsets.py", sdf)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "not reachable" in r.stderr

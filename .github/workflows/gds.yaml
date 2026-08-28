@@ -234,6 +234,32 @@ jobs:
           echo "checked $n corners"
           exit $rc
 
+      - name: The launch and merge offsets do not bias the depth series
+        # The depth series slope is the unit every delay on this chip is quoted
+        # in. Its four short points launch from tree branch 2 and its 32 stage
+        # point from branch 4, so a per-branch delay lands on the longest lever
+        # arm and moves the SLOPE. Measured at 3.2 to 4.5 percent on the build
+        # of 2026-08-28, which is why it is subtracted before the fit rather
+        # than hoped away.
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          rc=0
+          n=0
+          for sdf in $(find artifacts -path '*stapostpnr*' -name '*.sdf' | sort); do
+            echo "==============================================================" >> char_offsets.md
+            python3 tools/char_offsets.py "$sdf" --markdown >> char_offsets.md 2>&1 || rc=1
+            n=$((n+1))
+          done
+          cat char_offsets.md
+          if [ "$n" -eq 0 ]; then
+            echo "no post place-and-route SDF found; nothing was checked" >&2
+            exit 1
+          fi
+          echo "checked $n corners"
+          exit $rc
+
       # The numeric half of the pre-registration, from THIS build. Generated as
       # an artifact rather than committed here: committing it is a deliberate
       # act by a person against the final submission commit, and a workflow that
@@ -287,6 +313,7 @@ jobs:
             tdc_range.md
             tdc_race.md
             tdc_bins.md
+            char_offsets.md
             stop_tree.md
             final_report.md
             final_report.json

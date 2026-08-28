@@ -342,6 +342,51 @@ and the count still reads six.
 the mean tap, so the counts that reach `predictions/` hold wherever an arrival
 lands rather than on average.
 
+## The launch tree is balanced in gates and not in delay
+
+The same question one block over, asked because the first one had an answer.
+
+src/char_paths.v launches all twenty fixed paths from one hand-built tree, a
+root buffer into five branch buffers into four launch gates each, and merges
+them back through a one-hot tri-state onto a single node. Every path is the same
+number of gates from the launch register. That is not the same delay, because
+the wires are the placer's decision.
+
+Where it lands is the problem. **The depth series is paths 8, 9, 10, 11 and 19.
+The four short points are all on launch branch 2 and the 32 stage point is on
+branch 4.** So a per-branch difference falls almost entirely on the longest lever
+arm, which moves the SLOPE rather than the intercept, and that slope is the unit
+every delay on this chip is quoted in.
+
+Measured at all nine corners of the 2026-08-28 build by `tools/char_offsets.py`:
+the per-path launch plus merge offset spans 102 to 251 ps, and the bias it puts
+on the depth series slope is **3.2 to 4.5 percent**. The residual it injects is
+0.07 to 0.17 taps, so linearity survives and only the unit moves. Several of the
+model-to-silicon gaps this chip exists to size are themselves ten to twenty five
+percent, so four percent on the unit is not in the noise.
+
+Nothing is redesigned for it. The offsets are a fixed property of the build, they
+are in the extraction, and they are **subtracted before the fit**, exactly the way
+`tools/stop_tree.py`'s per-tap selector offsets are subtracted before the
+per-site fit. What is claimed is therefore *equal logical launch and merge depth
+with an extracted per-path offset correction*, and not *a balanced tree*.
+`tools/prereg.py` writes both slopes, because the raw one is what a host that did
+not know about the tree would measure and the gap between them is itself a
+prediction.
+
+Two things are gated. The raw slope bias must stay under ten percent, because a
+correction worth more than a tenth of the quantity it corrects is doing too much
+of the work to be called a correction. And the offsets must scatter less than
+0.25 tap about their own straight line, because a large scatter means they are
+not a per-path constant plus noise and subtracting them models nothing.
+
+One property worth stating because the intuition runs the other way. With five
+points, loading branch 4 and loading branch 2 produce the **same magnitude** of
+slope bias and the **opposite sign**. Branch 2 carries four of the five points
+and branch 4 carries one, and it makes no difference: the two are complements.
+A tool that reported only the spread of the offsets would say nothing about
+which way the unit had moved.
+
 ## The TDC is not calibrated until it is calibrated on the die
 
 The converter reports raw tap counts. It is sampled by the arrival edge of the

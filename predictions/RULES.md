@@ -65,6 +65,31 @@ not report the expected instrument version and site count, or the safety trip
 cannot be made to fire. Those are stage A of the bring up order and no result
 from a die that fails them is reported at all.
 
+## 2b. Two corrections applied before any fit, amended 2026-08-28
+
+Both are extracted per-instance constants from the shipped build, both are
+subtracted from raw readings before anything is fitted, and both are named here
+rather than applied quietly in analysis code.
+
+  - **The per-tap stop selector offset**, from `tools/stop_tree.py`. The tree
+    that selects which fabric site stops the converter has equal logical depth
+    and unequal delay, and the correction is what makes the per-site slope in
+    study 8 a measurement of the sites rather than of the selector. The
+    correction table is polarity dependent, because rise and fall through that
+    tree differ by about six taps.
+  - **The per-path launch and merge offset**, from `tools/char_offsets.py`. The
+    depth series' four short points launch from tree branch 2 and its 32 stage
+    point from branch 4, so a per-branch delay difference lands on the longest
+    lever arm and biases the SLOPE, measured at 3.2 to 4.5 percent. **The
+    corrected slope is the pre-registered one.** The uncorrected slope is
+    recorded beside it, and the difference between them is predicted too, so
+    that a die which disagrees with the correction is distinguishable from one
+    that disagrees with the model.
+
+Neither correction is allowed to grow after the deadline. If silicon says a
+correction was wrong, that is a result and it is written as one, not folded back
+into the analysis.
+
 ## 3. Repeats, and the precondition nobody can skip
 
 `tools/tdc_range.py` prints the repeat count each comparison needs, from the

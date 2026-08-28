@@ -167,6 +167,8 @@ def main():
                   "--sites", str(args.sites)]),
                 (f"thermometer code monotone and bins uniform, {corner}",
                  [sys.executable, f"{TOOLS}/tdc_bins.py", sdf]),
+                (f"launch and merge offsets do not bias the slope, {corner}",
+                 [sys.executable, f"{TOOLS}/char_offsets.py", sdf]),
             ]:
                 rc, out = run(cmd)
                 gate(label, rc == 0, out)
