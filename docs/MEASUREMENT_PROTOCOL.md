@@ -169,6 +169,71 @@ first run of the depth series test reported a perfectly ordered series running
 backwards. `tdc_decode()` in `harness/evofab/genome.py` is the correct one, and
 `test/test.py` carries an independent reimplementation rather than importing it.
 
+### The coarse count is Gray coded, and why that is not decoration
+
+The coarse counter lives in the ring's own clock domain and is captured by the
+arrival edge, which has no relationship to it whatever. A binary counter going
+from 0111 to 1000 presents four simultaneously changing bits to that capture,
+and a capture landing inside that window can return any of sixteen values,
+including 1111, which is the saturation code. It is not a rare corner: the
+counter is changing for a few tens of picoseconds out of every few nanoseconds
+and this chip will take hundreds of thousands of readings.
+
+So a Gray coded copy is registered beside the binary one and the Gray copy is
+what crosses. Adjacent counts differ in one bit, so a capture taken mid
+transition returns either the old count or the new one and nothing else. The
+chip does not convert it back; `gray_to_bin()` does, for the same reason the
+thermometer code leaves uncooked, and `readout_sel` 16 is named `tdc_gray` so
+that a host reading it as binary is making a visible mistake rather than a
+silent one.
+
+This does not remove metastability. Nothing in an asynchronous capture can. It
+confines the ambiguity to ADJACENT counts, which is what makes it resolvable.
+
+### Not every capture is a measurement
+
+`tdc_reading()` returns a status, and four of the five are not delays.
+
+| status | what happened | what to do |
+|---|---|---|
+| `VALID` | an ordinary reading | use it |
+| `NO_ARRIVAL` | the trial saw no arrival edge. The tap register still holds the PREVIOUS capture, which decodes to a perfectly plausible number | discard. Check `done` on the MEASURING trial, not after the readout trials |
+| `COARSE_SATURATED` | the counter reached 0xFF, Gray 0x80 | discard, never scale. A wrapped count reads as a fast path |
+| `BOUNDARY_AMBIGUOUS` | the arrival landed within a tap of the coarse counter's own clock edge | discard and REPEAT. Two candidates are returned and they differ by a whole ring period, so they must not be averaged |
+| `THERMOMETER_INVALID` | the fine code has more runs than any bubble pattern can explain | discard and investigate. This is a sampling fault, not a bin width |
+
+A decoder that always returns a number reports the converter's failures as
+measurements, and on this converter two of those failures look exactly like
+ordinary fast readings.
+
+The rate of each status is itself data and is reported with every study. The
+geometric prediction for `BOUNDARY_AMBIGUOUS` is about 3 percent, two guard taps
+out of the 64 in a ring period; a rate far from that means the coarse capture is
+not behaving the way the Gray coding assumes, and it would be visible in nothing
+else.
+
+One case the decoder cannot catch is stated here rather than discovered later. If
+one of the four branches of the sampling tree never fires, its eight taps read
+zero, and for many positions the surviving pattern is a well formed code for a
+DIFFERENT position. What catches that is hardware: `src/tdc.v` ANDs the four
+branch fired flags, so a partial capture reports `done` low and never reaches
+the decoder at all.
+
+### The capture has to beat the kill, and that is now a number
+
+The arrival edge does two things at once: it samples the whole line, and it kills
+the ring. If the kill reached the line first the flip flops would latch a line
+the arrival never saw, and the reading would be short by however far the kill had
+walked. Short, which is the direction that looks like a result.
+
+The design's argument for why the capture wins was that the capture is one buffer
+from the arrival edge and the kill is a flip flop and three gates from it. That
+is a short argument about a race, and a short argument about a race is not a
+margin. Two dont_touch buffers now sit in the kill path on purpose, delaying only
+the shutdown of an instrument whose reading is already latched, and
+`tools/tdc_race.py` reads both paths out of the extracted timing at every corner
+and fails the build if the margin falls below a guard band.
+
 ### The two bugs the tests found before silicon did
 
 Recorded because both were silent and both would have produced numbers.
@@ -198,16 +263,51 @@ That residual is a **per-tap distortion, not a constant offset, and it does not
 cancel in a difference.** It is handled the way delay-line converters are always
 handled: the bins are calibrated on the die.
 
-  - The depth series, characterization paths 8, 9, 0 and 10, is the same cell at
-    depths 2, 4, 8 and 16. A straight line through the four gives the per-stage
-    delay and the fixed offset contributed by the launch gate, the select tree
-    and the converter input.
-  - The series is four points and not two on purpose. Two points give a slope
-    with no way to check that the relationship is linear, and if it is not
-    linear then the offset is not a constant and nothing else can be quoted
-    against it.
-  - The fabric column is a continuously variable delay source, so bin widths can
-    be recovered by code density.
+  - The depth series is the same cell at six depths, 2, 4, 8, 16, 24 and 32,
+    across characterization paths 8, 9, 10, 11, 4 and 19. A straight line
+    through them gives the per-stage delay and the fixed offset contributed by
+    the launch gate, the select merge and the converter input.
+  - Six points and a 16:1 lever arm, not two. Two points give a slope with no
+    way to check that the relationship is linear, and if it is not linear then
+    the offset is not a constant and nothing else can be quoted against it.
+    Depths 16 and 24 are reached by two structurally different paths that should
+    agree, so the series carries a free repeatability check as well as a fit.
+  - Bin widths come from CODE DENSITY, and the stop source for it is a free
+    running calibration ring (`tdc_src = calib`), not the fabric. This matters
+    and the earlier version of this document had it wrong. Code density recovers
+    a bin width from how often the edge lands in that bin, which is only a bin
+    width if the arrival phase is UNIFORM. A fixed path arrives in the same bin
+    every time. A fabric configuration arrives wherever that configuration puts
+    it, and the distribution over random configurations is unknown, which is not
+    the same thing as uniform and must not be used as though it were. A
+    calibration ring is uncorrelated with the converter's own ring by
+    construction: different structure, different length, no shared gate.
+  - The gating of that stop source is part of the design and not a detail. The
+    sampler is released eight clocks before the launch so the fabric can settle,
+    and a free running ring would trip it during that window every time; ANDing
+    the ring with the launch does not fix it either, because whenever the ring is
+    high as the launch rises the AND produces an edge at the launch instant,
+    which is a fixed reading masquerading as a random one for half of all trials.
+    So the asynchronous sources are edge armed by a flip flop held cleared while
+    the launch is low. Exactly one edge per trial, at a phase uniform over the
+    source's period.
+  - There is a fourth stop source, the SCAN_IN pin, for a stop whose time the
+    host chooses rather than measures. It is for bring up and for deliberate
+    stimulus, and it is not for quoting a delay against: board timing at a
+    hundred picoseconds is not something to trust.
+
+**The selector offset is measured, not assumed to cancel.** The per-site result
+is a SLOPE over the stop tap index, so anything that varies WITH the tap index is
+added to it and is reported as the cost of a site: stable, reproducible and
+wrong. The tree is balanced three cells deep for every input, which removes the
+part of that effect caused by logic depth, and it does NOT remove the part caused
+by routing, because nothing in this design places a wire. `tools/stop_tree.py`
+extracts the per-tap offset, reports its mean, spread, rise-fall difference and
+its LINEAR TREND with tap index, and fails the build if that trend exceeds a
+quarter of a tap per site. The per-code offsets it prints are the correction, and
+study 8 applies them before fitting. The right phrasing for this is equal logical
+selector depth with an extracted per-code offset correction, and never that the
+selector delay cancels.
 
 **Until that is done, delays from this chip are quoted in raw tap counts and say
 so.** No hardware bin-width table exists and none should be added; it would be a

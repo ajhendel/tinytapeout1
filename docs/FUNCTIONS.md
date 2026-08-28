@@ -1,13 +1,20 @@
 # FUNCTIONS — what this fabric can compute or solve, and why anyone would care
 
-Scale honesty first. At 8–64 sites everything below is toy-instance scale. The value is scientific (does the physics actually compute), methodological (open, reproducible, pre-registered), and platform (the same fabric runs new experiments for years). Nothing here competes with a GPU on throughput. Applications listed are what the *class* of machine is for, demonstrated at small scale.
+**NONE OF TIER A IS ON TAPEOUT ONE. READ THIS BEFORE QUOTING ANYTHING BELOW.**
 
-## Tier A — physics-as-computer (the flagship class, beyond FPGA by construction)
+This file is the program's map of what an evolvable electrical-realization fabric could be aimed at. It is not a description of the chip being submitted. Tapeout one carries 20 serial configurable sites and the instruments needed to measure them, and no analog patch: no coupled-oscillator optimizer, no p-bit array, no analog constraint relaxation. Two separate things put them off it. The area went to the instruments instead, which is recorded in docs/AREA_GATE.md, and the coupled-oscillator optimization framing was withdrawn on prior art, which is recorded in docs/PRIOR_ART.md row 3. The single feedback edge this chip does have is a feedback edge. It is not a small coupled-oscillator optimizer and must not be written about as one: there is no controllable coupling, no phase readout, no locking guarantee and no independent enable per oscillator.
 
-### 1. Coupled-oscillator optimization (Ising machine)
+What tapeout one is actually for is in docs/EXPERIMENT_MATRIX.md, which is the committed list of studies, and it is a measurement program rather than any of the tiers below.
+
+Scale honesty next. At the sizes this program can reach, everything below is toy-instance scale. The value is scientific (does the physics actually compute), methodological (open, reproducible, pre-registered), and platform (the same fabric runs new experiments for years). Nothing here competes with a GPU on throughput. Applications listed are what the *class* of machine is for, demonstrated at small scale.
+
+## Tier A — physics-as-computer. NOT ON TAPEOUT ONE; see the banner above.
+
+### 1. Coupled-oscillator optimization
+The field calls these Ising machines. This project does not claim one, at any scale, on any tapeout so far; docs/PRIOR_ART.md row 3 is closed against a large existing literature and against WobblyBits on the previous sky shuttle.
 Ring oscillators with configurable coupling strengths settle into minimum-energy phase patterns. Map a graph's edges onto couplings; the settled phases read out a MAX-CUT of the graph. The annealing is performed by physics, not simulated.
 - Functions: MAX-CUT, graph partitioning, small QUBO instances (many NP-hard problems reduce to QUBO).
-- Applications of the class: scheduling, placement/partitioning in EDA itself, portfolio selection, interference-aware channel assignment. Active research field (oscillator Ising machines); our angle is configurable coupling searched in-loop on open silicon.
+- Applications of the class: scheduling, placement/partitioning in EDA itself, portfolio selection, interference-aware channel assignment. This is an active field with a large prior literature, enumerated in docs/PRIOR_ART.md row 3, and we have no claim in it.
 - FPGA status: digital emulation only (that is just a slow annealer with PRNGs). Real phase dynamics need real analog coupling strength.
 
 ### 2. Probabilistic bits (p-bits) and sampling

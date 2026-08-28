@@ -31,6 +31,14 @@ jobs:
           # make will return success even if the test fails, so check for failure in the results.xml
           ! grep failure results.xml
 
+      - name: Constants and documentation audit
+        shell: bash
+        run: |
+          # Neither of these breaks a simulation. Both of them are what the next
+          # reader will believe. See the note at the top of tools/doc_audit.py.
+          python3 tools/gen_constants.py --check
+          python3 tools/doc_audit.py
+
       - name: Constraint check (timing.sdc still points at the fabric pins)
         shell: bash
         run: |

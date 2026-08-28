@@ -62,7 +62,7 @@ G_READOUT_SEL = 7  # 5 bits
 G_WINDOW_EXP = 12  # 4 bits
 G_TRANS_EXP = 16  # 4 bits
 G_TDC_EN = 20
-G_TDC_SRC = 21
+G_TDC_SRC = 36    # 2 bits: 0 char, 1 fabric, 2 calib ring, 3 external pin
 G_TDC_POL = 22
 G_CHAR_SEL = 23  # 5 bits
 G_CHAR_DRIVE = 28  # 2 bits
@@ -76,7 +76,8 @@ CNT_CALIB, CNT_FABRIC, CNT_TDC_RING = 0, 1, 2
 RO_FREQ0, RO_STATUS, RO_NSITES = 0, 6, 7
 RO_TDC0, RO_TDC1, RO_TDC2, RO_TDC3 = 8, 9, 10, 11
 RO_TDC_TAPS, RO_TWIN_MASK, RO_CHAR_COUNT, RO_ALIVE = 12, 13, 14, 15
-RO_TDC_WRAPS, RO_TAP_ECHO, RO_CHAR_ECHO, RO_GLOBAL_W = 16, 17, 18, 19
+RO_TDC_GRAY, RO_TAP_ECHO, RO_CHAR_ECHO, RO_GLOBAL_W = 16, 17, 18, 19
+RO_INSTR_VERSION, RO_TDC_CFG_ECHO, RO_SITE_W = 20, 21, 22
 
 # Bit positions inside the status byte, readout slot 6. The packing in
 # src/project.v is {0, tdc_valid, tdc_done, tripped, meas_busy, crc_ok, n[1:0]},
@@ -98,8 +99,16 @@ N_CHAR_PATHS = 20
 # src/project.v.
 ISO_TWIN_MASK = 0xAA
 
-# The TDC wrap counter saturates rather than wrapping. See src/tdc.v.
+# The TDC wrap counter saturates rather than wrapping. See src/tdc.v. What
+# leaves the chip is GRAY coded, so the saturation value on the wire is 0x80.
 TDC_WRAPS_SATURATED = 0xFF
+TDC_GRAY_SATURATED = 0x80
+
+# Stop source codes for tdc_src. See the stop source note in src/project.v.
+SRC_CHAR, SRC_FABRIC, SRC_CALIB, SRC_EXTERNAL = 0, 1, 2, 3
+
+# The instrument version the chip should report at RO_INSTR_VERSION.
+INSTR_VERSION = 2
 
 # Site config field positions inside each 12-bit site word.
 S_FUNC = 0  # 3 bits
@@ -151,7 +160,7 @@ def global_word(fb_en=0, calib_en=0, calib_sel=0, cnt_src=0,
            ((calib_sel & 7) << G_CALIB_SEL) | ((cnt_src & 3) << G_CNT_SRC) | \
            ((readout_sel & 31) << G_READOUT_SEL) | \
            ((window_exp & 15) << G_WINDOW_EXP) | ((trans_exp & 15) << G_TRANS_EXP) | \
-           (tdc_en << G_TDC_EN) | (tdc_src << G_TDC_SRC) | (tdc_pol << G_TDC_POL) | \
+           (tdc_en << G_TDC_EN) | ((tdc_src & 3) << G_TDC_SRC) | (tdc_pol << G_TDC_POL) | \
            ((char_sel & 31) << G_CHAR_SEL) | ((char_drive & 3) << G_CHAR_DRIVE) | \
            ((tdc_tap & 31) << G_TDC_TAP) | (tdc_freerun << G_TDC_FREERUN)
 
@@ -483,11 +492,16 @@ async def test_readout_selector_reaches_every_slot(dut):
     assert await read(RO_CHAR_COUNT) == N_CHAR_PATHS, "characterization path count slot"
     assert await read(RO_ALIVE) == 0xA5, "default slot pattern"
     assert await read(RO_GLOBAL_W) == GLOBAL_W, "global word width slot"
+    assert await read(RO_INSTR_VERSION) == INSTR_VERSION, (
+        "the chip reports an instrument version this test does not know. That "
+        "is the point of the slot: a host reading an unfamiliar die finds out "
+        "rather than decoding it with the wrong field map")
+    assert await read(RO_SITE_W) == 12, "site word width slot"
 
 
 async def tdc_measure(dut, char_sel=0, char_drive=0, tdc_src=0, tdc_pol=0,
-                      tdc_tap=0, sites=None):
-    """Run one TDC trial and return (taps_int, wraps, done, valid).
+                      tdc_tap=0, sites=None, calib_en=0, inject=None):
+    """Run one TDC trial and return (taps_int, gray, done, valid).
 
     Thirty-two taps plus a wrap count do not fit in an eight bit port, so the
     measuring trial is followed by read-only trials with the TDC disabled. That
@@ -504,9 +518,18 @@ async def tdc_measure(dut, char_sel=0, char_drive=0, tdc_src=0, tdc_pol=0,
         gw = global_word(readout_sel=readout_sel, window_exp=2, trans_exp=15,
                          tdc_en=tdc_en, tdc_src=tdc_src, tdc_pol=tdc_pol,
                          char_sel=char_sel, char_drive=char_drive,
-                         tdc_tap=tdc_tap)
+                         tdc_tap=tdc_tap, calib_en=calib_en)
         await load_config(dut, build_frame(gw, words))
-        await tick(dut, 120)
+        if tdc_en and inject is not None:
+            # Past the settle and the launch, then hand the window over to the
+            # caller so it can place an edge on a pin at a chosen time. Only on
+            # the MEASURING trial: an injected edge during a read-only trial
+            # would be an arrival nobody asked for.
+            await tick(dut, 10)
+            await inject(dut)
+            await tick(dut, 110)
+        else:
+            await tick(dut, 120)
         return dut.uio_out.value.to_unsigned()
 
     # The status byte has to be read on the MEASURING trial. tdc_done reports
@@ -521,16 +544,30 @@ async def tdc_measure(dut, char_sel=0, char_drive=0, tdc_src=0, tdc_pol=0,
     b1 = await trial(RO_TDC1, 0)
     b2 = await trial(RO_TDC2, 0)
     b3 = await trial(RO_TDC3, 0)
-    wraps = await trial(RO_TDC_WRAPS, 0)
+    gray = await trial(RO_TDC_GRAY, 0)
     taps = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
-    return taps, wraps, done, valid
+    return taps, gray, done, valid
 
 
-def tdc_reading(taps, wraps, n_taps=32):
+def ungray(g, width=8):
+    """Gray to binary. Reimplemented here for the same reason as crc8 below."""
+    b, shift = g & ((1 << width) - 1), 1
+    while shift < width:
+        b ^= b >> shift
+        shift <<= 1
+    return b & ((1 << width) - 1)
+
+
+def tdc_reading(taps, gray, n_taps=32):
     """Coarse plus fine, in units of taps. Mirrors genome.tdc_decode.
 
     Reimplemented here rather than imported, on purpose: this file has to be
     able to disagree with the harness for the disagreement to mean anything.
+
+    The coarse half arrives GRAY coded, because it is captured out of the ring's
+    domain by an edge that has no relationship to it, and a binary count caught
+    mid carry can read as anything including the saturation code. Gray confines
+    that to adjacent counts. See the long note in src/tdc.v.
 
     The line is a RING, so the taps are not a thermometer that only grows. It
     parks all high; the launch edge walks a 1 to 0 transition down it, then a
@@ -539,6 +576,7 @@ def tdc_reading(taps, wraps, n_taps=32):
     decode and reports a longer path as a SMALLER number on odd traversals,
     which is how this was found: a perfectly ordered depth series, backwards.
     """
+    wraps = ungray(gray)
     full = (1 << n_taps) - 1
     if taps == full:
         return wraps * 2 * n_taps
@@ -569,13 +607,13 @@ async def test_tdc_orders_the_depth_series(dut):
     # is a repeatability check that costs no area, and it is checked below.
     for depth, sel in ((2, CH_INV1_D2), (4, CH_INV1_D4), (8, CH_INV1_D8),
                        (16, CH_INV1_D16), (16, CH_LOAD_0), (32, CH_INV1_D32)):
-        taps, wraps, done, valid = await tdc_measure(dut, sel)
-        count = tdc_reading(taps, wraps)
+        taps, gray, done, valid = await tdc_measure(dut, sel)
+        count = tdc_reading(taps, gray)
         dut._log.info(f"depth {depth:>2}: {count} taps "
-                      f"(code {taps:#010x}, wraps {wraps})")
+                      f"(code {taps:#010x}, gray {gray:#04x})")
         assert done, f"depth {depth} produced no arrival edge at the TDC"
         assert valid, f"depth {depth} left the tap register invalid"
-        assert wraps != TDC_WRAPS_SATURATED, (
+        assert gray != TDC_GRAY_SATURATED, (
             f"depth {depth} saturated the wrap counter; a reference path must "
             "never do that")
         seen.append((depth, count))
@@ -632,7 +670,7 @@ async def test_both_drive_replicas_conduct(dut):
     await start(dut)
     for sel in (CH_DRIVE_ISOLATED, CH_DRIVE_SHARED):
         for drive in range(4):
-            taps, wraps, done, valid = await tdc_measure(dut, sel,
+            taps, gray, done, valid = await tdc_measure(dut, sel,
                                                          char_drive=drive)
             assert done and valid, (
                 f"path {sel} at drive variant {drive} produced no arrival; the "
@@ -655,7 +693,7 @@ async def test_both_ladder_replicas_conduct(dut):
     dead arm reports zero and looks like a finding."""
     await start(dut)
     for sel in (CH_LADDER_OFF, CH_LADDER_ON):
-        taps, wraps, done, valid = await tdc_measure(dut, sel)
+        taps, gray, done, valid = await tdc_measure(dut, sel)
         assert done and valid, (
             f"ladder path {sel} produced no arrival; the pair that measures the "
             "load ladder in isolation has a dead arm")
@@ -686,20 +724,149 @@ async def test_tdc_measures_the_fabric_per_site(dut):
         # tap t is t+1 inversions deep; a rising launch arrives rising only when
         # that count is even, so invert the stop edge when it is odd.
         pol = 0 if (tap + 1) % 2 == 0 else 1
-        taps, wraps, done, valid = await tdc_measure(
-            dut, tdc_src=1, tdc_pol=pol, tdc_tap=tap, sites=words)
-        r = tdc_reading(taps, wraps)
+        taps, gray, done, valid = await tdc_measure(
+            dut, tdc_src=SRC_FABRIC, tdc_pol=pol, tdc_tap=tap, sites=words)
+        r = tdc_reading(taps, gray)
         dut._log.info(f"fabric tap {tap:>2} (sites 0..{tap}): {r} taps, "
-                      f"wraps {wraps}, code {taps:#010x}")
+                      f"gray {gray:#04x}, code {taps:#010x}")
         assert done and valid, (
             f"tap {tap} produced no arrival; the stop tap multiplexer is not "
             "reaching site outputs, or the polarity bit is wrong")
-        assert wraps != TDC_WRAPS_SATURATED, f"tap {tap} saturated the counter"
+        assert gray != TDC_GRAY_SATURATED, f"tap {tap} saturated the counter"
         seen.append((tap, r))
     vals = [v for _, v in seen]
     assert vals == sorted(vals) and vals[-1] > vals[0], (
         f"the per-site series is not monotone: {seen}. Either the stop tap "
         "multiplexer is unbalanced or it is not selecting what it claims")
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_external_stop_times_a_pin_edge(dut):
+    """The external stop source must time an edge the testbench places itself.
+
+    This is the only stop source whose arrival time is chosen rather than
+    measured, which makes it the only one that can prove the converter is
+    reading the interval between the launch and the stop rather than some fixed
+    property of the path it was pointed at. Three injected delays, three
+    readings, and they have to come out in the order they were injected.
+
+    The pin is SCAN_IN. It is not a spare pin, it is a pin the scan chain stops
+    listening to when scan_en goes low, which it is for the whole window.
+    """
+    await start(dut)
+    words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
+
+    def at(offset_ns):
+        async def inject(d):
+            set_ui(d, scan_in=0)
+            await Timer(offset_ns, unit="ns")
+            set_ui(d, scan_in=1)
+            await Timer(1, unit="ns")
+            set_ui(d, scan_in=0)
+        return inject
+
+    seen = []
+    for off in (1.0, 4.0, 7.0):
+        taps, gray, done, valid = await tdc_measure(
+            dut, tdc_src=SRC_EXTERNAL, inject=at(off))
+        r = tdc_reading(taps, gray)
+        dut._log.info(f"external stop at +{off} ns: {r} taps, "
+                      f"gray {gray:#04x}, code {taps:#010x}")
+        assert done and valid, f"no arrival for an edge injected at +{off} ns"
+        assert gray != TDC_GRAY_SATURATED
+        seen.append((off, r))
+    vals = [v for _, v in seen]
+    assert vals == sorted(vals) and vals[-1] > vals[0], (
+        f"the converter did not order three injected delays: {seen}. It is "
+        "not measuring the interval it was given")
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_no_pin_edge_is_no_arrival(dut):
+    """Sabotage the external stop: no edge, no measurement.
+
+    Without this the test above could be passing on any edge that happens to
+    exist in the window, and the readings would be ordered by something other
+    than what was injected."""
+    await start(dut)
+    words = [site_word(func=FUNC_AND, route=ROUTE_PI) for _ in range(N_SITES)]
+
+    async def nothing(d):
+        set_ui(d, scan_in=0)
+        await Timer(1, unit="ns")
+
+    _, _, done, _ = await tdc_measure(dut, tdc_src=SRC_EXTERNAL, inject=nothing)
+    assert not done, (
+        "the converter reported an arrival with nothing driving the external "
+        "stop, so the previous test is timing something it did not inject")
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_calibration_ring_can_stop_the_converter(dut):
+    """The code density stop source has to reach, and has to need its ring.
+
+    Code density is the only honest way to recover this converter's bin widths,
+    and it needs a stop whose phase relative to the launch is uniform. A fixed
+    path arrives in the same bin every time; a fabric configuration arrives
+    wherever that configuration puts it, which is not the same as uniform. A
+    free running calibration ring is uncorrelated with the converter's own ring
+    by construction. See the stop source note in src/project.v.
+
+    The pair is the test. With the ring enabled there must be an arrival, and
+    with it parked there must not be, or the arrival was coming from somewhere
+    else and the bin table would be a histogram of that instead."""
+    await start(dut)
+    _, _, done_on, _ = await tdc_measure(dut, tdc_src=SRC_CALIB, calib_en=1)
+    _, _, done_off, _ = await tdc_measure(dut, tdc_src=SRC_CALIB, calib_en=0)
+    dut._log.info(f"calibration stop: ring on -> done={done_on}, "
+                  f"ring parked -> done={done_off}")
+    assert done_on, (
+        "the calibration ring is running and the converter saw no arrival; "
+        "the code density stop source does not reach")
+    assert not done_off, (
+        "the converter saw an arrival with the calibration ring parked, so "
+        "the stop edge is not coming from the ring")
+
+
+@cocotb.test(skip=GATE_LEVEL)
+async def test_the_coarse_count_is_gray_coded(dut):
+    """Sweep a lengthening path and watch the ORDER the coarse codes appear in.
+
+    A chip that shipped the binary counter instead of the Gray one would pass
+    every other test in this file. Every reading would decode to a plausible
+    number, the depth series would still be monotone, and the only symptom would
+    be an occasional wild value on silicon whenever an arrival landed on a carry
+    boundary, which is roughly one reading in a hundred and looks exactly like
+    an outlier.
+
+    So this test does not decode anything. It sweeps the fabric tap, which
+    lengthens the path monotonically, and records the coarse codes in the order
+    they first appear. Counting up, that order is the Gray sequence
+    0, 1, 3, 2, 6, 7, 5, 4 and NOT 0, 1, 2, 3. The two agree for the first two
+    counts, which is why the sweep has to reach a third.
+    """
+    await start(dut)
+    words = [site_word(func=FUNC_NOTA, route=ROUTE_PREV) for _ in range(N_SITES)]
+    order = []
+    for tap in range(N_SITES):
+        pol = 0 if (tap + 1) % 2 == 0 else 1
+        _, gray, done, _ = await tdc_measure(
+            dut, tdc_src=SRC_FABRIC, tdc_pol=pol, tdc_tap=tap, sites=words)
+        assert done, f"tap {tap} produced no arrival"
+        assert gray != TDC_GRAY_SATURATED, f"tap {tap} saturated the counter"
+        if not order or gray != order[-1]:
+            order.append(gray)
+    dut._log.info(f"coarse codes in order of appearance: "
+                  f"{[hex(g) for g in order]}")
+    assert len(order) >= 3, (
+        f"the sweep only ever produced {len(order)} distinct coarse codes "
+        f"({[hex(g) for g in order]}); Gray and binary agree for the first two, "
+        "so this test cannot tell them apart without a third")
+    expected = [c ^ (c >> 1) for c in range(len(order))]
+    assert order == expected, (
+        f"coarse codes appeared as {[hex(g) for g in order]}; counting up they "
+        f"should be the Gray sequence {[hex(g) for g in expected]}. Binary "
+        f"would be {[hex(c) for c in range(len(order))]}")
 
 
 @cocotb.test(skip=GATE_LEVEL)
@@ -714,11 +881,12 @@ async def test_tdc_ring_wraps_on_a_long_path(dut):
     words = [site_word(func=FUNC_NOTA, route=ROUTE_PREV) for _ in range(N_SITES)]
     tap = N_SITES - 1
     pol = 0 if (tap + 1) % 2 == 0 else 1
-    _, wraps_long, done, _ = await tdc_measure(
-        dut, tdc_src=1, tdc_pol=pol, tdc_tap=tap, sites=words)
-    _, wraps_short, done_s, _ = await tdc_measure(dut, CH_INV1_D2)
-    dut._log.info(f"wraps: whole column {wraps_long}, shortest fixed path "
-                  f"{wraps_short}")
+    _, gray_long, done, _ = await tdc_measure(
+        dut, tdc_src=SRC_FABRIC, tdc_pol=pol, tdc_tap=tap, sites=words)
+    _, gray_short, done_s, _ = await tdc_measure(dut, CH_INV1_D2)
+    wraps_long, wraps_short = ungray(gray_long), ungray(gray_short)
+    dut._log.info(f"wraps: whole column {wraps_long} (gray {gray_long:#04x}), "
+                  f"shortest fixed path {wraps_short} (gray {gray_short:#04x})")
     assert done and done_s
     assert wraps_short == 0, (
         "the shortest fixed path wrapped the ring, so the ring period is far "

@@ -73,7 +73,15 @@ module tt_um_ajhendel_evofab (
 
   localparam integer N_SITES  = `N_SITES;
   localparam integer GLOBAL_W = 48;
+  localparam integer SITE_W   = 12;
   localparam integer TDC_TAPS = 32;
+
+  // Bumped whenever anything a host has to know about changes shape: a field
+  // moves, a readout slot changes meaning, or an instrument's output changes
+  // encoding. Readable at readout_sel 20, so a host talking to an unfamiliar
+  // die finds out rather than assuming. Version 2 is the Gray coded coarse
+  // count and the four-way TDC stop source.
+  localparam [7:0] INSTR_VERSION = 8'd2;
 
   // ------------------------------------------------- the un-isolated controls
   // Sites 1, 3, 5 and 7 are built WITHOUT drive-variant input isolation. Every
@@ -112,7 +120,7 @@ module tt_um_ajhendel_evofab (
   wire                  scan_out, crc_ok, inert, tripped, meas_busy;
   wire                  meas_gate, meas_capture;
   wire [GLOBAL_W-1:0]   gcfg;
-  wire [12*N_SITES-1:0] scfg;
+  wire [SITE_W*N_SITES-1:0] scfg;
   wire [23:0]           trans_count;
   wire [23:0]           freq_count;
   wire                  mon_to_safety;
@@ -140,12 +148,19 @@ module tt_um_ajhendel_evofab (
   //         window_exp  = gcfg[15:12]  (scan_config)
   //         trans_exp   = gcfg[19:16]  (scan_config)
   wire       tdc_en      = gcfg[20];
-  wire       tdc_src     = gcfg[21];    // 0 = characterization path, 1 = fabric
+  //         gcfg[21]    RETIRED. It was a one bit tdc_src. The field grew to
+  //                     two and was moved whole rather than split across the
+  //                     word, because a field in two pieces is a field someone
+  //                     eventually reads half of. Nothing drives it and nothing
+  //                     reads it; it is in the spare list below.
   wire       tdc_pol     = gcfg[22];    // invert the arrival edge
   wire [4:0] char_sel    = gcfg[27:23];
   wire [1:0] char_drive  = gcfg[29:28]; // drive variant for char paths 15, 16
   wire [4:0] tdc_tap     = gcfg[34:30]; // which site output stops the TDC
   wire       tdc_freerun = gcfg[35];    // let the ring run, to measure its period
+  // 0 characterization path, 1 fabric tap, 2 calibration ring, 3 external pin.
+  // See the stop source block below for what the last two are for.
+  wire [1:0] tdc_src     = gcfg[37:36];
 
   // ------------------------------------------------------------- TDC launch
   // Exactly one rising edge per trial, produced in the clock domain. It rises
@@ -163,9 +178,11 @@ module tt_um_ajhendel_evofab (
   //
   // So the window is divided. Eight clocks of settling with the sampler held in
   // reset, then arm, then four more clocks, then launch. At 20 ns that is 160 ns
-  // of settling against a measured 84 ns for the whole 24-site column at the
-  // typical corner, and the counter saturates rather than rolling over so a
-  // longer window cannot silently shorten it.
+  // of settling. The reference for how long is enough is the 24 site build,
+  // whose whole column extracted at about 84 ns at the typical corner; this
+  // column is shorter than that one and the margin is therefore larger than the
+  // one the number was chosen against. The counter saturates rather than
+  // rolling over, so a longer window cannot silently shorten it.
   //
   // tdc_wait is cleared by meas_gate rather than meas_busy on purpose: the gate
   // stays high through the readout tail, so the armed signal does too, so the
@@ -222,7 +239,7 @@ module tt_um_ajhendel_evofab (
   // same constant to every fabric measurement rather than appearing only in
   // the mode being compared.
   wire fab_head;
-  cell_mux2 u_fab_src (.A0(fab_a), .A1(launch), .S(tdc_en & tdc_src), .X(fab_head));
+  cell_mux2 u_fab_src (.A0(fab_a), .A1(launch), .S(tdc_en & (tdc_src == 2'd1)), .X(fab_head));
   assign col[0] = fab_head;
 
   genvar s;
@@ -242,7 +259,7 @@ module tt_um_ajhendel_evofab (
           // MSB first, so site 0 sits in the HIGH bits of scfg. Indexing this
           // the obvious way instead would silently reverse the genome and every
           // per-site experiment would address the wrong site.
-          .cfg(scfg[12*(N_SITES-1-s) +: 12]),
+          .cfg(scfg[SITE_W*(N_SITES-1-s) +: SITE_W]),
           .out(col[s+1]),
           .load_mon(site_mon[s]));
     end
@@ -266,9 +283,9 @@ module tt_um_ajhendel_evofab (
   // -------------------------------------------------- the per-site stop tap
   // The TDC's arrival edge can come from ANY site's output, not only the end of
   // the column. Without this the only fabric measurement available is one number
-  // for all 24 sites, and the first build's SDF says that number is about 84 ns
-  // against a converter that resolves 0.12 ns; the interesting quantity, the
-  // cost of one site, would have been buried in it.
+  // for the whole column, and on the 24 site build the SDF put that number at
+  // about 84 ns against a converter that resolves 0.12 ns; the interesting
+  // quantity, the cost of one site, would have been buried in it.
   //
   // Sweeping the tap gives a per-site delay series, and the per-site delay comes
   // out as the SLOPE, exactly the way the characterization block's depth series
@@ -316,18 +333,65 @@ module tt_um_ajhendel_evofab (
   // either may arrive falling rather than rising depending on how the fabric is
   // configured, so the polarity is a config bit. Without it half the fabric
   // configurations would simply be unmeasurable.
-  wire tdc_stop_raw = tdc_src ? tap_out : char_out;
+  // THE TWO ASYNCHRONOUS STOP SOURCES, AND WHAT THEY ARE FOR
+  //
+  // Bin width calibration by code density needs a stop whose phase relative to
+  // the launch edge is UNIFORM, and neither of the first two sources is. A
+  // fixed characterization path arrives at the same place in the line every
+  // time, so it exercises one bin and says nothing about the other 31. A
+  // fabric configuration arrives wherever that configuration puts it, and the
+  // distribution over random configurations is unknown, which is not the same
+  // thing as uniform and must not be used as though it were.
+  //
+  // A free running calibration ring is uncorrelated with the TDC's own ring by
+  // construction: different structure, different length, no common gate. So the
+  // arrival phase walks the whole period and the histogram of fine codes is the
+  // bin width map. That is the one honest code density source on this chip.
+  //
+  // The gating matters as much as the source. The sampler is released eight
+  // clocks before the launch so the fabric can settle, and a free running ring
+  // would trip it during that window every time. ANDing the ring with the
+  // launch does not fix it either: whenever the ring happens to be high when
+  // the launch rises, the AND produces an edge at the launch instant, which is
+  // a fixed reading masquerading as a random one for half of all trials.
+  //
+  // So the async sources are edge armed instead. This flip flop is held cleared
+  // while the launch is low and set by the first rising edge of the source
+  // after it, which is exactly one edge per trial at a phase uniform over the
+  // source's period. It sits outside the path of sources 0 and 1 and adds
+  // nothing to them.
+  //
+  // Source 3 is the SCAN_IN pin. It is not a spare pin, it is a pin that is
+  // already ignored during a measurement: the scan chain only listens to it
+  // while scan_en is high, and scan_en is low for the whole window. An external
+  // stop needs board timing nobody should trust at 100 ps, so it is here for
+  // deliberate stimulus and for bring-up, not for quoting a delay against.
+  wire async_raw;
+  cell_mux2 u_async_src (.A0(calib_osc), .A1(scan_in), .S(tdc_src[0]), .X(async_raw));
+  reg async_stop;
+  always @(posedge async_raw or negedge launch) begin
+    if (!launch) async_stop <= 1'b0;
+    else         async_stop <= 1'b1;
+  end
+
+  // One four way cell rather than a chain of twos, so that every source carries
+  // the SAME select delay. An unequal select tree would put a different fixed
+  // offset on the characterization paths than on the fabric taps, and those two
+  // are quoted against each other.
+  wire tdc_stop_raw;
+  cell_mux4 u_tdc_src (.A0(char_out), .A1(tap_out), .A2(async_stop), .A3(async_stop),
+                       .S0(tdc_src[0]), .S1(tdc_src[1]), .X(tdc_stop_raw));
   wire tdc_stop;
   cell_xor2 u_tdc_pol (.A(tdc_stop_raw), .B(tdc_pol), .X(tdc_stop));
 
   wire [TDC_TAPS-1:0] tdc_taps;
-  wire [7:0]          tdc_wraps;
+  wire [7:0]          tdc_gray;
   wire                tdc_done, tdc_valid, tdc_ring;
   tdc #(.TAPS(TDC_TAPS)) u_tdc (
       .clk(clk), .rst_n(rst_n),
       .armed(tdc_armed), .capture(meas_capture),
       .start(launch), .stop(tdc_stop), .freerun(tdc_freerun),
-      .taps(tdc_taps), .wrap_count(tdc_wraps), .ring(tdc_ring),
+      .taps(tdc_taps), .wrap_gray(tdc_gray), .ring(tdc_ring),
       .done(tdc_done), .valid(tdc_valid));
 
   // ------------------------------------------------ what the counters watch
@@ -399,15 +463,24 @@ module tt_um_ajhendel_evofab (
       // nothing else would notice.
       5'd13: readout = ISO_TWIN_MASK[7:0];
       5'd14: readout = 8'd20;          // characterization path count
-      // The coarse half of a TDC reading. 8'hFF means the counter SATURATED and
-      // the measurement must be discarded, not scaled: a wrapped count is
-      // indistinguishable from a fast path.
-      5'd16: readout = tdc_wraps;
+      // The coarse half of a TDC reading, GRAY CODED. It is captured by the
+      // arrival edge out of the ring's own domain, and a binary count crossing
+      // a carry boundary can be captured as any value at all, including the
+      // saturation code. Convert with gray_to_bin() before doing anything with
+      // it. 8'h80 is the Gray code of 8'hFF and means the counter SATURATED:
+      // discard, do not scale. See the long note in src/tdc.v.
+      5'd16: readout = tdc_gray;
       // Echoes, so the host can prove the select fields reached the hardware
       // rather than assuming a frame landed where it meant to.
       5'd17: readout = {3'b000, tdc_tap};
       5'd18: readout = {3'b000, char_sel};
       5'd19: readout = GLOBAL_W[7:0];
+      // What the host has to agree with the chip about before a single genome
+      // means anything. A host that has the payload arithmetic wrong addresses
+      // the wrong site and nothing else notices.
+      5'd20: readout = INSTR_VERSION;
+      5'd21: readout = {4'b0000, tdc_freerun, tdc_pol, tdc_src};
+      5'd22: readout = SITE_W[7:0];
       default: readout = 8'hA5;        // fixed pattern: the readout mux is alive
     endcase
   end
@@ -432,12 +505,9 @@ module tt_um_ajhendel_evofab (
   assign uo_out[6] = fab_load_mon;
   assign uo_out[7] = inert;
 
-  // gcfg[17:10] is window_exp and trans_exp, consumed inside scan_config rather
-  // than here; gcfg[31:27] is spare. Both are listed so the linter can see that
-  // leaving them alone at this level is deliberate.
   // gcfg[19:12] is window_exp and trans_exp, consumed inside scan_config rather
-  // than here; gcfg[47:36] is spare. Both are listed so the linter can see that
-  // leaving them alone at this level is deliberate.
-  wire _unused = &{uio_in, gcfg[19:12], gcfg[47:36], 1'b0};
+  // than here; gcfg[21] is retired and gcfg[47:38] is spare. All are listed so
+  // the linter can see that leaving them alone at this level is deliberate.
+  wire _unused = &{uio_in, gcfg[19:12], gcfg[21], gcfg[47:38], 1'b0};
 
 endmodule

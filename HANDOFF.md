@@ -49,6 +49,139 @@ WP1 and WP2 complete, WP3 items 1–3 running with real numbers written back int
 
 ## Status
 
+### 2026-08-28, fourth round. Hardening the instrument, and everything the last round owed.
+
+The direction taken: **keep 20 sites, add the instrumentation, and let explicit
+gates decide whether 16 is necessary.** Nothing was removed to protect the site
+count, and nothing was cut preemptively to make room. At 28.2 percent there was
+room; the work below adds about a dozen cells of RTL and a great deal of
+checking, and the next build measures whether that judgement held.
+
+**The coarse counter was an asynchronous binary capture, which is a real bug.**
+The wrap counter lives in the ring's clock domain and is sampled by the arrival
+edge, which has no relationship to it. A binary count crossing 0111 to 1000
+presents four simultaneously changing bits to that capture, so a capture landing
+inside the transition can return any of sixteen values, including 1111, which is
+the saturation code. That is not a rare corner: the counter is changing for tens
+of picoseconds out of every few nanoseconds and this chip will take hundreds of
+thousands of readings. A Gray coded copy is now registered beside the binary one
+and the Gray copy is what crosses; adjacent counts differ in one bit, so a
+capture mid transition returns the old count or the new one and nothing else.
+The conversion back is in software, for the same reason the thermometer code
+leaves uncooked.
+
+The test for it does not decode anything, because a decoding test would pass on
+a binary counter. It sweeps the fabric tap, which lengthens the path
+monotonically, and checks the ORDER the coarse codes first appear in: counting
+up, that is 0, 1, 3, 2 and not 0, 1, 2, 3. Sabotaged by shipping the binary
+value: the test fails with exactly that message and nothing else in the suite
+notices.
+
+**The decoder now refuses to answer.** `tdc_reading()` returns one of five
+statuses and four of them are not delays. `NO_ARRIVAL` catches a stale read,
+`COARSE_SATURATED` catches a wrapped counter, `THERMOMETER_INVALID` catches a
+scattered fine code, and `BOUNDARY_AMBIGUOUS` catches a capture within a tap of
+the counter's own carry and returns both candidates rather than picking. The two
+candidates are a whole ring period apart, so the rule is repeat, never average.
+`harness/tests/test_tdc_decode.py` runs it against synthesised captures: every
+position of every traversal, bubbles, all-ones and all-zeros fields, the carry
+boundary, saturation, a lost sampling branch and a ring with randomised bin
+widths. One limitation is stated as a test rather than discovered later: a lost
+sampling branch is often NOT visible in the code, and what catches it is the
+hardware AND across the four branch fired flags.
+
+**The capture-beats-kill race is now a number.** It was an argument: the capture
+is one buffer from the arrival edge and the kill is a flip flop and three gates
+from it. A short argument about a race is not a margin, and the failure it
+guards is not a crash but a reading short by a tap or two, in the direction that
+looks like a result. Two dont_touch buffers now sit in the kill path, delaying
+only the shutdown of an instrument whose reading is already latched, and
+`tools/tdc_race.py` reads both paths out of the extracted timing at every corner
+and fails the build below a guard band. It finds the kill path by SEARCHING the
+SDF as a graph rather than by naming cells, because the flip flop and the two
+gates in that path were named by the tool and not by us.
+
+**Code density had no honest stop source, and the fix is a mode.** Bin widths
+come from how often the edge lands in each bin, which is a bin width only if the
+arrival phase is uniform. A fixed path arrives in the same bin every time. A
+fabric configuration arrives wherever that configuration puts it, and the
+distribution over random configurations is unknown, which is not the same thing
+as uniform. `tdc_src` is now two bits: a fixed path, a fabric tap, a free
+running calibration ring, and the SCAN_IN pin. The last two are edge armed by a
+flip flop held cleared while the launch is low, which matters more than it
+sounds: the sampler is released eight clocks before the launch so the fabric can
+settle, and a free running ring would trip it every time, while ANDing the ring
+with the launch produces an edge AT the launch instant whenever the ring happens
+to be high, which is a fixed reading masquerading as a random one for half of
+all trials.
+
+SCAN_IN costs nothing: the scan chain stops listening to it when SCAN_EN is low,
+which it is for the whole window. It also gave the suite its best new test.
+Injecting an edge at 1, 4 and 7 ns produced 130, 184 and 237 taps, which is the
+converter measuring an interval the testbench chose, linear to within half a
+tap, with the no-edge sabotage returning no arrival.
+
+**The stop selector's offset is measured rather than assumed to cancel.** The
+per-site result is a slope over the tap index, so anything varying WITH the tap
+index is added to it and reported as the cost of a site: stable, reproducible
+and wrong. A balanced tree removes the part caused by logic depth and not the
+part caused by routing, because nothing in this design places a wire.
+`tools/stop_tree.py` extracts the per-tap offset, reports mean, spread, rise
+against fall and the LINEAR TREND with tap index, and fails above a quarter tap
+per site. The phrasing everywhere is now equal logical selector depth with an
+extracted per-code offset correction, never that the selector cancels.
+
+**SPICE on the load ladder pair is set up and owed.** `tools/spice_ladder.py`
+builds both chains in one deck so nothing about the solver can differ between
+the arms of a matched pair, reads the cell pin order out of the PDK rather than
+assuming it, and sweeps corners, supplies and temperatures. It prints which of
+three categories row 6 of the matrix is allowed to be: resolvable measurement,
+repeated statistical measurement, or upper bound. The third is a legitimate
+result and the design will not be changed to amplify a secondary mechanism into
+the first. The `spice` workflow runs it; **the number is not in yet.**
+
+**The submission gate is one job and one exit code.** `tools/final_report.py`
+runs every check against the artifacts of one build on one commit and prints a
+single table. The old TDC range check lived in a job with continue-on-error,
+which means it could never actually have failed a build; the reports job keeps
+that flag and the gate job does not.
+
+**The documentation is checked by a machine now.** `tools/gen_constants.py`
+generates docs/CONSTANTS.md from the RTL and fails CI on drift.
+`tools/doc_audit.py` checks arithmetic, retracted phrasing and present-tense
+claims about the site count. It found a duplicated status paragraph in
+README.md carrying two different timing numbers, a document still saying the
+chip ships at 24 sites, a claim of 24 configurable sites in the matrix, and
+FUNCTIONS.md presenting a physics tier as though it were on this tapeout. Its
+first version was line based and reported the matrix clean, because prose here
+wraps at eighty columns and the claim straddled a line break; it reads
+paragraphs now, and that change alone found the one it had missed.
+
+**The pre-registration is split in two.** predictions/RULES.md is the half that
+cannot be generated: the decode procedure, the exclusion rules, what happens to
+an ambiguous reading, the repeat counts and the dither precondition they rest
+on, the multiple comparison correction for the search (50 finalists fixed in
+advance, a matched random baseline as the null, Bonferroni on the holdout, and
+the full ranked list published including the failures), and the die split.
+tools/prereg.py generates the numbers from the shipped build's own SDF and
+refuses to give the ladder pair a prediction from extraction.
+
+Verification: 21 cocotb tests, 67 harness tests, verilator clean, netlist and
+constraint checks pass. Every new gate was sabotage-tested and the sabotage
+output is in this session's record: binary instead of Gray, a kill that beats
+the capture, a stop tree that trends with the tap, a selector split into two mux
+levels, a missing guard buffer, and a document with bad arithmetic.
+
+Owed, in order:
+
+1. **The SPICE number.** It decides how row 6 is written and nothing else can.
+2. **The next build**, which is what decides 20 against 16. The gates are
+   written down in the matrix and in tools/final_report.py: utilization at or
+   below 33 percent, clean routing, positive timing, and no instrument feature
+   weakened to make area. If it asks for 16, cut to 16.
+3. **The generated pre-registration**, committed against the final submission
+   commit, once 1 and 2 have settled.
+
 ### 2026-08-27, third round. The drive series could not have worked either. Fixed, 20 sites, built clean.
 
 The 24-site build with the ring converter came back clean and its own extracted
@@ -168,7 +301,7 @@ faces a node that floats when disabled. The effect is real, partial and bias
 dependent, which is what src/fabric_site.v's header had said all along while the
 field description said something else.
 
-The sharp part: Liberty has ONE capacitance number per input pin, 0.002382 pF
+The sharp part: the released Liberty view gives this pin ONE capacitance, 0.002382 pF
 for einvn_1, with no dependence on the enable, because the format cannot express
 one. **So the Liberty-layer prediction for the entire load field is exactly
 zero.** That is not a gap to apologize for, it is the cleanest

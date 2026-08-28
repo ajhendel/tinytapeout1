@@ -276,6 +276,39 @@ def main():
             f"it is not balanced then different taps carry different offsets "
             f"and the per-site slope is corrupted")
 
+    # -------------------------- 10. the kill guard buffers are still in the path
+    # tools/tdc_race.py measures the margin between the capture and the ring
+    # kill out of the extracted timing, and these two dont_touch buffers are
+    # what makes that margin large rather than argued. A resizer that merged
+    # them would shorten the kill path, the race tool would still report a
+    # margin, and the margin it reported would be the real one, so this is not
+    # a silent failure. It is here because losing them is a design change made
+    # by a tool, and a design change made by a tool should fail a build.
+    kill = [n for n, c in cells.items()
+            if re.search(r"u_tdc\.kill_b[01]\.", n)
+            and c["type"].startswith("sky130_fd_sc_hd__buf_")]
+    print(f"\nTDC ring kill guard buffers: {len(kill)} (expected 2)")
+    if len(kill) != 2:
+        failures.append(
+            f"the ring kill path has {len(kill)} guard buffers, expected 2; "
+            f"without them the capture-beats-kill ordering goes back to being "
+            f"an argument about gate counts")
+
+    # ------------------------------- 11. the stop source select is ONE mux4
+    # Four sources, one cell, so that every source carries the same select
+    # delay. Two levels of mux2 would put a different fixed offset on the
+    # characterization paths than on the fabric taps, and those two are quoted
+    # against each other.
+    srcmux = [n for n, c in cells.items()
+              if n.endswith("u_tdc_src.u")
+              and c["type"] == "sky130_fd_sc_hd__mux4_1"]
+    print(f"TDC stop source select: {len(srcmux)} mux4 (expected 1)")
+    if len(srcmux) != 1:
+        failures.append(
+            f"expected exactly one mux4 named u_tdc_src.u, found "
+            f"{len(srcmux)}; an unequal select tree puts a different offset on "
+            f"the fixed paths than on the fabric taps")
+
     print()
     if failures:
         print("NETLIST CHECK FAILED")

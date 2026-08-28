@@ -38,8 +38,6 @@ jobs:
         uses: TinyTapeout/tt-gds-action/gl_test@ttsky26c
 
   build_reports:
-    # Two questions the build artifacts can answer and the build itself does not.
-    #
     # Where did the flow actually put the things whose POSITION is the result?
     # Three of the calibration rings are byte-for-byte identical, so their
     # difference is a placement effect and nothing else, and we cannot ask the
@@ -73,32 +71,128 @@ jobs:
           echo "reporting on $def"
           python3 tools/check_placement.py "$def" --json placement.json
 
-      # And does the time-to-digital converter have usable range for the paths
-      # it is pointed at? That is answerable from extraction, before
-      # fabrication, and the first version of this design shipped without
-      # asking: the converter spanned 3.835 ns and one fabric site took 3.515 of
-      # them. This step FAILS if a reference path leaves the fine range, because
-      # a reference other measurements are quoted against must not depend on the
-      # coarse counter. See docs/MEASUREMENT_PROTOCOL.md.
+      - name: upload the placement report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: placement-report
+          path: placement.json
+          if-no-files-found: warn
+
+  submission_gate:
+    # The gate, and the reason it is a separate job from the report above.
+    #
+    # Everything here is a question answerable from extraction, before
+    # fabrication, and every one of them was at some point NOT asked. The
+    # converter shipped once with no range for the paths it was pointed at. The
+    # drive series shipped once unable to produce a result. Both were visible in
+    # the build's own reports and neither failed a test.
+    #
+    # So these run against the artifacts of THIS build, on THIS commit, and they
+    # fail it. No continue-on-error: a gate that cannot fail the build is a
+    # report, and there is a report job above for that.
+    needs: gds
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v6
+
+      - name: Download the GDS build logs
+        uses: actions/download-artifact@v7
+        with:
+          name: GDS_logs
+          path: artifacts/logs
+
+      - name: Download the submission
+        uses: actions/download-artifact@v7
+        with:
+          name: tt_submission
+          path: artifacts/submission
+
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install the harness dependencies
+        shell: bash
+        run: pip install pyyaml
+
+      # The three instrument gates, printed one corner at a time so the report
+      # is readable, then the single verdict over all of them.
       - name: TDC range against every intended path
         shell: bash
         run: |
-          set -uo pipefail
+          set -o pipefail
           rc=0
-          for sdf in $(find submission -path '*stapostpnr*' -name '*.sdf' | sort); do
+          for sdf in $(find artifacts -path '*stapostpnr*' -name '*.sdf' | sort); do
             echo "=============================================================="
             python3 tools/tdc_range.py "$sdf" --markdown || rc=1
           done | tee tdc_range.md
           exit $rc
 
-      - name: upload the build reports
+      - name: The capture beats the ring kill
+        shell: bash
+        run: |
+          set -o pipefail
+          rc=0
+          for sdf in $(find artifacts -path '*stapostpnr*' -name '*.sdf' | sort); do
+            echo "=============================================================="
+            python3 tools/tdc_race.py "$sdf" --markdown || rc=1
+          done | tee tdc_race.md
+          exit $rc
+
+      - name: The stop selector has no trend with the tap index
+        shell: bash
+        run: |
+          set -o pipefail
+          rc=0
+          for sdf in $(find artifacts -path '*stapostpnr*' -name '*.sdf' | sort); do
+            echo "=============================================================="
+            python3 tools/stop_tree.py "$sdf" --markdown || rc=1
+          done | tee stop_tree.md
+          exit $rc
+
+      # The numeric half of the pre-registration, from THIS build. Generated as
+      # an artifact rather than committed here: committing it is a deliberate
+      # act by a person against the final submission commit, and a workflow that
+      # committed predictions on every push would make the timestamp worthless.
+      - name: Generate the pre-registration numbers
+        shell: bash
+        run: |
+          set -o pipefail
+          sdf=$(find artifacts -path '*stapostpnr*' -name '*.sdf' \
+                | grep -E '/(tt|nom_tt|typical)' | head -1)
+          if [ -z "${sdf:-}" ]; then
+            sdf=$(find artifacts -path '*stapostpnr*' -name '*.sdf' | head -1)
+          fi
+          echo "generating from $sdf"
+          python3 tools/prereg.py "$sdf" --out prereg
+
+      - name: The submission report
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 tools/final_report.py artifacts --json final_report.json \
+            | tee final_report.md
+
+      - name: Put the report in the job summary
+        if: always()
+        shell: bash
+        run: cat final_report.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: upload the gate reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: build-reports
+          name: submission-gate
           path: |
-            placement.json
             tdc_range.md
+            tdc_race.md
+            stop_tree.md
+            final_report.md
+            final_report.json
+            prereg/
           if-no-files-found: warn
 
   viewer:

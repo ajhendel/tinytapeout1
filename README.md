@@ -14,8 +14,9 @@ Start with [PLAN.md](PLAN.md). Everything in `docs/` supports it.
 - [docs/THROUGHPUT.md](docs/THROUGHPUT.md) — evolution feasibility math (genome size, trials per second)
 - [docs/MEASUREMENT_PROTOCOL.md](docs/MEASUREMENT_PROTOCOL.md) — the inference chain, which instrument answers which question, and the four-stage experiment order
 - [docs/EXPERIMENT_MATRIX.md](docs/EXPERIMENT_MATRIX.md) — the fixed list of studies, committed before fabrication, including the ones deliberately absent
-- [docs/AREA_GATE.md](docs/AREA_GATE.md) — what the flow actually said, twice, and why the chip ships at 24 sites
+- [docs/AREA_GATE.md](docs/AREA_GATE.md) — what the flow actually said, at every size, and why the chip ships at 20 sites
+- [docs/CONSTANTS.md](docs/CONSTANTS.md) — the numbers, generated from the RTL; CI fails if they drift
 - [docs/TT_LOGISTICS.md](docs/TT_LOGISTICS.md) — shuttle facts, pricing, deadlines, sources
 - [TODO.md](TODO.md) — phase 0 checklist, in order
 
-Status (2026-08-27). RTL frozen at 20 sites on 6x2 tiles and built: 28.2 percent utilization, DRC 0, LVS clean, antenna 0, setup slack +5.60 ns, precheck and gate-level test passing: DRC 0, LVS clean, antenna 0, setup slack +7.18 ns, precheck and gate-level test pass. 14 cocotb tests and 44 harness tests pass; the structural netlist and constraint checks pass and were sabotage-tested. Two findings from the build are recorded rather than smoothed over, one of which withdraws a planned experiment. See the Status section of [HANDOFF.md](HANDOFF.md), which is the live record.
+Status (2026-08-28). RTL frozen at 20 sites on 6x2 tiles and built: 63,627 um2 of standard cells, 28.2 percent utilization, DRC 0, LVS clean, antenna 0, setup slack +5.60 ns, hold slack +0.108 ns, precheck and gate-level test passing. 21 cocotb tests and 66 harness tests pass; the structural netlist, constraint, TDC range, TDC race and stop-selector checks pass and were each sabotage-tested. Three rounds of review each found a real defect and each was found by reading what the build itself reported rather than by a test failing. See the Status section of [HANDOFF.md](HANDOFF.md), which is the live record, and [docs/EXPERIMENT_MATRIX.md](docs/EXPERIMENT_MATRIX.md) for what the chip is for.

@@ -101,7 +101,7 @@ module tdc #(
     input  wire            stop,      // arrival edge, asynchronous
     input  wire            freerun,   // hold the ring running for the whole window
     output wire [TAPS-1:0] taps,
-    output wire      [7:0] wrap_count,// full ring periods before the arrival
+    output wire      [7:0] wrap_gray, // full ring periods before arrival, GRAY
     output wire            ring,      // the ring node, for the frequency counter
     output wire            done,      // the MOST RECENT trial saw an arrival
     output wire            valid      // taps holds a real capture, not zeros
@@ -129,8 +129,26 @@ module tdc #(
   // count would be in units of an interval nobody had measured, and the whole
   // coarse-plus-fine construction would rest on a Liberty number, which is
   // exactly the circularity PLAN.md section 2 forbids for the TDC.
+  //
+  // THE KILL GUARD
+  //
+  // The kill and the capture race, and the capture has to win. If line[1]
+  // changed before the sampling flip flops closed, the converter would record a
+  // line that the arrival edge never saw, and the error would be one tap on
+  // some dies and not others. The ordering argument is short (the capture is
+  // one buffer from the arrival edge; the kill is a flip flop, three gates and
+  // a buffer from it) and a short argument about a race is not a margin.
+  //
+  // So two dont_touch buffers are put in the kill path on purpose. They cost
+  // two cells, they delay only the shutdown of an instrument whose reading is
+  // already latched, and they turn the ordering from an argument into a number
+  // that tools/tdc_race.py reads out of the extracted timing at every corner
+  // and fails the build over. See the guard band there.
   reg  ring_kill;
-  wire run = start & (~ring_kill | freerun);
+  wire kill_d0, kill_d1;
+  cell_buf #(.DRIVE(1)) kill_b0 (.A(ring_kill), .X(kill_d0));
+  cell_buf #(.DRIVE(1)) kill_b1 (.A(kill_d0),   .X(kill_d1));
+  wire run = start & (~kill_d1 | freerun);
   cell_nand2 #(.DRIVE(2)) ring_close (.A(run), .B(line[TAPS]), .Y(line[0]));
 
   genvar i;
@@ -229,11 +247,46 @@ module tdc #(
   // tap, asynchronously cleared between trials, and SATURATING: an overflowed
   // count would be indistinguishable from a fast path, and reading a saturated
   // count as a measurement is how a slow circuit gets published as a fast one.
-  // The host is expected to check for 8'hFF and discard.
+  // The host checks for 8'h80, the Gray code of 8'hFF, and discards.
+  //
+  // AND WHY THE VALUE THAT LEAVES THIS BLOCK IS GRAY CODED
+  //
+  // The counter lives in the ring's domain and is captured by the arrival edge,
+  // which has no relationship to it whatever. A binary counter crossing 0111 to
+  // 1000 presents four simultaneously changing bits to that capture, and a
+  // capture that lands in the middle of it can return any of sixteen values,
+  // including 1111, which is the saturation code. That is not a rare corner: at
+  // one ring period per count the counter is changing for a few tens of
+  // picoseconds out of every few nanoseconds, and this chip takes many thousands
+  // of readings.
+  //
+  // So a Gray coded copy is registered beside the binary one, from the same
+  // next-state value on the same edge, and the Gray copy is what crosses. Only
+  // one bit differs between adjacent counts, so a capture taken during a
+  // transition returns either the old count or the new one and nothing else.
+  //
+  // This does not remove metastability, and nothing in an asynchronous capture
+  // can. It confines the ambiguity to ADJACENT counts, which is what makes the
+  // fine code able to resolve it: the host knows where in the ring the edge was,
+  // so it knows which side of the counter's own clock edge the arrival fell on.
+  // That resolution is tdc_decode() in harness/evofab/genome.py and it is tested
+  // against synthetic captures, including this case.
+  //
+  // The conversion back to binary is NOT done here. Same reason the thermometer
+  // code leaves uncooked: a converter in metal is an opinion that cannot be
+  // revised, and the raw Gray value is the diagnostic. gray_to_bin() is three
+  // lines of Python and it is covered by tests.
   reg [7:0] wraps;
+  reg [7:0] wraps_gray;
+  wire [7:0] wraps_nxt = (wraps == 8'hFF) ? 8'hFF : (wraps + 8'd1);
   always @(posedge line[TAPS] or negedge clr_n) begin
-    if (!clr_n)              wraps <= 8'h00;
-    else if (wraps != 8'hFF) wraps <= wraps + 8'd1;
+    if (!clr_n) begin
+      wraps      <= 8'h00;
+      wraps_gray <= 8'h00;
+    end else begin
+      wraps      <= wraps_nxt;
+      wraps_gray <= wraps_nxt ^ (wraps_nxt >> 1);
+    end
   end
 
   // The coarse count has to be latched by the ARRIVAL edge, exactly like the
@@ -243,10 +296,10 @@ module tdc #(
   // later therefore reports one phantom wrap, which is 64 taps of delay that
   // never happened. The tests found this before silicon did: the shortest fixed
   // path in the design reported a full extra ring period.
-  reg [7:0] wraps_at_arrival;
+  reg [7:0] gray_at_arrival;
   always @(posedge samp_root or negedge clr_n) begin
-    if (!clr_n) wraps_at_arrival <= 8'h00;
-    else        wraps_at_arrival <= wraps;
+    if (!clr_n) gray_at_arrival <= 8'h00;
+    else        gray_at_arrival <= wraps_gray;
   end
 
   // ------------------------------------------------- hand over to the clk side
@@ -269,27 +322,27 @@ module tdc #(
   // Reading bytes without checking done is how a dead path gets published as a
   // fast one.
   reg [TAPS-1:0] held;
-  reg      [7:0] held_wraps;
+  reg      [7:0] held_gray;
   reg            held_valid;
   reg            fired_last;
   always @(posedge clk) begin
     if (!rst_n) begin
       held       <= {TAPS{1'b0}};
-      held_wraps <= 8'h00;
+      held_gray  <= 8'h00;
       held_valid <= 1'b0;
       fired_last <= 1'b0;
     end else if (capture) begin
       fired_last <= fired;
       if (fired) begin
         held       <= cap;
-        held_wraps <= wraps_at_arrival;
+        held_gray  <= gray_at_arrival;
         held_valid <= 1'b1;
       end
     end
   end
 
   assign taps       = held;
-  assign wrap_count = held_wraps;
+  assign wrap_gray  = held_gray;
   assign ring       = line[TAPS];
   assign done       = fired_last;
   assign valid      = held_valid;

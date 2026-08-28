@@ -1,0 +1,83 @@
+name: spice
+
+on:
+  push:
+  workflow_dispatch:
+
+# The load ladder pair is the one comparison on this chip that no model layer
+# above the transistor can answer. Liberty has a single capacitance per input
+# pin and therefore predicts the pair's difference to be exactly zero; the
+# extracted SDF inherits that capacitance, so its number for the pair is
+# routing, and two builds of the unchanged circuit reported 7 ps and 57 ps.
+#
+# So the question goes to SPICE. It runs here rather than on a laptop because
+# the sky130 models live in the PDK and the PDK is a download, not because the
+# simulation is large: it is about three hundred transistors and finishes in
+# seconds.
+#
+# What comes out is not a pass or a fail. It is which of three categories the
+# row in docs/EXPERIMENT_MATRIX.md is allowed to be written as: a resolvable
+# measurement, a repeated statistical one, or an upper bound. The category is
+# chosen from this output BEFORE the dies exist, which is the whole point.
+jobs:
+  ladder_pair:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v6
+
+      - name: install ngspice
+        shell: bash
+        run: sudo apt-get update && sudo apt-get install -y ngspice
+
+      - name: setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      # The PDK is about a gigabyte and does not change, so it is cached on the
+      # resolved version rather than fetched every push.
+      - name: pick a sky130 version
+        id: pdk
+        shell: bash
+        run: |
+          pip install volare
+          ver=$(volare ls-remote --pdk sky130 2>/dev/null \
+                | grep -oE '[0-9a-f]{40}' | head -1)
+          if [ -z "$ver" ]; then
+            echo "could not resolve a sky130 version from volare" >&2
+            exit 1
+          fi
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+          echo "resolved sky130 open_pdks version $ver"
+
+      - name: cache the PDK
+        id: pdkcache
+        uses: actions/cache@v4
+        with:
+          path: ~/.volare
+          key: sky130-${{ steps.pdk.outputs.version }}
+
+      - name: fetch the PDK
+        if: steps.pdkcache.outputs.cache-hit != 'true'
+        shell: bash
+        run: volare enable --pdk sky130 ${{ steps.pdk.outputs.version }}
+
+      - name: the ladder pair, across corners, supplies and temperatures
+        shell: bash
+        run: |
+          set -o pipefail
+          echo "sky130 open_pdks ${{ steps.pdk.outputs.version }}" | tee spice_ladder.md
+          python3 tools/spice_ladder.py \
+            --pdk "$HOME/.volare/sky130A" \
+            --sweep --json spice_ladder.json | tee -a spice_ladder.md
+
+      - name: upload the result
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: spice-ladder
+          path: |
+            spice_ladder.md
+            spice_ladder.json
+          if-no-files-found: warn

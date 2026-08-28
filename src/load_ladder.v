@@ -35,9 +35,12 @@
 //
 // THE PART THAT MAKES THIS AN EXPERIMENT RATHER THAN AN EMBARRASSMENT
 //
-// Liberty has ONE capacitance number per input pin. For einvn_1 it is
-// 0.002382 pF, with no dependence on TE_B, because the format cannot express
-// one. So the Liberty-layer prediction for the entire ladder is EXACTLY ZERO
+// The RELEASED sky130 Liberty view assigns one capacitance number to this pin
+// and does not represent any dependence on TE_B. For einvn_1 it is 0.002382 pF
+// in every state. Stated that way on purpose: this is a fact about the view
+// this design is compiled against, which is checkable, and not a claim about
+// what the Liberty format is capable of in general, which is not what we
+// measured. So the Liberty-layer prediction for the entire ladder is EXACTLY ZERO
 // delay difference across all four codes.
 //
 // That is not a gap to apologize for. It is the sharpest model-discrimination

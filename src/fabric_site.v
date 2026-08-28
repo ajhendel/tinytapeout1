@@ -135,7 +135,7 @@ module fabric_site #(
   // does and does not do, lives in src/load_ladder.v. Read it before writing
   // anything about this field. The short version: enabling an element does NOT
   // connect a capacitor, the effect on the output node is real but partial and
-  // bias dependent, and Liberty cannot express it at all, so the Liberty-layer
+  // bias dependent, and the released Liberty view does not represent it, so that layer's
   // prediction for this field is exactly zero.
   wire [2:0] ld_en;
   assign ld_en[0] = live & (cfg[6] | cfg[5]);

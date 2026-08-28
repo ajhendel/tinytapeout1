@@ -35,7 +35,7 @@ netlist says why: an einvn's input devices have their drains on the output and
 their sources on internal nodes that the enable devices tie to the rails, so
 part of the input capacitance is present in every state and part of it faces a
 floating node when disabled. The effect on the node is real, partial and bias
-dependent. Liberty has one capacitance number per pin and cannot express it at
+dependent. The released Liberty view assigns one capacitance number to that pin and does not represent it at
 all, so the Liberty-layer prediction for this field is exactly zero, which makes
 it the sharpest model-discrimination test on the chip rather than a weak knob.
 Two of the fixed characterization paths carry the same ladder with its enables
@@ -103,18 +103,35 @@ clear one.
 3. Lower SCAN_EN, check CRC_OK (uo[1]) is high, then pulse LOAD (ui[2]).
 4. INERT (uo[7]) falls, MEAS_BUSY (uo[4]) rises and the window runs. When it
    falls, the selected readout byte is on uio[7:0]. The readout selector is a
-   global config field with sixteen slots: three bytes of frequency count, three
-   of transition count, a status byte, the site count, four bytes of TDC taps,
-   the tap count, the un-isolated site mask, the path count, and a fixed 0xA5
-   pattern that proves the multiplexer is alive.
+   global config field: three bytes of frequency count, three of transition
+   count, a status byte, the site count, four bytes of TDC taps, the tap count,
+   the un-isolated site mask, the path count, a fixed 0xA5 pattern that proves
+   the multiplexer is alive, the TDC coarse count, three echoes of select
+   fields, the global word width, the instrument version and the site word
+   width. The last few are there so a host talking to an unfamiliar die finds
+   out what it is talking to instead of assuming.
 5. Drive FAB_A (ui[4]) and FAB_B (ui[5]) and watch FAB_OUT (uo[2]) for the logic
    behavior. OBS_SEL (ui[6]) puts the calibration oscillator on OBS_OUT (uo[3])
    for a scope; with OBS_SEL low it carries the characterization path output
    when the TDC is enabled, and the fabric feedback node otherwise.
 6. For a delay measurement, set tdc_en and a characterization path, run one
-   trial reading the status byte to confirm an arrival was seen, then run three
-   more trials with tdc_en clear to read the remaining tap bytes. A trial with
-   the TDC off cannot disturb the capture it is reading.
+   trial reading the status byte to confirm an arrival was seen, then run more
+   trials with tdc_en clear to read the four tap bytes and the coarse byte. A
+   trial with the TDC off cannot disturb the capture it is reading.
+7. **The coarse byte is GRAY coded.** Convert it before using it. It is captured
+   out of the ring's own clock domain by an edge unrelated to it, and a binary
+   count caught mid carry can read as anything at all including the saturation
+   value. Gray confines that to adjacent counts. Then decode the pair with
+   `tdc_reading()` in harness/evofab/genome.py, which returns a STATUS as well
+   as a number: four of its five outcomes are not delays, and two of those four
+   look exactly like ordinary fast readings.
+8. The TDC's stop source has four settings. Two are measurements, a fixed
+   characterization path and any site's output. The other two are stimulus: a
+   free running calibration ring, whose phase relative to the launch is uniform
+   and which is therefore the only honest source for a bin width calibration by
+   code density, and the SCAN_IN pin, for a stop whose time you choose. SCAN_IN
+   is free for this because the scan chain stops listening to it while SCAN_EN
+   is low, which it is for the whole measurement window.
 
 The cocotb suite in test/ covers all of this, including the reach tests that
 sabotage a path and require the observable to move.

@@ -57,12 +57,20 @@ G_READOUT_SEL, G_READOUT_SEL_W = 7, 5
 G_WINDOW_EXP, G_WINDOW_EXP_W = 12, 4
 G_TRANS_EXP, G_TRANS_EXP_W = 16, 4
 G_TDC_EN, G_TDC_EN_W = 20, 1
-G_TDC_SRC, G_TDC_SRC_W = 21, 1
+# gcfg[21] is RETIRED. It held a one bit tdc_src; the field grew to two and was
+# moved whole rather than split across the word. Nothing reads it.
 G_TDC_POL, G_TDC_POL_W = 22, 1
 G_CHAR_SEL, G_CHAR_SEL_W = 23, 5
 G_CHAR_DRIVE, G_CHAR_DRIVE_W = 28, 2
 G_TDC_TAP, G_TDC_TAP_W = 30, 5
 G_TDC_FREERUN, G_TDC_FREERUN_W = 35, 1
+G_TDC_SRC, G_TDC_SRC_W = 36, 2
+
+# What stops the TDC. The first two are measurements. The last two are
+# stimulus: their phase relative to the launch edge is uniform, which is what
+# code density calibration needs and what neither of the first two provides.
+# See the stop source note in src/project.v.
+TDC_STOP_SRC = {"char": 0, "fabric": 1, "calib": 2, "external": 3}
 
 # What the frequency counter watches.
 CNT_SRC = {"calib": 0, "fabric": 1, "tdc_ring": 2}
@@ -76,46 +84,199 @@ READOUT = {
     "tdc_taps": 12, "twin_mask": 13, "char_count": 14, "alive": 15,
     # The coarse half of a TDC reading. 0xFF means SATURATED: discard the
     # measurement, never scale it. A wrapped count reads as a fast path.
-    "tdc_wraps": 16,
+    "tdc_gray": 16,
     "tdc_tap_echo": 17, "char_sel_echo": 18, "global_w": 19,
+    "instr_version": 20, "tdc_cfg_echo": 21, "site_w": 22,
 }
+
+# The coarse count is GRAY coded on the wire; see the long note in src/tdc.v.
+# 0x80 is the Gray code of 0xFF, which is the saturation value.
+TDC_GRAY_SATURATED = 0x80
 TDC_WRAPS_SATURATED = 0xFF
 TDC_TAPS = 32
+INSTR_VERSION = 2
+
+# How close to the coarse counter's own clock edge a reading may fall before the
+# Gray capture stops being trustworthy on its own, in taps. The Gray code
+# confines an ambiguous capture to ADJACENT counts, so one tap either side of
+# the boundary is where the fine code has to be consulted to decide which.
+TDC_BOUNDARY_GUARD = 1
+
+# How many runs of equal bits a fine code may contain before it stops looking
+# like a delay line reading at all. A clean code is two runs. Bubbles are
+# expected and are the calibration, but they are LOCAL: a handful of extra runs
+# near the boundary, not a scattered pattern. Six is generous; a code with more
+# runs than this is a sampling fault, not a bin width.
+TDC_MAX_RUNS = 6
 
 
-def tdc_decode(taps: int, wraps: int, n_taps: int = TDC_TAPS) -> int:
-    """Turn a raw TDC capture into a delay in units of one line stage.
+class TdcStatus:
+    """What a raw capture turned out to be. Not every capture is a delay.
+
+    A decoder that always returns a number is a decoder that reports the
+    converter's failures as measurements, and on this chip two of those failures
+    (a saturated coarse count, a capture taken at the counter's own carry) look
+    exactly like ordinary fast readings.
+    """
+
+    VALID = "VALID"
+    BOUNDARY_AMBIGUOUS = "BOUNDARY_AMBIGUOUS"
+    THERMOMETER_INVALID = "THERMOMETER_INVALID"
+    COARSE_SATURATED = "COARSE_SATURATED"
+    NO_ARRIVAL = "NO_ARRIVAL"
+
+
+def gray_to_bin(g: int, width: int = 8) -> int:
+    """Undo the Gray coding the coarse counter leaves the chip in.
+
+    The chip does not do this. A converter in metal is an opinion that cannot be
+    revised once the die exists, and the raw Gray value is the diagnostic: a
+    capture that lands mid transition returns one of two ADJACENT codes, and
+    which two it was is visible here and gone after conversion.
+    """
+    b = g & ((1 << width) - 1)
+    shift = 1
+    while shift < width:
+        b ^= b >> shift
+        shift <<= 1
+    return b & ((1 << width) - 1)
+
+
+def bin_to_gray(b: int, width: int = 8) -> int:
+    m = (1 << width) - 1
+    return ((b & m) ^ ((b & m) >> 1)) & m
+
+
+def _fine(taps: int, n_taps: int):
+    """(parity, position) of the launch edge inside the ring, from the fine code.
 
     The delay line is a RING, so the tap register is not a thermometer code that
     grows monotonically. The ring parks with every tap high; the launch edge
-    walks a 1 to 0 transition down it, then a 0 to 1 transition, alternating.
-    So during traversal T the taps below the edge carry the NEW value and the
-    ones above carry the old, and which is which flips with the parity of T.
+    walks a 1 to 0 transition down it, then a 0 to 1 transition, alternating. So
+    during traversal T the taps below the edge carry the NEW value and the ones
+    above carry the old, and which is which flips with the parity of T.
 
     Population count alone is therefore the wrong decode, and it is wrong in a
     way that looks plausible: it DECREASES as the path gets longer on odd
-    traversals. That is what the first run of the depth-series test reported,
-    a perfectly ordered series running backwards.
-
-    wraps counts full ring periods, which is two traversals, so it fixes T only
-    to within one. The parity comes from the lowest tap, which is the first to
-    change and therefore always carries the new value once the edge has moved
-    at all.
+    traversals. That is what the first run of the depth series test reported, a
+    perfectly ordered series running backwards.
     """
-    full = (1 << n_taps) - 1
-    if taps == full:
-        # Nothing has moved yet: the arrival beat the first tap. Only reachable
-        # for a path shorter than one buffer, which on silicon means something
-        # is wrong, so it is not silently folded into the general case.
-        return wraps * 2 * n_taps
+    if taps == (1 << n_taps) - 1:
+        # Every tap high. Either the ring is still parked and the arrival beat
+        # the first buffer, or a rising traversal has just completed. Those two
+        # are one ring period apart and the fine code cannot separate them,
+        # which is why this lands in the boundary case below rather than being
+        # quietly folded into the general one.
+        return 0, 0
     ones = bin(taps).count("1")
     if taps & 1:
-        traversal = 2 * wraps + 1      # low taps are 1: an odd traversal
-        pos = ones
-    else:
-        traversal = 2 * wraps          # low taps are 0: an even traversal
-        pos = n_taps - ones
-    return traversal * n_taps + pos
+        return 1, ones                 # low taps are 1: an odd traversal
+    return 0, n_taps - ones            # low taps are 0: an even traversal
+
+
+def tdc_runs(taps: int, n_taps: int = TDC_TAPS) -> int:
+    """How many runs of equal bits the fine code contains. Clean is 1 or 2."""
+    runs = 1
+    for i in range(1, n_taps):
+        if ((taps >> i) & 1) != ((taps >> (i - 1)) & 1):
+            runs += 1
+    return runs
+
+
+def tdc_decode(taps: int, coarse_gray: int, n_taps: int = TDC_TAPS) -> int:
+    """Delay in units of one line stage, from a raw capture.
+
+    coarse_gray is the GRAY coded coarse count as the chip reports it at
+    readout_sel 16, NOT a binary wrap count. The two agree for 0 and 1 and
+    disagree from 2 upward, which is exactly the shape of mistake that passes a
+    short test and corrupts a long measurement, so the argument is named for
+    what it is.
+
+    This returns a number for every input. Use tdc_reading() where the answer
+    matters; it is the one that can say the capture was not a measurement.
+    """
+    parity, pos = _fine(taps, n_taps)
+    return (2 * gray_to_bin(coarse_gray) + parity) * n_taps + pos
+
+
+@dataclasses.dataclass(frozen=True)
+class TdcReading:
+    """A decoded capture, and what kind of capture it turned out to be.
+
+    A decoder that always returns a number reports the converter's failures as
+    measurements. Two of this converter's failures look exactly like ordinary
+    fast readings: a saturated coarse count, and a capture taken while the
+    coarse counter was changing. Neither is a delay and neither is detectable
+    downstream, so they are named here.
+    """
+
+    status: str
+    delay_taps: int | None
+    candidates: tuple
+    taps_raw: int
+    gray: int
+    coarse: int
+    parity: int
+    position: int
+    bubbles: int
+    runs: int
+
+    @property
+    def ok(self) -> bool:
+        return self.status == TdcStatus.VALID
+
+
+def tdc_reading(taps: int, coarse_gray: int, done: bool = True,
+                n_taps: int = TDC_TAPS,
+                guard: int = TDC_BOUNDARY_GUARD) -> TdcReading:
+    """Decode one capture and classify it. See TdcStatus for the outcomes.
+
+    The order of the checks is the order in which the failures mask each other.
+    A trial that never saw an arrival has a stale tap register from the previous
+    one, so `done` is asked first. A saturated coarse count makes the fine code
+    meaningless, so it is asked before the fine code is interpreted.
+
+    BOUNDARY_AMBIGUOUS is the case the Gray coding exists to make detectable.
+    The coarse counter lives in the ring's domain and is captured by the arrival
+    edge; a capture taken while it is changing returns one of two ADJACENT
+    counts. The fine code says which side of the counter's own clock edge the
+    arrival fell on, but not which of the two values the capture took, so both
+    are returned. They differ by a whole ring period, which is 2 * n_taps taps,
+    so this must NOT be averaged away. Repeat the trial.
+    """
+    coarse = gray_to_bin(coarse_gray)
+    bubbles = tdc_bubbles(taps, n_taps)
+    runs = tdc_runs(taps, n_taps)
+    parity, pos = _fine(taps, n_taps)
+
+    def mk(status, delay=None, candidates=()):
+        return TdcReading(status=status, delay_taps=delay,
+                          candidates=tuple(candidates), taps_raw=taps,
+                          gray=coarse_gray, coarse=coarse, parity=parity,
+                          position=pos, bubbles=bubbles, runs=runs)
+
+    if not done:
+        return mk(TdcStatus.NO_ARRIVAL)
+    if coarse_gray == TDC_GRAY_SATURATED:
+        return mk(TdcStatus.COARSE_SATURATED)
+    if runs > TDC_MAX_RUNS:
+        return mk(TdcStatus.THERMOMETER_INVALID)
+
+    def delay(c):
+        return (2 * c + parity) * n_taps + pos
+
+    # The coarse counter ticks at the end of every RISING traversal, so the
+    # boundary sits between (parity 1, position n_taps) and (parity 0,
+    # position 0). Those are the two places a capture can straddle a carry.
+    alt = None
+    if parity == 1 and pos >= n_taps - guard and coarse >= 1:
+        alt = coarse - 1
+    elif parity == 0 and pos <= guard:
+        alt = coarse + 1
+    if alt is not None:
+        return mk(TdcStatus.BOUNDARY_AMBIGUOUS,
+                  candidates=sorted((delay(coarse), delay(alt))))
+    return mk(TdcStatus.VALID, delay=delay(coarse))
 
 
 def tdc_bubbles(taps: int, n_taps: int = TDC_TAPS) -> int:
@@ -135,6 +296,7 @@ def tdc_bubbles(taps: int, n_taps: int = TDC_TAPS) -> int:
             break
     clean = [first] * boundary + [1 - first] * (n_taps - boundary)
     return sum(1 for a, b in zip(bits, clean) if a != b)
+
 
 # The eight fixed calibration rings, by calib_sel code. See src/calib_macro.v.
 # Rings 0, 6 and 7 are the SAME circuit; their spread is the within-die
@@ -393,20 +555,53 @@ class Genome:
                 "counter source with the ring free-running is a measurement "
                 "taken beside an oscillator nobody is reading")
 
-        if self.globals.tdc_en and self.globals.calib_en:
+        # The calibration ring IS the stop source in code density mode, so the
+        # rule below has to except exactly that case and no other. Written as an
+        # exception rather than dropped, because the reason the rule exists has
+        # not changed: everywhere else, a ring running beside the converter is a
+        # supply disturbance of exactly the size the converter resolves.
+        if (self.globals.tdc_en and self.globals.calib_en
+                and self.globals.tdc_src != TDC_STOP_SRC["calib"]):
             raise UnsafeGenome(
                 "tdc_en with calib_en runs a ring oscillator while the TDC "
                 "times a single edge; the ring is a supply disturbance of "
                 "exactly the size the TDC is trying to resolve. Take the ring "
-                "covariate in a separate trial, immediately before or after")
+                "covariate in a separate trial, immediately before or after. "
+                "The one exception is tdc_src=calib, where the ring is the "
+                "stop source and its own disturbance is part of the stimulus")
 
-        if self.globals.tdc_en and self.globals.tdc_src and self.globals.fb_en:
+        if (self.globals.tdc_en
+                and self.globals.tdc_src == TDC_STOP_SRC["calib"]
+                and not self.globals.calib_en):
             raise UnsafeGenome(
-                "tdc_en with tdc_src=1 times the fabric column, and fb_en "
+                "tdc_src=calib takes the stop edge from a calibration ring, "
+                "and calib_en=0 leaves that ring parked, so the converter would "
+                "wait for an edge that never comes and the trial would report "
+                "NO_ARRIVAL for a reason that has nothing to do with the fabric")
+
+        if (self.globals.tdc_en
+                and self.globals.tdc_src == TDC_STOP_SRC["fabric"]
+                and self.globals.fb_en):
+            raise UnsafeGenome(
+                "tdc_en with tdc_src=fabric times the fabric column, and fb_en "
                 "closes that column into a loop, so the arrival edge the TDC "
                 "samples is whichever oscillation happened to be passing. Time "
                 "the column open, then close the loop and use the frequency "
                 "counter")
+
+        # Code density is a calibration of the CONVERTER, and a fabric that is
+        # switching underneath it is a supply disturbance charged to every bin.
+        # The rule is here rather than in the protocol because a bin table with
+        # a fabric-shaped bias in it is invisible afterwards and is then applied
+        # to every measurement the chip ever makes.
+        if (self.globals.tdc_en
+                and self.globals.tdc_src in (TDC_STOP_SRC["calib"],
+                                             TDC_STOP_SRC["external"])
+                and self.globals.fb_en):
+            raise UnsafeGenome(
+                "an asynchronous stop source is used to calibrate the bins, so "
+                "nothing else on the die should be oscillating; fb_en closes "
+                "the fabric loop underneath the calibration")
 
 
 # ------------------------------------------------------------------------ crc
