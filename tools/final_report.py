@@ -173,6 +173,12 @@ def main():
                 rc, out = run(cmd)
                 gate(label, rc == 0, out)
 
+        # One question over the whole artifact set rather than per corner: it
+        # reads the static timing reports directly and already loops corners.
+        rc, out = run([sys.executable, f"{TOOLS}/slew_range.py",
+                       args.artifacts])
+        gate("every measured node is inside the Liberty table", rc == 0, out)
+
     # ------------------------------------------------------ placement
     defs = sorted(glob.glob(os.path.join(args.artifacts, "**", "*.def"),
                             recursive=True), key=os.path.getsize)

@@ -260,6 +260,21 @@ jobs:
           echo "checked $n corners"
           exit $rc
 
+      - name: Every measured node is inside the Liberty table
+        # A Liberty cell model is a table and a table has edges. sky130_fd_sc_hd
+        # is characterized to 1.5 ns of input transition; past that the delay
+        # static timing reports is an extrapolation off the end of it, and a
+        # node whose Liberty number came from outside the table has not been
+        # predicted by the Liberty layer at all. On a chip whose entire claim is
+        # the size of model to silicon gaps, that is a claim risk and not just a
+        # timing one. Worst measured node on this build is the characterization
+        # merge at 1.318 ns, 88 percent of the limit.
+        if: always()
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 tools/slew_range.py artifacts --markdown | tee slew_range.md
+
       # The numeric half of the pre-registration, from THIS build. Generated as
       # an artifact rather than committed here: committing it is a deliberate
       # act by a person against the final submission commit, and a workflow that
@@ -314,6 +329,7 @@ jobs:
             tdc_race.md
             tdc_bins.md
             char_offsets.md
+            slew_range.md
             stop_tree.md
             final_report.md
             final_report.json

@@ -666,3 +666,89 @@ def test_char_offsets_fails_when_a_path_is_unreachable(tmp_path):
     r = run("char_offsets.py", sdf)
     assert r.returncode == 1, r.stdout + r.stderr
     assert "not reachable" in r.stderr
+
+
+# ------------------------------------------------------------- slew_range.py
+
+CHECKS_HEAD = """
+===========================================================================
+ report_check_types -max_slew -max_cap -max_fanout -violators
+============================================================================
+======================= {corner} Corner ===================================
+
+max slew
+
+Pin                                   Limit         Slew       Slack
+---------------------------------------------------------------------
+"""
+
+
+def write_checks(path, pins, corner="nom_ss_100C_1v60"):
+    """A miniature checks.rpt. `pins` is [(name, slew ns)]."""
+    body = CHECKS_HEAD.format(corner=corner)
+    for name, slew in pins:
+        body += (f"{name:<38} {0.75:.6f} {slew:.6f} "
+                 f"{0.75 - slew:.6f} (VIOLATED)\n")
+    body += "\nmax fanout\n\nNo violations found.\n"
+    with open(path, "w") as fh:
+        fh.write(body)
+    return path
+
+
+def test_slew_gate_passes_when_measured_nodes_are_inside_the_table(tmp_path):
+    rpt = write_checks(str(tmp_path / "checks.rpt"),
+                       [("u_char.merge_out.g2.u/A", 1.318),
+                        ("sites[12].u_site.route_mux.u/A0", 1.136),
+                        ("u_calib.ro5.stage[5].u.drv1.g1.u/Z", 1.008)])
+    r = run("slew_range.py", rpt)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "PASS" in r.stdout
+
+
+def test_a_control_node_past_the_limit_is_reported_and_not_gated(tmp_path):
+    # The rst_n and site `live` distribution chains have gone past 1.5 ns on
+    # real builds. Nothing is quoted against them, so they are reported.
+    rpt = write_checks(str(tmp_path / "checks.rpt"),
+                       [("fanout158/A", 1.617),
+                        ("u_char.merge_out.g2.u/A", 1.318)])
+    r = run("slew_range.py", rpt)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "1.617" in r.stdout
+
+
+def test_a_measured_node_past_the_limit_fails(tmp_path):
+    # The same slew, on a node a delay IS quoted against.
+    rpt = write_checks(str(tmp_path / "checks.rpt"),
+                       [("u_char.merge_out.g2.u/A", 1.617)])
+    r = run("slew_range.py", rpt)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "extrapolation" in r.stderr
+
+
+def test_the_tdc_is_gated_like_everything_else(tmp_path):
+    rpt = write_checks(str(tmp_path / "checks.rpt"),
+                       [("u_tdc.dl[7].u.g1.u/X", 1.55)])
+    r = run("slew_range.py", rpt)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "TDC" in r.stderr
+
+
+def test_the_slew_gate_fails_when_it_finds_nothing_to_check(tmp_path):
+    d = tmp_path / "empty"
+    d.mkdir()
+    r = run("slew_range.py", str(d))
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "not asked" in r.stderr
+
+
+def test_the_slew_gate_does_not_read_the_fanout_section(tmp_path):
+    # max fanout follows max slew in the same file and its middle column is a
+    # COUNT, not a time. Reading past the section boundary would turn a fanout
+    # of 13 into a 13 ns slew and fail every build for the wrong reason.
+    rpt = str(tmp_path / "checks.rpt")
+    write_checks(rpt, [("u_char.merge_out.g2.u/A", 1.318)])
+    with open(rpt, "a") as fh:
+        fh.write("u_tdc.dl[0].u.g1.u/X                   10.000000 "
+                 "13.000000 -3.000000 (VIOLATED)\n")
+    r = run("slew_range.py", rpt)
+    assert r.returncode == 0, r.stdout + r.stderr
