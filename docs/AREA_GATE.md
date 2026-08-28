@@ -613,3 +613,53 @@ the sample read the previous value. It presented as the scan chain appearing to
 be one bit short, which is precisely the failure the scan test exists to catch,
 so a testbench bug was wearing the costume of a design bug. Everything now drives
 and samples at mid-period, which is correct in both modes.
+
+
+## FINAL GATE, 2026-08-28. The site count is decided, against the written rule
+
+The rule was written before the build existed and is quoted here unchanged: keep
+20 if utilization is at or under about 32 percent, if it routes cleanly without
+aggressive overrides, if DRC, LVS and antenna are clean, if timing is positive,
+if the converter's range and ordering gates pass, if the selector offset bias is
+acceptable, and if **no instrument feature was weakened to make the area**. The
+threshold is not "does it route once". It is "does it route cleanly with
+believable margin".
+
+Against the build of 2026-08-28, commit `f00c762`, which is the first build on
+which every required gate passed:
+
+| gate | rule | measured | |
+|---|---|---|---|
+| standard cell utilization | at or under about 32 % | **28.4 %** | pass |
+| routing | clean, no aggressive overrides | DRC 0, no overrides | pass |
+| DRC, LVS, antenna | clean | precheck clean, antenna 0 | pass |
+| setup slack, worst corner | positive | **+7.10 ns** | pass |
+| hold slack, worst corner | positive | **+0.108 ns** | pass |
+| converter range | every reference path inside one ring period | 9 corners | pass |
+| capture beats the ring kill | positive margin at every corner | 9 corners | pass |
+| thermometer code monotone | hard requirement | 9 corners | pass |
+| bin uniformity | widest bin under 2.0 nominal taps | **1.32 to 1.41** | pass |
+| stop selector trend with tap index | under 0.25 tap per site | **0.044** | pass |
+| launch and merge slope bias | under 10 percent | **3.0 to 4.5 %** | pass |
+| every measured node inside the Liberty table | hard requirement | worst **88 %** | pass |
+| instrument weakened for area | forbidden | nothing removed | pass |
+
+The last row is the one that mattered and it is worth being explicit about. This
+round did not trade instrument for area in either direction. It **added** a fifth
+sampling branch buffer, a ring tap buffer and two guard buffers, and utilization
+moved from 28.2 to 28.4 percent. Four gates were added and none was loosened.
+The one threshold that was set during the round rather than before it, the 2.0
+nominal tap bin limit, was set from what a balanced build had already achieved
+and the fixed build then came in at 1.32 to 1.41, comfortably under, rather than
+at the line.
+
+**Verdict: 20 sites.** Utilization has 3.6 points of headroom against the rule
+and 6.4 against the highest utilization that has ever routed clean here, timing
+is positive by a wide margin at every corner, and every instrument gate passes at
+all nine. There is no reason from this build to cut to 16, and cutting to 16 to
+buy margin nobody needs would be trading the experiment's width for nothing.
+
+This is the fourth time the same rule has been applied, cut sites before cutting
+the strip. It went 24, then 24 again, then 20 on the drive-series redesign, and
+now it holds at 20 because the instrument round did not cost what a round like
+that usually costs.
