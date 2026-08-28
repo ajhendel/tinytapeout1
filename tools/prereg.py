@@ -110,6 +110,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("sdf")
     ap.add_argument("--spice")
+    ap.add_argument("--corner", default="nom_tt",
+                    help="the corner this build's SDF must be from. The "
+                         "predictions are quoted at ONE corner and which one "
+                         "has to be a decision, not whatever `find` returned "
+                         "first.")
+    ap.add_argument("--any-corner", action="store_true",
+                    help="generate from whatever corner the SDF is, and say so")
     ap.add_argument("--out", default=os.path.join(ROOT, "predictions", "generated"))
     ap.add_argument("--taps", type=int, default=32)
     args = ap.parse_args()
@@ -123,6 +130,22 @@ def main():
         return 2
 
     corner = os.path.basename(os.path.dirname(args.sdf)) or "unknown"
+
+    # WHICH CORNER IS A DECISION, NOT A FIND ORDER.
+    #
+    # These predictions are quoted at ONE corner. The workflow used to pick the
+    # SDF with `grep -E '/(tt|nom_tt|typical)' | head -1`, and every corner's
+    # file is named tt_um_ajhendel_evofab__<corner>.sdf, so `/tt` matched the
+    # FILENAME of every one of them and the first hit was max_ff. The whole
+    # pre-registration was generated at the fast corner for one build, which is
+    # not wrong in the sense of being a lie, since every file names its corner,
+    # but it is not what anybody decided and nothing said so.
+    if not args.any_corner and not corner.startswith(args.corner):
+        print(f"refusing: this SDF is corner {corner}, not {args.corner}. "
+              f"The predictions are quoted at one corner and which one is a "
+              f"decision. Pass --corner to change it or --any-corner to "
+              f"generate from this one anyway.", file=sys.stderr)
+        return 1
     span = sum(v for k, v in by.items() if k.startswith("u_tdc.dl"))
     tap = span / args.taps
     period = 2 * span

@@ -348,8 +348,12 @@ def test_prereg_generates_every_file_from_a_build(tmp_path):
                 f"u_char.p{i}.stage[{k}].u.g1.u",
                 [_iopath("A", "Y", 0.05 + 0.001 * i)]))
 
-    sdf = tmp_path / "tt" / "x.sdf"
-    (tmp_path / "tt").mkdir()
+    # A REAL corner directory name. This fixture used to write into a
+    # directory called `tt`, which is not a corner any build produces, and it
+    # passed because the corner was never checked. The nine real ones are
+    # {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95}.
+    sdf = tmp_path / "nom_tt_025C_1v80" / "x.sdf"
+    (tmp_path / "nom_tt_025C_1v80").mkdir()
     with open(sdf, "w") as fh:
         fh.write('(DELAYFILE\n  (SDFVERSION "3.0")\n  (TIMESCALE 1ns)\n')
         fh.write("".join(cells))
@@ -752,3 +756,24 @@ def test_the_slew_gate_does_not_read_the_fanout_section(tmp_path):
                  "13.000000 -3.000000 (VIOLATED)\n")
     r = run("slew_range.py", rpt)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_prereg_refuses_a_corner_it_was_not_asked_for(tmp_path):
+    # The predictions are quoted at ONE corner. The workflow used to select the
+    # SDF with a pattern that matched every corner's FILENAME, so `head -1`
+    # handed it max_ff and a whole pre-registration was generated at the fast
+    # corner with nothing saying so. Two places check this now; this is one.
+    d = tmp_path / "max_ff_n40C_1v95"
+    d.mkdir()
+    sdf = write_sdf(str(d / "tt_um_ajhendel_evofab__max_ff_n40C_1v95.sdf"))
+    r = run("prereg.py", sdf, "--out", str(tmp_path / "out"))
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "refusing" in r.stderr and "max_ff" in r.stderr
+
+
+def test_prereg_accepts_the_corner_when_told_to(tmp_path):
+    d = tmp_path / "max_ff_n40C_1v95"
+    d.mkdir()
+    sdf = write_sdf(str(d / "tt_um_ajhendel_evofab__max_ff_n40C_1v95.sdf"))
+    r = run("prereg.py", sdf, "--out", str(tmp_path / "out"), "--any-corner")
+    assert "refusing" not in r.stderr

@@ -289,10 +289,17 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          sdf=$(find artifacts -path '*stapostpnr*' -name '*.sdf' \
-                | grep -E '/(tt|nom_tt|typical)' | head -1)
+          # The DIRECTORY, not the path. Every corner's file is named
+          # tt_um_ajhendel_evofab__<corner>.sdf, so the old pattern '/(tt|...)'
+          # matched the filename of all nine and head -1 gave max_ff. The
+          # predictions were generated at the fast corner for one build and
+          # nothing said so. prereg.py now refuses a corner it was not asked
+          # for, so this is checked in two places.
+          sdf=$(find artifacts -path '*stapostpnr*/nom_tt_*' -name '*.sdf' | head -1)
           if [ -z "${sdf:-}" ]; then
-            sdf=$(find artifacts -path '*stapostpnr*' -name '*.sdf' | head -1)
+            echo "no nom_tt corner in the artifacts; the pre-registration is" >&2
+            echo "quoted at that corner and will not be generated at another" >&2
+            exit 1
           fi
           echo "generating from $sdf"
           # spice/spice_ladder.json is committed from the spice workflow.
