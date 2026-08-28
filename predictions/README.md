@@ -73,15 +73,29 @@ because whole-chip current is the only instrument we will have.
 **2026-08-28. Both halves are committed. `predictions/generated/` holds the
 numbers, from corner `nom_tt_025C_1v80` of the build of commit `32bd0b9`.**
 
-**One caveat, stated because it is the load bearing one.** This repository was
-PRIVATE when these were committed. A commit date inside a private repository is
-set by whoever made the commit, so it is not the credible timestamp this
-directory's whole argument rests on. **The credible timestamp is the moment the
-repository is published**, which has to happen before submission anyway because
-Tiny Tapeout requires open source. Until that moment these are predictions in
-the ordinary sense and not pre-registered ones, and nothing in any paper may
-describe them as pre-registered until the publication date is a fact. If the
-repository is published after the dies exist, this directory is worth nothing
+**One caveat, stated because it is the load bearing one.** A commit date inside
+a repository you control is a date you set. `git commit --date` exists. So the
+git history of this repository, public or private, is not by itself the
+independent timestamp this directory's whole argument rests on.
+
+**This paragraph said something else until 2026-08-28 and it was wrong.** It
+said the credible timestamp was the moment the repository is published, and that
+publication had to happen before submission because Tiny Tapeout requires it.
+Tiny Tapeout's terms require the DESIGN to be licensed compatibly with Apache-2.0
+and say that THEY will publish it. They say nothing about the visibility of the
+author's own repository. Publishing early would also be a poor way to get a
+timestamp, since it discloses everything to prove the date of one directory.
+
+**What actually establishes it**: `predictions/MANIFEST.sha256` lists the
+SHA-256 of every file here, and that manifest is timestamped through
+OpenTimestamps, which anchors its hash in the Bitcoin blockchain. Only a hash
+leaves the machine, so nothing is disclosed early, and the proof is verifiable
+by anyone afterwards without trusting the author, GitHub, or any service. The
+`.ots` proof lives beside the manifest.
+
+Until that proof exists these are predictions in the ordinary sense and **not**
+pre-registered ones, and nothing in any paper may call them pre-registered. If
+the timestamp is created after the dies exist, this directory is worth nothing
 and should be described that way rather than quietly cited.
 
 **What IS already checked**: that regenerating reproduces them. Two independent

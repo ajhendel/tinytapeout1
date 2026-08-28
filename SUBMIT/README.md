@@ -10,11 +10,21 @@ a license, a visibility switch, a login, a card, and a board.
 
 ---
 
-## 1. Add a LICENSE  (yours, 2 minutes)
+## 1. Add a LICENSE  (yours, 2 minutes)  **REQUIRED**
 
-There is no LICENSE file. **Tiny Tapeout requires open source.** Their own
-template ships Apache-2.0 and that is the recommendation, but the choice is
-yours because it is a legal one.
+There is no LICENSE file, and this one is a genuine hard requirement, quoted
+from Tiny Tapeout's own terms at https://tinytapeout.com/terms/:
+
+> "All Designs and Design Documentation must be licensed under terms and
+> conditions compatible with the Apache License, Version 2.0"
+
+> "your Design and Design Documentation will be published and made publicly
+> available on the Website, Tiny Tapeout GitHub pages and other promotional
+> materials"
+
+Note what the second line does and does not say. **They** publish the design.
+It does not say your repository has to be public. Apache-2.0 is both the safe
+choice and their template default, but the choice is yours because it is legal.
 
 Easiest route, in the browser:
 
@@ -28,26 +38,53 @@ Or from the terminal:
     curl -sL https://www.apache.org/licenses/LICENSE-2.0.txt -o LICENSE
     git add LICENSE && git commit -m "Apache-2.0" && git push
 
-## 2. Make the repository public  (yours, 1 minute)
+## 2. Timestamp the predictions  (yours, 2 minutes, no disclosure)
+
+**Corrected 2026-08-28.** An earlier version of this file said the repository
+had to be made public and gave the pre-registration as one of the reasons. Tiny
+Tapeout's terms do not require your repository to be public, and the timestamp
+does not need it either. Both claims were mine and both were wrong.
+
+What `predictions/` actually needs is evidence that its contents existed before
+the dies did, from something that is not you. Publishing the repo is one way and
+it is the clumsiest one, because it means disclosing everything early to prove
+the date of one directory.
+
+Do this instead. It reveals nothing and takes two minutes:
+
+> https://opentimestamps.org → drag
+> `/Users/andrewhendel/CascadeProjects/tinytapeout1/predictions/MANIFEST.sha256`
+> onto the **Stamp** box → it hands back a `.ots` proof file → put that file in
+> `predictions/` and commit it.
+
+That anchors a hash of the six prediction files in the Bitcoin blockchain. Only
+the hash leaves your machine, so nothing is disclosed, and the proof can be
+verified by anyone later without trusting you, GitHub, or me. If the files
+change afterwards the hash stops matching, which is the entire point.
+
+`predictions/MANIFEST.sha256` is already written and committed.
+
+## 2b. Make the repository public  (yours, whenever you like)
 
 > github.com/ajhendel/tinytapeout1 → **Settings** → **General** → scroll to
 > **Danger Zone** → **Change visibility** → **Make public**
 
-This is not optional and it is not only about CI. Three things depend on it:
+**Optional, and it can wait.** Tiny Tapeout publishes your design on their own
+website and GitHub, so their open-source obligation is satisfied by the license
+in step 1, not by your repository's visibility. What going public buys you is
+practical:
 
 - **CI runners.** Actions stopped giving this repo runners on 2026-08-28; every
   workflow now fails in three seconds with zero steps. Public repos do not
-  consume the Actions quota.
+  consume the Actions quota. Paying for minutes or waiting for the cycle to
+  reset works just as well.
 - **The `viewer` job**, which has failed on every build ever run here, because
-  GitHub Pages needs a public repo.
-- **The pre-registration.** `predictions/` only means something if its
-  timestamp is public before the dies exist. Read
-  `/Users/andrewhendel/CascadeProjects/tinytapeout1/predictions/README.md`
-  under "Status" before you cite it in any paper. **This step is the earlier
-  deadline**, not September 7.
+  GitHub Pages needs a public repo. It is a 3D render of the layout. Nice, not
+  needed.
 
-Already done for you: cross-program references stripped from four files,
-credential scan clean. The repo has been written as public-ready throughout.
+Already done either way: cross-program references stripped from four files,
+credential scan clean. The repo has been written as public-ready throughout, so
+this is a switch and not a project.
 
 ## 3. Watch CI go green  (mine, ~20 minutes after step 2)
 
@@ -108,6 +145,6 @@ stages A to E. Nothing about it needs deciding now.
   is append-only from the deadline onward, and a correction is a NEW file that
   names the file it corrects. The whole point is that it cannot be edited once
   the answers exist.
-- **Do not describe the predictions as "pre-registered" until the repo has been
-  public for a while.** If publication happens after the dies arrive, that
-  directory is worth nothing and has to be described that way.
+- **Do not describe the predictions as "pre-registered" until they carry a
+  timestamp that is not yours.** Step 2 is what makes that true. Without it, a
+  commit date inside a repository you control is a date you set.
