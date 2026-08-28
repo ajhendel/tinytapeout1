@@ -70,8 +70,24 @@ because whole-chip current is the only instrument we will have.
 
 ## Status
 
-**2026-08-28. The rules are committed; the numbers are generated and not yet
-committed.**
+**2026-08-28. Both halves are committed. `predictions/generated/` holds the
+numbers, from corner `nom_tt_025C_1v80` of the build of commit `32bd0b9`.**
+
+**One caveat, stated because it is the load bearing one.** This repository was
+PRIVATE when these were committed. A commit date inside a private repository is
+set by whoever made the commit, so it is not the credible timestamp this
+directory's whole argument rests on. **The credible timestamp is the moment the
+repository is published**, which has to happen before submission anyway because
+Tiny Tapeout requires open source. Until that moment these are predictions in
+the ordinary sense and not pre-registered ones, and nothing in any paper may
+describe them as pre-registered until the publication date is a fact. If the
+repository is published after the dies exist, this directory is worth nothing
+and should be described that way rather than quietly cited.
+
+**What IS already checked**: that regenerating reproduces them. Two independent
+CI runs of identical RTL, `f00c762` and `32bd0b9`, produced byte-identical
+extracted timing at all nine corners, so `tools/prereg.py` against the
+submission build's SDF reproduces these files exactly rather than approximately.
 
 The pre-registration is in two halves on purpose.
 
