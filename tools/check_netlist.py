@@ -174,15 +174,113 @@ def main():
             f"{args.taps}; a shortened delay line reports the wrong time "
             f"forever and every functional test still passes")
 
+    # One root, four tap branches, one coarse branch. The coarse branch is not
+    # decoration: without it the root drives four buffers plus the eight flip
+    # flops of the coarse capture, which is twelve sinks against a max fanout
+    # of ten, and the resizer repairs that by inserting a repeater in front of
+    # SOME of the branches. The build that did it put a 5.08 tap hole in the
+    # middle of the converter's range. See the note in src/tdc.v.
     samp = [n for n, c in cells.items()
             if c["type"].startswith("sky130_fd_sc_hd__buf_")
-            and re.search(r"u_tdc\.(samp_rt|sampbuf)", n)]
-    print(f"TDC sampling tree buffers: {len(samp)} (expected 5)")
-    if len(samp) != 5:
+            and re.search(r"u_tdc\.(samp_rt|sampbuf|samp_cb)", n)]
+    print(f"TDC sampling tree buffers: {len(samp)} (expected 6)")
+    if len(samp) != 6:
         failures.append(
-            f"TDC sampling tree has {len(samp)} buffers, expected 5 (one root "
-            f"and four branches); the balanced tree is what keeps sampling "
-            f"skew a measurable constant instead of an artefact of a tool run")
+            f"TDC sampling tree has {len(samp)} buffers, expected 6 (one root, "
+            f"four tap branches, one coarse branch); the balanced tree is what "
+            f"keeps sampling skew a measurable constant instead of an artefact "
+            f"of a tool run, and the sixth is what keeps the root's fanout "
+            f"under the limit that decides whether the flow rebuilds the tree")
+
+    # THE ROOT'S FANOUT, which is the property that actually broke.
+    #
+    # Counting buffers is not enough and the count said so: the buffers are
+    # dont_touch, so a coarse branch buffer left driving nothing survives
+    # synthesis and the count still reads six. What matters is what the ROOT
+    # drives. It must drive the five branch buffers and NOTHING ELSE. When it
+    # drove the coarse capture flops directly as well, that was twelve sinks
+    # against a max fanout of ten, the resizer rebuilt the tree, and the
+    # converter came back with a five tap hole in it.
+    root_cells = [n for n, c in cells.items()
+                  if re.search(r"u_tdc\.samp_rt\.", n)
+                  and c["type"].startswith("sky130_fd_sc_hd__buf_")]
+    if len(root_cells) != 1:
+        failures.append(
+            f"expected one sampling tree root buffer, found {len(root_cells)}")
+    else:
+        root_net = tuple(cells[root_cells[0]]["connections"].get("X", []))
+        sinks = []
+        for n, c in cells.items():
+            if n == root_cells[0]:
+                continue
+            for pin, bits in c["connections"].items():
+                if pin in ("X", "Y", "Z", "Q", "Q_N"):
+                    continue
+                if tuple(bits) == root_net:
+                    sinks.append(f"{n}/{pin}")
+        print(f"TDC sampling root fanout: {len(sinks)} sinks (expected 5)")
+        nonbuf = [x for x in sinks
+                  if not re.search(r"u_tdc\.(sampbuf|samp_cb)", x)]
+        if len(sinks) != 5 or nonbuf:
+            failures.append(
+                f"the sampling tree root drives {len(sinks)} sinks, expected "
+                f"the 5 branch buffers"
+                + (f"; these are not branch buffers: {sorted(nonbuf)}"
+                   if nonbuf else "")
+                + ". Over the flow's max fanout of ten the resizer rebuilds "
+                  "the tree and picks which branches get a repeater, and that "
+                  "choice decides whether the converter loses a bin or stops "
+                  "being a thermometer code")
+
+    # WHAT HANGS OFF THE LAST DELAY STAGE. Same kind of check, same reason: the
+    # ring_tap buffer being present says nothing about whether the counter was
+    # actually moved behind it.
+    # The wrapper module and the leaf cell both match the name; the leaf is
+    # the one with a real cell type.
+    last = [n for n, c in cells.items()
+            if re.search(rf"u_tdc\.dl\[{args.taps - 1}\]\.", n)
+            and c["type"].startswith("sky130_fd_sc_hd__")]
+    if len(last) != 1:
+        failures.append(
+            f"expected one leaf cell for delay stage {args.taps - 1}, found "
+            f"{len(last)}")
+    else:
+        out = None
+        for pin in ("X", "Y", "Z"):
+            if pin in cells[last[0]]["connections"]:
+                out = tuple(cells[last[0]]["connections"][pin])
+        lsinks = []
+        for n, c in cells.items():
+            if n == last[0]:
+                continue
+            for pin, bits in c["connections"].items():
+                if pin in ("X", "Y", "Z", "Q", "Q_N"):
+                    continue
+                if tuple(bits) == out:
+                    lsinks.append(f"{n}/{pin}")
+        print(f"TDC last delay stage fanout: {len(lsinks)} sinks (expected 3)")
+        if len(lsinks) > 3:
+            failures.append(
+                f"the last delay stage drives {len(lsinks)} sinks, expected 3 "
+                f"(the ring NAND, its own sampling flop and the ring tap "
+                f"buffer): {sorted(lsinks)[:6]}. A last stage loaded "
+                f"differently from the other thirty one is a wider bin at the "
+                f"top of the range, and it measured 3.2 taps when the counter "
+                f"and the chip output hung on it")
+
+    # The last delay stage carries the ring NAND and one sampling flop, and
+    # NOTHING else. The counter and the ring observation output sit behind this
+    # buffer. Without it the last stage drove sixteen flip flops and a chip
+    # output, and measured 3.2 taps against a 1.0 tap stage.
+    rtap = [n for n, c in cells.items()
+            if re.search(r"u_tdc\.ring_tap\.", n)
+            and c["type"].startswith("sky130_fd_sc_hd__buf_")]
+    print(f"TDC ring tap buffer: {len(rtap)} (expected 1)")
+    if len(rtap) != 1:
+        failures.append(
+            f"expected one ring_tap buffer, found {len(rtap)}; without it the "
+            f"counter and the ring output hang on the last delay stage and "
+            f"that stage stops being the same length as the other thirty one")
 
     # ------------------------------- 7. the un-isolated control sites are real
     iso = collections.Counter()

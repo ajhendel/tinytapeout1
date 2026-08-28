@@ -145,6 +145,12 @@ jobs:
           exit $rc
 
       - name: The capture beats the ring kill
+        # ALWAYS. A failing gate must not hide the evidence from the
+        # gates after it: on the build of 2026-08-28 the race step
+        # failed and the bin profile, the selector trend and the
+        # report were never produced, so one cycle of CI answered
+        # one question instead of five.
+        if: always()
         shell: bash
         run: |
           # NOT piped into tee. Piping the loop runs it in a SUBSHELL, so rc=1
@@ -169,6 +175,12 @@ jobs:
           exit $rc
 
       - name: The stop selector has no trend with the tap index
+        # ALWAYS. A failing gate must not hide the evidence from the
+        # gates after it: on the build of 2026-08-28 the race step
+        # failed and the bin profile, the selector trend and the
+        # report were never produced, so one cycle of CI answered
+        # one question instead of five.
+        if: always()
         shell: bash
         run: |
           # NOT piped into tee. Piping the loop runs it in a SUBSHELL, so rc=1
@@ -192,11 +204,47 @@ jobs:
           echo "checked $n corners"
           exit $rc
 
+      - name: The thermometer code is monotone and the bins are uniform
+        # ALWAYS. A failing gate must not hide the evidence from the
+        # gates after it: on the build of 2026-08-28 the race step
+        # failed and the bin profile, the selector trend and the
+        # report were never produced, so one cycle of CI answered
+        # one question instead of five.
+        if: always()
+        shell: bash
+        run: |
+          # A tap's threshold is the line delay to it MINUS the sampling delay
+          # to it. tdc_range.py checks the first half and tdc_race.py checks
+          # the second, and until this step existed nothing subtracted them.
+          # The build of 2026-08-28 passed both and shipped a bin 5.08 taps
+          # wide in the middle of the range.
+          set -o pipefail
+          rc=0
+          n=0
+          for sdf in $(find artifacts -path '*stapostpnr*' -name '*.sdf' | sort); do
+            echo "==============================================================" >> tdc_bins.md
+            python3 tools/tdc_bins.py "$sdf" --markdown >> tdc_bins.md 2>&1 || rc=1
+            n=$((n+1))
+          done
+          cat tdc_bins.md
+          if [ "$n" -eq 0 ]; then
+            echo "no post place-and-route SDF found; nothing was checked" >&2
+            exit 1
+          fi
+          echo "checked $n corners"
+          exit $rc
+
       # The numeric half of the pre-registration, from THIS build. Generated as
       # an artifact rather than committed here: committing it is a deliberate
       # act by a person against the final submission commit, and a workflow that
       # committed predictions on every push would make the timestamp worthless.
       - name: Generate the pre-registration numbers
+        # ALWAYS. A failing gate must not hide the evidence from the
+        # gates after it: on the build of 2026-08-28 the race step
+        # failed and the bin profile, the selector trend and the
+        # report were never produced, so one cycle of CI answered
+        # one question instead of five.
+        if: always()
         shell: bash
         run: |
           set -o pipefail
@@ -209,6 +257,12 @@ jobs:
           python3 tools/prereg.py "$sdf" --out prereg
 
       - name: The submission report
+        # ALWAYS. A failing gate must not hide the evidence from the
+        # gates after it: on the build of 2026-08-28 the race step
+        # failed and the bin profile, the selector trend and the
+        # report were never produced, so one cycle of CI answered
+        # one question instead of five.
+        if: always()
         shell: bash
         run: |
           set -o pipefail
@@ -228,6 +282,7 @@ jobs:
           path: |
             tdc_range.md
             tdc_race.md
+            tdc_bins.md
             stop_tree.md
             final_report.md
             final_report.json

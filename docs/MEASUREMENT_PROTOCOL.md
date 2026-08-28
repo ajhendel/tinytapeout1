@@ -280,6 +280,68 @@ Recorded because both were silent and both would have produced numbers.
   window is now divided: eight clocks of settling, then arm, then four more,
   then launch.
 
+## What a tap's threshold actually is, and the hole that put in the range
+
+A tapped delay line is usually described as if a tap's threshold were the delay
+down the line to that tap. It is not. The tap fires when the launched edge has
+passed it **at the moment the sampling edge arrives**, so the quantity that
+orders the taps is the difference
+
+    T(i) = line delay to stage i  minus  sampling tree delay to stage i's flop
+
+Both halves are in the extracted timing of every build. The repository was
+checking both, and subtracting neither. `tools/tdc_range.py` measured the line.
+`tools/tdc_race.py` measured the tree. Nothing looked at T.
+
+The build of 2026-08-28 is what that cost. The sampling root drove the four
+branch buffers **and** the eight flip flops of the coarse capture, which is
+twelve sinks against the flow's max fanout of ten, so the resizer repaired it by
+inserting a repeater in front of two of the four branches and leaving the other
+two direct. Taps 0 to 15 were sampled 0.52 ns later than taps 16 to 31 at the
+typical corner and 1.02 ns later at the slow one. The line was fine. The race
+margin was fine. Every other gate in the repository passed. The bin between tap
+15 and tap 16 was **5.08 nominal taps wide at all nine corners**, which is about
+fifteen percent of the converter's range sitting in one undivided bin, and the
+pre-registered repeat counts are computed from the quantization variance of one
+bin, so they were understated by a factor of twenty five for any path that
+landed in it.
+
+It was still monotone, and that was luck rather than design. The repeater landed
+on the low half. Had it landed on the high half the same 0.52 ns would have run
+the thresholds **backwards** across four bins, the set of taps reading one would
+not have been a prefix, and the thermometer code would not have been a
+thermometer code. Which two branches get a repeater is not something this design
+was choosing.
+
+Three things changed.
+
+  - The coarse capture gets its own branch buffer, so the root drives five
+    buffer inputs and nothing else and the flow has no fanout to repair. The
+    coarse count is now latched at the same tree depth as the fine taps, which
+    it should have been anyway: before this the two halves of one reading were
+    taken about a tenth of a nanosecond apart.
+  - The counter and the ring observation output moved behind a buffer, off the
+    last delay stage. That stage was driving sixteen flip flops and a chip
+    output on top of the ring, and it measured 0.393 ns against a 0.124 ns
+    typical stage, so the bin at the top of the range was 3.2 taps wide before
+    anything else was wrong with it.
+  - `tools/tdc_bins.py` computes T at every corner and gates it. A non-monotone
+    code is a hard fail, because the decoder, the code density calibration and
+    the coarse/fine boundary rule all assume a prefix. A bin wider than 2.0
+    nominal taps is a fail, because quantization variance goes as the square of
+    the width and a factor of four in repeats is inside the trial budget while a
+    factor of twenty five is not.
+
+`tools/check_netlist.py` gates the two structures from the synthesized netlist
+as well, and it gates the **fanout** rather than the presence of the buffers.
+Counting buffers was not enough and the count proved it: the buffers carry
+`dont_touch`, so a coarse branch buffer left driving nothing survives synthesis
+and the count still reads six.
+
+`tools/tdc_range.py` now sizes its repeat counts from the widest bin instead of
+the mean tap, so the counts that reach `predictions/` hold wherever an arrival
+lands rather than on average.
+
 ## The TDC is not calibrated until it is calibrated on the die
 
 The converter reports raw tap counts. It is sampled by the arrival edge of the

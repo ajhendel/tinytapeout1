@@ -188,8 +188,43 @@ module tdc #(
   // fires the launch four clocks after that.
   wire clr_n = rst_n & armed;
 
+  // THE ROOT'S FANOUT IS PART OF THE DESIGN, not an afterthought. It was not,
+  // and the build measured the cost.
+  //
+  // The root used to drive the four branch buffers AND the eight flip flops of
+  // the coarse capture directly, which is twelve sinks. LibreLane's default max
+  // fanout for sky130hd is ten. So the resizer repaired it, by inserting one
+  // repeater in front of branches 0 and 1 and leaving branches 2 and 3 direct.
+  //
+  // That is not a cosmetic asymmetry. From the extracted timing of the build
+  // that did it: taps 0 to 15 were sampled 0.52 ns LATER than taps 16 to 31 at
+  // the typical corner, and 1.02 ns later at the slow one. The effective
+  // threshold of a tap is the line delay to it MINUS the sampling delay to it,
+  // so a step in the second is a step in the first, and the bin between tap 15
+  // and tap 16 came out 5.08 nominal taps wide at every one of the nine
+  // corners. About fifteen percent of the converter's range was one undivided
+  // bin, and an arrival landing in it is resolved eight times worse than one
+  // landing anywhere else.
+  //
+  // It stayed MONOTONE only because the repeater happened to land on the LOW
+  // half. Had the placer picked branches 2 and 3 instead, the same 0.52 ns
+  // would have run the effective thresholds BACKWARDS across four bins, and the
+  // thermometer code would not have been a thermometer code. Which two branches
+  // get the repeater is not something this design gets to choose.
+  //
+  // So the fanout is brought under the limit here rather than left for the
+  // resizer to fix in whichever way it likes. The coarse capture gets its own
+  // branch buffer, exactly like the four tap groups, and the root drives five
+  // buffer inputs and nothing else.
+  //
+  // The coarse branch also buys a correctness improvement that was owed anyway.
+  // The coarse count is latched by the arrival edge to the same DEPTH as the
+  // fine taps now. Before this it was one buffer level shallower, so the coarse
+  // and fine halves of the same reading were taken at instants about a tenth of
+  // a nanosecond apart, and the coarse/fine boundary resolution in
+  // tdc_decode() assumed they were not.
   wire samp_root;
-  cell_buf #(.DRIVE(4)) samp_rt (.A(stop), .X(samp_root));
+  cell_buf #(.DRIVE(8)) samp_rt (.A(stop), .X(samp_root));
 
   wire [GROUPS-1:0] samp;
   genvar b;
@@ -198,6 +233,10 @@ module tdc #(
       cell_buf #(.DRIVE(2)) u (.A(samp_root), .X(samp[b]));
     end
   endgenerate
+
+  // The fifth branch. Same drive, same depth, same root as the four above.
+  wire samp_coarse;
+  cell_buf #(.DRIVE(2)) samp_cb (.A(samp_root), .X(samp_coarse));
 
   wire [TAPS-1:0] line_taps = line[TAPS:1];
 
@@ -302,10 +341,28 @@ module tdc #(
   // code leaves uncooked: a converter in metal is an opinion that cannot be
   // revised, and the raw Gray value is the diagnostic. gray_to_bin() is three
   // lines of Python and it is covered by tests.
+  // WHAT HANGS OFF THE LAST STAGE IS PART OF THE DELAY LINE.
+  //
+  // line[TAPS] closes the ring, feeds tap 31's sampling flop, clocks the
+  // sixteen flip flops of the counter below, and leaves the block as the ring
+  // observation output. That load is not the load the other thirty-one stages
+  // carry, and the extracted timing said so: the last stage measured 0.393 ns
+  // against a 0.124 ns typical stage, so the bin between tap 30 and tap 31 was
+  // 3.2 taps wide before anything else was wrong with it.
+  //
+  // The counter and the observation output do not need to be on the ring node.
+  // They are moved behind a buffer, which leaves the ring itself carrying the
+  // NAND and one sampling flop like every other stage. The counter now
+  // increments one buffer delay later, which moves the coarse/fine boundary
+  // window and does not create one: the boundary was always there, it is why
+  // the count is Gray coded and why tdc_decode() carries a guard band.
+  wire ring_tapped;
+  cell_buf #(.DRIVE(4)) ring_tap (.A(line[TAPS]), .X(ring_tapped));
+
   reg [7:0] wraps;
   reg [7:0] wraps_gray;
   wire [7:0] wraps_nxt = (wraps == 8'hFF) ? 8'hFF : (wraps + 8'd1);
-  always @(posedge line[TAPS] or negedge clr_n) begin
+  always @(posedge ring_tapped or negedge clr_n) begin
     if (!clr_n) begin
       wraps      <= 8'h00;
       wraps_gray <= 8'h00;
@@ -323,7 +380,7 @@ module tdc #(
   // never happened. The tests found this before silicon did: the shortest fixed
   // path in the design reported a full extra ring period.
   reg [7:0] gray_at_arrival;
-  always @(posedge samp_root or negedge clr_n) begin
+  always @(posedge samp_coarse or negedge clr_n) begin
     if (!clr_n) gray_at_arrival <= 8'h00;
     else        gray_at_arrival <= wraps_gray;
   end
@@ -369,7 +426,7 @@ module tdc #(
 
   assign taps       = held;
   assign wrap_gray  = held_gray;
-  assign ring       = line[TAPS];
+  assign ring       = ring_tapped;
   assign done       = fired_last;
   assign valid      = held_valid;
 

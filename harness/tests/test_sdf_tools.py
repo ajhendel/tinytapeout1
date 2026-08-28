@@ -14,6 +14,7 @@ tools are made to fail. A gate that has never been seen to fail is not a gate.
 """
 
 import os
+import re
 import subprocess
 import sys
 import textwrap
@@ -70,7 +71,8 @@ def _ic(src, dst, d):
 
 
 def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True,
-              branches=2, per_branch=2, branch_ic=0.02, causal_kill=False):
+              branches=2, per_branch=2, branch_ic=0.02, causal_kill=False,
+              skew=0.0, skew_branches=()):
     """A miniature of src/tdc.v: a sampling tree, a kill path and a ring.
 
     Every delay line stage drives the DATA pin of the flip flop that samples it,
@@ -110,7 +112,12 @@ def write_sdf(path, *, kill_flop_cq=0.30, guard_buffers=True,
         bi = f"u_tdc.sampbuf[{b}].u.g2.u"
         cells.append(_cell("sky130_fd_sc_hd__buf_2", bi,
                            [_iopath("A", "X", 0.08)]))
-        ics.append(_ic(f"{root}/X", f"{bi}/A", 0.02))
+        # `skew` is what an unbalanced repeater looks like in the timing: one
+        # branch further from the arrival edge than another. Which branch it
+        # lands on decides whether the converter loses resolution or stops
+        # being a thermometer code, and the placer picks.
+        ics.append(_ic(f"{root}/X", f"{bi}/A",
+                       0.02 + (skew if b in skew_branches else 0.0)))
         for f in range(per_branch + 1):
             flop = f"_1{b}{f}_"
             cells.append(_cell("sky130_fd_sc_hd__dfxtp_1", flop,
@@ -432,3 +439,74 @@ def test_the_race_tool_sees_the_causal_kill_as_a_larger_margin(tmp_path):
     assert m_raced < 0.10, (
         "the raced fixture was supposed to be the tight case and is not, so "
         "this test is not comparing what it says it is")
+
+
+# ---------------------------------------------------------------- tdc_bins.py
+#
+# The quantity these three cover is the one that was measured by nothing until
+# the build of 2026-08-28 put a 5.08 tap hole in the middle of the converter.
+# A tap's threshold is the line delay to it MINUS the sampling delay to it, and
+# both halves were being checked separately by tools that never subtracted them.
+
+
+def test_the_bin_tool_passes_a_balanced_tree(tmp_path):
+    sdf = write_sdf(str(tmp_path / "b.sdf"), branches=2, per_branch=2)
+    r = run("tdc_bins.py", sdf, "--taps", "4")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "PASS" in r.stdout
+
+
+def test_a_late_low_branch_is_a_wide_bin_and_fails(tmp_path):
+    # The repeater lands on the LOW half. The code stays monotone and the bin
+    # at the branch boundary opens up. This is the arrangement the real build
+    # shipped with, and it passed every other gate in the repository.
+    sdf = write_sdf(str(tmp_path / "w.sdf"), branches=2, per_branch=2,
+                    skew=0.30, skew_branches=(0,))
+    r = run("tdc_bins.py", sdf, "--taps", "4")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "nominal taps wide" in r.stderr
+    assert "NOT a thermometer code" not in r.stderr
+
+
+def test_a_late_high_branch_is_not_a_thermometer_code_and_fails(tmp_path):
+    # The same repeater, the same delay, the other half. Nothing about the
+    # design chooses which of these two happens.
+    sdf = write_sdf(str(tmp_path / "n.sdf"), branches=2, per_branch=2,
+                    skew=0.30, skew_branches=(1,))
+    r = run("tdc_bins.py", sdf, "--taps", "4")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "NOT a thermometer code" in r.stderr
+
+
+def test_the_bin_tool_fails_on_a_broken_delay_line(tmp_path):
+    # A chain the parser cannot walk reports a SHORTER line, which makes every
+    # bin look narrower and this gate look better. It has to fail instead.
+    sdf = write_sdf(str(tmp_path / "g.sdf"), branches=2, per_branch=2)
+    text = open(sdf).read()
+    # ESCAPED, the way the fixture writes it. The first version of this line
+    # used the unescaped name, matched nothing, and asserted against a file
+    # it had not modified.
+    text = text.replace("u_tdc\\.dl\\[2\\]", "u_tdc\\.dl\\[9\\]")
+    open(sdf, "w").write(text)
+    r = run("tdc_bins.py", sdf, "--taps", "4")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "FAIL" in r.stderr
+
+
+def test_the_bin_tool_fails_when_no_tap_is_sampled(tmp_path):
+    # Every flop still there, none of them connected to the line it samples.
+    sdf = write_sdf(str(tmp_path / "u.sdf"), branches=2, per_branch=2)
+    text = open(sdf).read()
+    # The D pin appears as `_100_.D` in an INTERCONNECT record, not `/D`.
+    text = re.sub(r'^.*INTERCONNECT.*\.D .*\n', "", text, flags=re.M)
+    open(sdf, "w").write(text)
+    r = run("tdc_bins.py", sdf, "--taps", "4")
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "not sampled" in r.stderr or "no sampling flip flop" in r.stderr
+
+
+def test_the_bin_tool_fails_on_a_file_that_is_not_an_sdf(tmp_path):
+    p = tmp_path / "x.sdf"
+    p.write_text("this is not an SDF\n")
+    r = run("tdc_bins.py", str(p))
+    assert r.returncode == 2

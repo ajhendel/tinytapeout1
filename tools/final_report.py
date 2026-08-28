@@ -165,6 +165,8 @@ def main():
                 (f"stop selector has no trend with tap index, {corner}",
                  [sys.executable, f"{TOOLS}/stop_tree.py", sdf,
                   "--sites", str(args.sites)]),
+                (f"thermometer code monotone and bins uniform, {corner}",
+                 [sys.executable, f"{TOOLS}/tdc_bins.py", sdf]),
             ]:
                 rc, out = run(cmd)
                 gate(label, rc == 0, out)

@@ -110,6 +110,28 @@ def main():
         print("no cells parsed; that is not an SDF", file=sys.stderr)
         return 2
 
+    # THE REPEAT COUNTS ARE SIZED FROM THE WIDEST BIN, NOT THE MEAN TAP.
+    #
+    # Quantization variance goes as the square of the bin an arrival actually
+    # lands in, and the bins are not equal. Sizing from the mean is sizing for
+    # the average arrival, and the pre-registration has to hold for the ones
+    # that land in the worst bin as well, which is not something the experiment
+    # gets to choose. On the build of 2026-08-28 the mean tap was 124 ps and
+    # the widest bin was 631 ps, so a count sized from the mean was low by a
+    # factor of twenty six.
+    #
+    # tools/tdc_bins.py gates the ratio separately. This is what happens to the
+    # numbers while the ratio is whatever it is.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    worst_bin = None
+    try:
+        from sdf_graph import load as _load_graph
+        from tdc_bins import widest_bin
+        worst_bin, _nom = widest_bin(_load_graph(args.sdf), args.taps)
+    except Exception as e:                                   # noqa: BLE001
+        print(f"could not measure the bin profile ({e}); repeat counts below "
+              f"are sized from the MEAN tap and are optimistic", file=sys.stderr)
+
     span = sum(v for k, v in by.items() if k.startswith("u_tdc.dl"))
     tap = span / args.taps if args.taps else 0.0
     # One ring period is two traversals of the line.
@@ -117,7 +139,10 @@ def main():
 
     corner = os.path.basename(os.path.dirname(args.sdf)) or "unknown"
     print(f"corner            {corner}")
-    print(f"tap delay         {tap:.4f} ns")
+    print(f"tap delay         {tap:.4f} ns  (mean)")
+    if worst_bin:
+        print(f"widest bin        {worst_bin:.4f} ns  "
+              f"({worst_bin/tap:.2f} mean taps; repeat counts use THIS)")
     print(f"line span         {span:.3f} ns over {args.taps} taps")
     print(f"ring period       {period:.3f} ns  (a wrap is worth {2*args.taps} taps)")
 
@@ -178,10 +203,13 @@ def main():
             continue
         diff = abs(got[a] - got[b])
         n_taps = diff / tap if tap else 0
-        # Quantization of a single reading is uniform over one tap, so its
-        # standard deviation is 1/sqrt(12) taps. Separating two means by three
-        # standard errors needs N > 18 * sigma^2 / d^2 trials per arm.
-        need = max(1, int(18 * (1.0 / 12.0) / max(n_taps, 1e-9) ** 2 + 0.5))
+        # Quantization of a single reading is uniform over ITS OWN bin, so its
+        # standard deviation is width/sqrt(12). Separating two means by three
+        # standard errors needs N > 18 * sigma^2 / d^2 trials per arm, with
+        # sigma in the same units as d. Expressed in worst bins rather than
+        # mean taps so the count holds wherever the arrival lands.
+        n_worst = diff / (worst_bin or tap) if (worst_bin or tap) else 0
+        need = max(1, int(18 * (1.0 / 12.0) / max(n_worst, 1e-9) ** 2 + 0.5))
         if n_taps >= 3:
             verdict = "yes"
         elif n_taps >= 1:
