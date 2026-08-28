@@ -64,13 +64,14 @@ instance by two independent mechanisms and shutdown behavior set to terminate.
 An expired lease then costs nothing at all rather than costing EBS. The script
 refuses to start a second instance while one exists.
 
-    AWS_PROFILE=mambik tools/aws/launch_f2.sh --list
-    AWS_PROFILE=mambik LEASE_HOURS=8 tools/aws/launch_f2.sh
-    AWS_PROFILE=mambik tools/aws/launch_f2.sh --terminate
+    AWS_PROFILE=<profile> tools/aws/launch_f2.sh --list
+    AWS_PROFILE=<profile> LEASE_HOURS=8 tools/aws/launch_f2.sh
+    AWS_PROFILE=<profile> tools/aws/launch_f2.sh --terminate
 
-The account is the mambik research account. Nothing from this project's repo is
-proprietary and nothing from mambik enters this repo, so the only thing crossing
-the boundary is compute, and the tags keep the bill separable.
+The account is a separate research account of the author's and it is named in
+`~/.aws/config`, not here. This repository is published, that account is not
+part of this project, and the only thing crossing the boundary is compute. The
+`Project` and `CostCenter` tags are what keep the bill separable.
 
 ## What Andrew has to do
 

@@ -11,9 +11,9 @@
 # orphan waiting to happen.
 #
 # Usage:
-#   AWS_PROFILE=mambik tools/aws/launch_f2.sh                 # 4 hour lease
-#   AWS_PROFILE=mambik LEASE_HOURS=8 tools/aws/launch_f2.sh
-#   AWS_PROFILE=mambik tools/aws/launch_f2.sh --terminate     # kill ours, now
+#   AWS_PROFILE=<profile> tools/aws/launch_f2.sh              # 4 hour lease
+#   AWS_PROFILE=<profile> LEASE_HOURS=8 tools/aws/launch_f2.sh
+#   AWS_PROFILE=<profile> tools/aws/launch_f2.sh --terminate  # kill ours, now
 
 set -euo pipefail
 

@@ -83,25 +83,44 @@ quietly returns noise.
 authority. The table below is that tool's output on the shipped build, at the
 typical corner.
 
+**Corner `nom_tt_025C_1v80`, build `32bd0b9`, mean tap 0.1166 ns, widest bin
+0.1600 ns.** The corner and the build are named because this table was wrong
+about both until 2026-08-28. It carried numbers from an older build, and it
+carried them from the FAST corner while the paragraph below it said they were
+quoted at the typical one. A tap of 78 ps is `max_ff`; the typical tap is 117.
+The same mistake had been made independently by the pre-registration generator,
+whose SDF selector matched every corner's filename and took the first, so this
+is a class of error in this repository and not an incident. Regenerate with
+`tools/tdc_range.py <sdf>` rather than editing the numbers here.
+
 | comparison | difference | taps | single trial? |
 |---|---|---|---|
-| drive series, x1 vs x8 | 1025 ps | 13.1 | yes |
-| load series, 0 vs 4 sinks | 921 ps | 11.8 | yes |
-| drive series, x1 vs x2 | 604 ps | 7.7 | yes |
-| input isolation pair | 270 ps | 3.5 | yes |
-| load series, 0 vs 1 sink | 196 ps | 2.5 | marginal, about 2 trials per arm |
-| **load ladder pair** | **3 ps** | **0.04** | **no; and not from this table at all** |
+| drive series, x1 vs x8 | 1330 ps | 11.41 | yes |
+| load series, 0 vs 4 sinks | 1244 ps | 10.67 | yes |
+| drive series, x1 vs x2 | 763 ps | 6.54 | yes |
+| input isolation pair | 296 ps | 2.54 | marginal, about 1 trial per arm |
+| load series, 0 vs 1 sink | 248 ps | 2.13 | marginal, about 1 trial per arm |
+| **load ladder pair** | **45 ps** | **0.39** | **no; and not from this table at all** |
 
-**The tap is not one number.** On this build it is 0.078 ns at the fast corner
-and 0.219 ns at the slow one, nearly three to one, because the delay line is
-built from the same cells as everything else and moves with them. Every ratio
-above is quoted at the typical corner and a comparison must be re-quoted against
-its own corner's tap before it is believed. A tool that divided a slow-corner
-delay by a typical-corner tap would overstate its own resolution by a factor of
-nearly three, and one of ours did.
+The repeat counts are sized from the WIDEST bin, not the mean tap, because
+quantization variance goes as the square of the bin an arrival actually lands
+in. That is why the two marginal rows now need about one trial each where the
+older table said two: the comparisons got larger in taps, not the statistics
+weaker.
 
-**The ladder pair cannot use these numbers, and four builds now say so.** The
-same unchanged circuit extracted at 7 ps, then 57 ps, then 3 ps, then 13 ps.
+**The tap is not one number.** On this build it is 0.0781 ns at the fast corner
+and 0.2173 ns at the slow one, nearly three to one, because the delay line is
+built from the same cells as everything else and moves with them. A comparison
+must be re-quoted against its own corner's tap before it is believed. A tool
+that divided a slow-corner delay by a typical-corner tap would overstate its own
+resolution by a factor of nearly three, and one of ours did. So did this table,
+in the other direction, by carrying fast-corner numbers under a sentence saying
+they were typical, which is why the corner is now in the caption rather than in
+the prose underneath.
+
+**The ladder pair cannot use these numbers, and five builds now say so.** The
+same unchanged circuit extracted at 7 ps, then 57 ps, then 3 ps, then 13 ps,
+then 45 ps.
 That is not a measurement converging, it is routing noise around a structural
 zero: the released Liberty view gives that pin one capacitance with no enable
 dependence, so extraction has no mechanism there to report and what varies

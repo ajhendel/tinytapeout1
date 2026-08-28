@@ -1,6 +1,6 @@
 # PRIOR ART — enumeration checklist
 
-Rule (inherited from mambik discipline): novelty is verified by enumeration, never by a proxy. No claim ships until its row is CLOSED with the searches run, the papers read, and the residual claim written. "First X" is banned while the row is OPEN.
+Rule: novelty is verified by enumeration, never by a proxy. No claim ships until its row is CLOSED with the searches run, the papers read, and the residual claim written. "First X" is banned while the row is OPEN.
 
 Status legend: OPEN = not yet enumerated. PARTIAL = known items listed, systematic sweep not done. CLOSED = swept, residual claim recorded.
 

@@ -81,8 +81,8 @@
 // the list above should not be read as the main effect. It is corrected here
 // rather than defended.
 //
-// The extraction layer is not a third opinion about this. It reported 3, 7, 13
-// and 57 ps for the same unchanged circuit across four builds, which is
+// The extraction layer is not a third opinion about this. It reported 3, 7, 13,
+// 45 and 57 ps for the same unchanged circuit across five builds, which is
 // placement noise around a mechanism it has no way to represent, and it must
 // not be quoted as an extraction-layer prediction of the effect.
 //

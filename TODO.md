@@ -29,5 +29,5 @@ Added 2026-08-28, with the deadline now known to be 2026-09-07.
 
 Standing rules for this repo
 - American English. Full absolute paths when telling Andrew where things are.
-- Public by intention: everything here is written as if already published (TT requires open source at submission anyway). Nothing mambik-proprietary (no D-002 structures) ever enters this repo.
+- Public by intention: everything here is written as if already published (TT requires open source at submission anyway). Nothing from the author's other programs, proprietary or otherwise, ever enters this repo.
 - Heavy compute (P&R runs, SPICE sweeps) off the Mac or inside the docker limits (nice 19, --cpus 2, one container).
