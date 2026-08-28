@@ -88,11 +88,17 @@ The pre-registration is in two halves on purpose.
   refreshed later from a better build. Regenerating from the submission commit
   reproduces them exactly, and that is what makes the timestamp mean something.
 
-**What is still owed before the deadline:** the SPICE result for the load ladder
-pair, which decides the category row 6 of docs/EXPERIMENT_MATRIX.md is written
-as, and the generated files committed against the final submission commit. The
-generator refuses to give the ladder pair a prediction from extraction, and says
-so in the output, because the extraction has no mechanism to report there.
+**The SPICE result landed 2026-08-28** and is committed at
+`spice/spice_ladder.json`, nine corners, with the category chosen before the
+deck ran. It is **resolvable measurement, single trial**: +144 to +371 ps over
+the eight stage chain, 2.38 to 3.07 taps against each corner's own tap, null
+control exactly zero. `tools/prereg.py --spice` consumes it, and CI passes it
+automatically. The generator still refuses to give the ladder pair a prediction
+from extraction, and says so in the output, because the extraction has no
+mechanism to report there.
+
+**What is still owed before the deadline:** the generated files committed
+against the final submission commit.
 
 ### The original scaffold note, 2026-08-26, kept
 
@@ -167,10 +173,13 @@ detail:
 TDC (src/tdc.v):
 
 - The mean tap delay, and the spread of bin widths across the 32 taps. The
-  second is a prediction about how badly place and route distorts a delay line
-  in this flow, and we currently have no basis for it beyond an order of
-  magnitude, which is exactly the kind of thing worth writing down before
-  finding out.
+  second was written here as something we had ~~no basis for beyond an order of
+  magnitude~~. **Corrected 2026-08-28.** There was a basis and it was in the
+  build the whole time: a tap's threshold is the delay down the line to it minus
+  the delay of the sampling edge to its flip flop, and both halves are in the
+  extracted timing. `tools/prereg.py` now writes the per-tap bin profile from
+  the shipped build's own SDF, so this is a generated prediction with 31 rows
+  rather than a sentence. `tools/tdc_bins.py` gates the same quantity.
 
 ### Quantities to be predicted, fixed 2026-08-26
 

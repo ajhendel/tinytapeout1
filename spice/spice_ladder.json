@@ -1,0 +1,233 @@
+{
+  "depth": 8,
+  "tap_ns_typical": 0.082,
+  "ref_stages": 16,
+  "note": "every d_*_ps is for the whole chain of 8 stages, not per stage",
+  "null_control_ps": {
+    "rise": 0.0,
+    "fall": 0.0
+  },
+  "cases": [
+    {
+      "corner": "tt",
+      "vdd": 1.8,
+      "temp": 25,
+      "tr_off_ps": 1020.29,
+      "tf_off_ps": 1049.43,
+      "tr_on_ps": 1240.9959999999999,
+      "tf_on_ps": 1266.3319999999999,
+      "ref_stage_ps": 50.14939375,
+      "d_rise_ps": 220.7059999999999,
+      "d_fall_ps": 216.90199999999982,
+      "tap_ps": 82.0,
+      "worst_taps": 2.6915365853658524,
+      "d_rise_per_stage_ps": 27.588249999999988,
+      "d_fall_per_stage_ps": 27.112749999999977
+    },
+    {
+      "corner": "tt",
+      "vdd": 1.8,
+      "temp": -40,
+      "tr_off_ps": 1041.353,
+      "tf_off_ps": 1076.634,
+      "tr_on_ps": 1250.833,
+      "tf_on_ps": 1285.6509999999998,
+      "ref_stage_ps": 48.85745,
+      "d_rise_ps": 209.48000000000002,
+      "d_fall_ps": 209.01699999999983,
+      "tap_ps": 79.88752406403717,
+      "worst_taps": 2.6221866612373996,
+      "d_rise_per_stage_ps": 26.185000000000002,
+      "d_fall_per_stage_ps": 26.127124999999978
+    },
+    {
+      "corner": "tt",
+      "vdd": 1.8,
+      "temp": 100,
+      "tr_off_ps": 1008.3219999999999,
+      "tf_off_ps": 1031.267,
+      "tr_on_ps": 1240.556,
+      "tf_on_ps": 1257.6740000000002,
+      "ref_stage_ps": 51.476075,
+      "d_rise_ps": 232.23400000000015,
+      "d_fall_ps": 226.40700000000015,
+      "tap_ps": 84.16927572529228,
+      "worst_taps": 2.75913031208626,
+      "d_rise_per_stage_ps": 29.02925000000002,
+      "d_fall_per_stage_ps": 28.30087500000002
+    },
+    {
+      "corner": "tt",
+      "vdd": 1.62,
+      "temp": 25,
+      "tr_off_ps": 1280.144,
+      "tf_off_ps": 1319.791,
+      "tr_on_ps": 1532.874,
+      "tf_on_ps": 1575.65,
+      "ref_stage_ps": 62.5794375,
+      "d_rise_ps": 252.73000000000002,
+      "d_fall_ps": 255.85900000000015,
+      "tap_ps": 102.32454455144833,
+      "worst_taps": 2.500465563971852,
+      "d_rise_per_stage_ps": 31.591250000000002,
+      "d_fall_per_stage_ps": 31.98237500000002
+    },
+    {
+      "corner": "tt",
+      "vdd": 1.98,
+      "temp": 25,
+      "tr_off_ps": 860.5972,
+      "tf_off_ps": 883.3947000000001,
+      "tr_on_ps": 1060.0339999999999,
+      "tf_on_ps": 1075.126,
+      "ref_stage_ps": 42.5576875,
+      "d_rise_ps": 199.43679999999983,
+      "d_fall_ps": 191.73129999999992,
+      "tap_ps": 69.58669116513497,
+      "worst_taps": 2.8660193014023303,
+      "d_rise_per_stage_ps": 24.92959999999998,
+      "d_fall_per_stage_ps": 23.96641249999999
+    },
+    {
+      "corner": "ss",
+      "vdd": 1.8,
+      "temp": 100,
+      "tr_off_ps": 1541.609,
+      "tf_off_ps": 1579.4569999999999,
+      "tr_on_ps": 1857.67,
+      "tf_on_ps": 1895.8539999999998,
+      "ref_stage_ps": 74.97699999999999,
+      "d_rise_ps": 316.06100000000015,
+      "d_fall_ps": 316.39699999999993,
+      "tap_ps": 122.59597854061792,
+      "worst_taps": 2.5808105923733278,
+      "d_rise_per_stage_ps": 39.50762500000002,
+      "d_fall_per_stage_ps": 39.54962499999999
+    },
+    {
+      "corner": "ff",
+      "vdd": 1.8,
+      "temp": -40,
+      "tr_off_ps": 750.1847,
+      "tf_off_ps": 771.8077000000001,
+      "tr_on_ps": 925.8140999999999,
+      "tf_on_ps": 934.9002,
+      "ref_stage_ps": 36.60161875,
+      "d_rise_ps": 175.62939999999992,
+      "d_fall_ps": 163.09249999999997,
+      "tap_ps": 59.84783689433932,
+      "worst_taps": 2.934598961530918,
+      "d_rise_per_stage_ps": 21.95367499999999,
+      "d_fall_per_stage_ps": 20.386562499999997
+    },
+    {
+      "corner": "ss",
+      "vdd": 1.62,
+      "temp": 100,
+      "tr_off_ps": 1945.2949999999998,
+      "tf_off_ps": 1997.1250000000002,
+      "tr_on_ps": 2310.046,
+      "tf_on_ps": 2368.3849999999998,
+      "ref_stage_ps": 95.24737499999999,
+      "d_rise_ps": 364.751,
+      "d_fall_ps": 371.25999999999954,
+      "tap_ps": 155.74036226509716,
+      "worst_taps": 2.3838393246321754,
+      "d_rise_per_stage_ps": 45.593875,
+      "d_fall_per_stage_ps": 46.40749999999994
+    },
+    {
+      "corner": "ff",
+      "vdd": 1.98,
+      "temp": -40,
+      "tr_off_ps": 641.9159000000001,
+      "tf_off_ps": 658.2645,
+      "tr_on_ps": 799.5437,
+      "tf_on_ps": 802.7074,
+      "ref_stage_ps": 31.444962500000003,
+      "d_rise_ps": 157.62779999999987,
+      "d_fall_ps": 144.4429,
+      "tap_ps": 51.41611357963824,
+      "worst_taps": 3.0657276294492912,
+      "d_rise_per_stage_ps": 19.703474999999983,
+      "d_fall_per_stage_ps": 18.0553625
+    }
+  ],
+  "steps": [
+    {
+      "code": 0,
+      "enables": [
+        0,
+        0,
+        0
+      ],
+      "rise_ps": 1036.9969999999998,
+      "vs_code0_ps": 0.0,
+      "step_ps": 0.0
+    },
+    {
+      "code": 1,
+      "enables": [
+        1,
+        0,
+        0
+      ],
+      "rise_ps": 1125.226,
+      "vs_code0_ps": 88.22900000000027,
+      "step_ps": 88.22900000000027
+    },
+    {
+      "code": 2,
+      "enables": [
+        1,
+        1,
+        0
+      ],
+      "rise_ps": 1198.8220000000001,
+      "vs_code0_ps": 161.82500000000027,
+      "step_ps": 73.596
+    },
+    {
+      "code": 3,
+      "enables": [
+        1,
+        1,
+        1
+      ],
+      "rise_ps": 1258.656,
+      "vs_code0_ps": 221.6590000000001,
+      "step_ps": 59.83399999999983
+    }
+  ],
+  "decomposition": {
+    "rows": [
+      {
+        "keeper": "sky130_fd_sc_hd__inv_1",
+        "d_rise_ps": 220.7059999999999,
+        "d_fall_ps": 216.90199999999982
+      },
+      {
+        "keeper": "sky130_fd_sc_hd__inv_2",
+        "d_rise_ps": 134.66600000000017,
+        "d_fall_ps": 122.173
+      },
+      {
+        "keeper": "sky130_fd_sc_hd__inv_4",
+        "d_rise_ps": 90.00999999999999,
+        "d_fall_ps": 72.61000000000013
+      },
+      {
+        "keeper": "sky130_fd_sc_hd__inv_8",
+        "d_rise_ps": 65.64299999999957,
+        "d_fall_ps": 44.639000000000124
+      },
+      {
+        "keeper": "sky130_fd_sc_hd__inv_16",
+        "d_rise_ps": 35.92699999999968,
+        "d_fall_ps": 24.402999999999793
+      }
+    ],
+    "mechanism_a_ps": 35.92699999999968,
+    "mechanism_b_ps": 184.77900000000022
+  }
+}

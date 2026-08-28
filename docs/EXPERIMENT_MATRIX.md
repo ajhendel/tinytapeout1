@@ -43,7 +43,7 @@ second search, or a script someone writes at midnight, will not have.
 | 3 | **Ring period** | frequency counter on the TDC ring | free-run, several window lengths | all | the depth series slope, independently | the two disagree, which invalidates every coarse-counted reading |
 | 4 | **Drive-variant series** | TDC | paths 0 to 3, a fixed load with a varying driver, and the fabric at all four drive codes | all | ring oscillators 0 to 2, a different instrument on the same question | drive selection produces no resolvable delay difference |
 | 5 | **Input-isolation cost** | TDC | paths 15 and 16 at all four drive variants; fabric sites 1,3,5,7 against 0,2,4,6 | all | the fixed pair against the fabric pair | fixed and fabric pairs disagree about the sign |
-| 6 | **Load-ladder mechanism** | TDC | paths 17 and 18; fabric load field 0 to 3 | all | **Liberty predicts exactly zero**, see src/load_ladder.v | no resolvable difference, which confirms Liberty and is a publishable null |
+| 6 | **Load-ladder mechanism** | TDC | paths 17 and 18; fabric load field 0 to 3 | all | **Liberty predicts exactly zero**, SPICE predicts +144 to +371 ps, see src/load_ladder.v | no resolvable difference, which confirms Liberty, contradicts SPICE and is a publishable null either way |
 | 7 | **Within-die variation floor** | frequency counter | calibration rings 0, 6, 7 | all | the three against each other | the floor exceeds the effects in rows 4 to 6, which retires those rows |
 | 8 | **Per-site fabric delay** | TDC, stop-tap sweep | tap 0 to 19 at a fixed configuration, then per function and drive | all | the fixed-path prediction for the same cells, and the extracted per-tap selector offset from `tools/stop_tree.py`, subtracted before the fit | the per-site slope is not linear in tap index, or it moves by more than the selector correction when that correction is applied |
 | 9 | **Model-disagreement search** | TDC | 10^4 to 10^6, stage 1 rules | **training only** | random configurations of matched depth | the search finds nothing that beats the random baseline's disagreement |
@@ -100,12 +100,29 @@ its own corner's tap before it is believed. A tool that divided a slow-corner
 delay by a typical-corner tap would overstate its own resolution by a factor of
 nearly three, and one of ours did.
 
-**The ladder pair cannot use these numbers, and three builds now say so.** The
-same unchanged circuit extracted at 7 ps, then 57 ps, then 3 ps. That is not a
-measurement converging, it is routing noise around a structural zero: the
-released Liberty view gives that pin one capacitance with no enable dependence,
-so extraction has no mechanism there to report and what varies between builds is
-wire.
+**The ladder pair cannot use these numbers, and four builds now say so.** The
+same unchanged circuit extracted at 7 ps, then 57 ps, then 3 ps, then 13 ps.
+That is not a measurement converging, it is routing noise around a structural
+zero: the released Liberty view gives that pin one capacitance with no enable
+dependence, so extraction has no mechanism there to report and what varies
+between builds is wire.
+
+**The prediction for row 6 comes from SPICE, and it now exists.** Nine corners,
+`tools/spice_ladder.py`, 2026-08-28. The category was chosen before the deck ran
+and the answer landed in the first of the three: **resolvable measurement,
+single trial**. Enabling the ladder costs +144 to +371 ps over the eight stage
+chain, 2.38 to 3.07 taps against each corner's own tap, 18.8 to 24.6 percent of
+the disabled chain, same sign at every corner, with a null control of exactly
++0.0000 ps. The near-constant fraction across corners whose absolute delays span
+threefold is the evidence the mechanism is real rather than a solver artefact,
+because a floating node artefact would not track the base delay.
+
+Two things came out of it that the RTL comment had not claimed. The four codes
+are not four equal steps: +88.2, +73.6 and +59.8 ps, shrinking as elements are
+added. And sweeping the keeper strength splits the effect about 16 percent
+gate-to-source and 84 percent Miller, so the mechanism named first in
+src/load_ladder.v is the smaller one. That comment is corrected rather than
+defended.
 
 The repeat counts assume DITHER. Averaging only beats quantization if the
 arrival time moves across tap boundaries between trials; if it does not, every

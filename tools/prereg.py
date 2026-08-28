@@ -152,19 +152,59 @@ def main():
          f"{over*(1-INTERVAL):.3f} to {over*(1+INTERVAL):.3f} ns | "
          f"{over/tap:.1f} |",
          "",
-         "**Bin width spread across the 32 taps: predicted under 15 percent of a",
-         "mean bin, one sigma.** This is the weakest prediction in the file and it",
-         "is written down anyway. We have no basis for it beyond an order of",
-         "magnitude, because it is a prediction about how badly this particular",
-         "place and route distorts a hand built delay line, and nothing in the",
-         "extraction reports that. It is measured by code density in study 2.",
-         "",
          "**Falsified by:** a measured ring period outside the interval, which",
          "would invalidate every coarse counted reading at once; or a bin width",
          "spread so large that the mean tap is not a useful unit, which would mean",
          "every delay on this chip has to be quoted through the bin table and",
          "never as a tap count.",
          ""]
+    # THE BIN PROFILE, from extraction, per tap. This file used to say the bin
+    # spread was "the weakest prediction in the file" and that we had no basis
+    # for it beyond an order of magnitude. That was true while the only thing
+    # being computed was the delay line, and it stopped being true when
+    # tools/tdc_bins.py started subtracting the sampling tree from it. A tap's
+    # threshold is the line delay to it MINUS the sampling delay to its flip
+    # flop, both of which are in this same SDF, so the extraction layer has a
+    # real per-bin prediction and it is written down as one.
+    try:
+        from sdf_graph import load as _load_graph
+        from tdc_bins import thresholds
+        _line, _tree, thr, err = thresholds(_load_graph(args.sdf), 32)
+    except Exception as e:                                    # noqa: BLE001
+        thr, err = None, str(e)
+    if err:
+        L += [f"**Bin widths: not predicted from this build.** {err}. Without "
+              f"them the only extraction layer statement about the converter is "
+              f"its mean, and study 2's code density run is the sole "
+              f"measurement of the shape.", ""]
+    else:
+        w = [thr[i + 1] - thr[i] for i in range(31)]
+        mean = sum(w) / len(w)
+        sd = (sum((x - mean) ** 2 for x in w) / len(w)) ** 0.5
+        L += ["### Bin widths, predicted per tap",
+              "",
+              f"Mean {mean*1000:.1f} ps, standard deviation {sd*1000:.1f} ps, "
+              f"{sd/mean*100:.1f} percent of the mean. Widest "
+              f"{max(w)*1000:.1f} ps at tap {w.index(max(w))}, narrowest "
+              f"{min(w)*1000:.1f} ps at tap {w.index(min(w))}.",
+              "",
+              "The threshold of tap i is the delay down the line to stage i "
+              "MINUS the delay of the sampling edge to that stage's flip flop. "
+              "Both halves are in this SDF and this file used to quote only "
+              "the first, which predicts a converter that does not exist.",
+              "",
+              "| tap | predicted bin ps | in mean bins |",
+              "|---|---|---|"]
+        for i, x in enumerate(w):
+            L.append(f"| {i} to {i+1} | {x*1000:.1f} | {x/mean:.2f} |")
+        L += ["",
+              "**Falsified by:** a code density histogram whose bin widths do "
+              "not correlate with this column, which would mean the extracted "
+              "sampling tree bears no relation to the die's; or one that "
+              "correlates but is offset, which is the interesting outcome and "
+              "is what the second paper is about.",
+              ""]
+
     write(os.path.join(args.out, "tdc.md"), "\n".join(L))
 
     # ------------------------------------------------------------- fixed paths

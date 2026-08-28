@@ -254,7 +254,11 @@ jobs:
             sdf=$(find artifacts -path '*stapostpnr*' -name '*.sdf' | head -1)
           fi
           echo "generating from $sdf"
-          python3 tools/prereg.py "$sdf" --out prereg
+          # spice/spice_ladder.json is committed from the spice workflow.
+          # Without it the ladder pair has no prediction from any layer
+          # that can represent the mechanism, and prereg.py says so.
+          python3 tools/prereg.py "$sdf" --out prereg \
+            --spice spice/spice_ladder.json
 
       - name: The submission report
         # ALWAYS. A failing gate must not hide the evidence from the

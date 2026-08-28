@@ -49,6 +49,43 @@
 // The prediction for this structure must come from SPICE, and the Liberty
 // prediction of zero is written down as a prediction, not as an omission.
 //
+// MEASURED, 2026-08-28, tools/spice_ladder.py, nine corners, sky130 open_pdks
+// c6d73a35f524070e85faff4a6a9eef49553ebc2b. The two mechanisms above were
+// listed without weights because nothing had weighed them. Now they have been,
+// and the weighting is not what the order of the sentences implies.
+//
+// Enabling the whole ladder costs +144 to +371 ps over the eight stage chain,
+// which is 2.38 to 3.07 taps against each corner's OWN tap, 18.8 to 24.6
+// percent of the disabled chain, same sign everywhere. The null control, both
+// arms configured identically, is exactly +0.0000 ps rise and fall.
+//
+// The four codes are NOT four equal steps, which is what the paragraphs above
+// predicted and the reason the deck sweeps all four rather than the endpoints:
+//
+//     code 0 (000)  +0.0 ps       code 2 (110)  +161.8 ps   step +73.6
+//     code 1 (100)  +88.2 ps      code 3 (111)  +221.7 ps   step +59.8
+//
+// The steps shrink as elements are added, which is the shape a shared-sink
+// effect has and not the shape added unit loads would have.
+//
+// The split between the two mechanisms comes from sweeping the keeper's
+// strength. A stronger keeper makes the shared sink's edge rate its own
+// business, so enabling the ladder stops changing it and the Miller term
+// collapses; what survives is the gate-to-source term. At an inv_16 keeper the
+// whole effect is +35.9 ps rise against +220.7 ps at inv_1.
+//
+//     gate-to-source, the term named first    about  +36 ps    16 percent
+//     Miller through gate-to-drain            about +185 ps    84 percent
+//
+// SO THE SECOND MECHANISM IS THE ONE DOING THE WORK, and the first sentence of
+// the list above should not be read as the main effect. It is corrected here
+// rather than defended.
+//
+// The extraction layer is not a third opinion about this. It reported 3, 7, 13
+// and 57 ps for the same unchanged circuit across four builds, which is
+// placement noise around a mechanism it has no way to represent, and it must
+// not be quoted as an extraction-layer prediction of the effect.
+//
 // src/char_paths.v carries two fixed chains that differ ONLY in whether these
 // enables are tied high or low, so the mechanism is measured in isolation from
 // everything the configurable fabric adds.
