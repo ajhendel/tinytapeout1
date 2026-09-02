@@ -10,10 +10,10 @@ a license, a visibility switch, a login, a card, and a board.
 
 ---
 
-## 1. Add a LICENSE  (yours, 2 minutes)  **REQUIRED**
+## 1. Add a LICENSE  (DONE, nothing to do)  **REQUIRED**
 
-There is no LICENSE file, and this one is a genuine hard requirement, quoted
-from Tiny Tapeout's own terms at https://tinytapeout.com/terms/:
+Tiny Tapeout's terms at https://tinytapeout.com/terms/ make this a hard
+requirement:
 
 > "All Designs and Design Documentation must be licensed under terms and
 > conditions compatible with the Apache License, Version 2.0"
@@ -23,20 +23,12 @@ from Tiny Tapeout's own terms at https://tinytapeout.com/terms/:
 > materials"
 
 Note what the second line does and does not say. **They** publish the design.
-It does not say your repository has to be public. Apache-2.0 is both the safe
-choice and their template default, but the choice is yours because it is legal.
+It does not say your repository has to be public.
 
-Easiest route, in the browser:
-
-> github.com/ajhendel/tinytapeout1 → **Add file** → **Create new file** →
-> type `LICENSE` in the name box → a **"Choose a license template"** button
-> appears on the right → **Apache License 2.0** → Commit.
-
-Or from the terminal:
-
-    cd /Users/andrewhendel/CascadeProjects/tinytapeout1
-    curl -sL https://www.apache.org/licenses/LICENSE-2.0.txt -o LICENSE
-    git add LICENSE && git commit -m "Apache-2.0" && git push
+**Corrected 2026-09-02.** This step said "There is no LICENSE file" and it was
+wrong, in this file and again in the message of commit `5fed3a3`. Apache-2.0 has
+been committed at the repository root since commit `20c722f`, which is the WP2
+commit, and it never went missing. Verified with `git ls-files LICENSE`.
 
 ## 2. Timestamp the predictions  (yours, 2 minutes, no disclosure)
 

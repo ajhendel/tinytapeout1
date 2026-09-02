@@ -10,7 +10,7 @@ toolchain yosys plus nextpnr plus icestorm).
 
 **AWS F2** (f2.6xlarge, 24 vCPU, 256 GiB, one AMD Virtex UltraScale+ VU47P,
 1.98 USD per hour on demand in us-east-1, quota confirmed at 64 vCPU in both
-us-east-1 and us-west-2 on account 569378724596; FPGA Developer AMI (Ubuntu)
+us-east-1 and us-west-2 on the author's account; FPGA Developer AMI (Ubuntu)
 1.19.2 available with Vivado licensed for use on F instances).
 
 The difference that decides everything is the bitstream. IceStorm has reverse
