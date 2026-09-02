@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this design or its supporting software, please cite this release."
+title: "Evolvable electrical-realization fabric"
+type: software
+authors:
+  - family-names: Hendel
+    given-names: Andrew
+version: 0.1.0
+date-released: 2026-09-02
+repository-code: "https://github.com/ajhendel/tinytapeout1"
+url: "https://github.com/ajhendel/tinytapeout1"
+license: Apache-2.0
+keywords:
+  - Tiny Tapeout
+  - SKY130
+  - open silicon
+  - evolvable hardware
+  - time-to-digital converter
+  - physical computation
+abstract: >-
+  A verified pre-silicon Tiny Tapeout design for studying configurable
+  electrical realizations of logic, with fixed reference paths, ring
+  oscillators, and an on-chip time-to-digital converter. The design was not
+  submitted for fabrication, so its results are limited to simulation and
+  physical-design verification.

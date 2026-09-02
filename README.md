@@ -1,5 +1,10 @@
 # tinytapeout1
 
+> **Status:** Complete and verified pre-silicon design, published as a research
+> artifact. It was not submitted for fabrication and is not actively maintained.
+> The physical-design and simulation results below have not been validated on
+> manufactured silicon.
+
 An open-silicon experimental platform on Tiny Tapeout. One chip: a configurable fabric where the configuration selects things an FPGA bitstream cannot touch (which prefabricated drive variant of a standard cell drives a node, how much load hangs on it, whether a fault is inserted, where a signal comes from), and the instruments needed to make measurements of it mean anything (fixed reference paths, ring oscillators, and a time-to-digital converter on the die).
 
 It is an instrument, not a demonstration. Nothing on it is claimed to be fast or efficient; the point is to find out how far the open sky130 models are from the silicon they describe, on circuits chosen by a search running against the physical die, with the predictions committed publicly before the chip exists.
