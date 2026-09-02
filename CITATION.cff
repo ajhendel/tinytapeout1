@@ -7,6 +7,7 @@ authors:
     given-names: Andrew
 version: 0.1.0
 date-released: 2026-09-02
+doi: 10.5281/zenodo.22261255
 repository-code: "https://github.com/ajhendel/tinytapeout1"
 url: "https://github.com/ajhendel/tinytapeout1"
 license: Apache-2.0
