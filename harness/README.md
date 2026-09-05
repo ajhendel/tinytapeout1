@@ -1,7 +1,9 @@
 # harness — the search loop, the genome, and the results database
 
-WP3 items 1 and 2 from HANDOFF.md. This is the software that will drive the FPGA
-pilot, the FPGA control arm, and the fabricated chip, through one interface.
+Reusable host-side components from the archived pre-silicon design. They cover
+configuration encoding, search orchestration, results storage, and the intended
+device protocol. No fabricated chip was available to validate a hardware loop.
+The device interface is specific to this project and needs adaptation for reuse.
 
 ## The rule this is built around
 
@@ -32,12 +34,12 @@ enforced by the type system rather than by discipline.
 - `SimDevice` scores against a Python model of the fabric. No hardware. Used to
   develop mutation operators and to test the search itself.
 - `IcarusDevice` scores against the actual Verilog through cocotb, which makes
-  the genome encoder and the scan frame format testable against the RTL that
-  will be fabricated. This is what catches an off-by-one in the chain before it
-  is in silicon.
-- `SerialDevice` talks to a real board over a framed serial protocol. The same
-  frame format serves the iCE40 pilot, the FPGA control arm and the RP2040
-  driving the fabricated chip.
+  the genome encoder and the scan frame format testable against the design RTL. This permits simulation checks of configuration and framing
+  before any potential fabrication.
+- `SerialDevice` implements the host side of a framed serial protocol. Its
+  intended targets were an iCE40 pilot and an RP2040 interface to a future chip.
+  A compatible board/firmware implementation is required; this archive does not
+  establish operation against fabricated silicon.
 
 ## What is deliberately not here
 
