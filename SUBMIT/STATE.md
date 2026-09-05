@@ -1,15 +1,22 @@
 # STATE — what is verified, on one page
 
-Read this before paying. Every number is from the build's own extracted timing,
-not from a simulation and not from an estimate.
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
+This historical snapshot records results from the physical-design tool flow.
+Timing values depend on the extraction and timing models; they are not silicon
+measurements. No purchase or submission is pending.
 
 **Commit** `b101dc3`. **Build** `32bd0b9` (the RTL is identical; the only change
 since is a comment). **Verified** 2026-08-28.
 
 ## Is it done?
 
-**The design is done. The submission is not.** Those are different things and
-the second one is the five steps in `README.md` next to this file.
+**The work ended at the pre-silicon stage. The design was not submitted.**
+The adjacent checklist records the abandoned submission plan.
 
 ## The physical build
 

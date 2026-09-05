@@ -1,8 +1,12 @@
+> **Archived pre-silicon design** — Not submitted for fabrication. The circuits
+> below describe the design; their intended measurements were not performed on
+> manufactured hardware. See the repository README for final status.
+
 ## How it works
 
-This chip is an instrument. It exists to find out how far the open sky130
-models are from the silicon they describe, on circuits chosen by a search
-running against the physical die. The full plan is in PLAN.md in this
+This design was intended as a measurement instrument to compare open SKY130
+models with silicon behavior while searching circuit configurations on a
+physical die. That silicon experiment was not performed. The full plan is in PLAN.md in this
 repository and the measurement discipline is in docs/MEASUREMENT_PROTOCOL.md.
 There are five blocks.
 

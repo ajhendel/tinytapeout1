@@ -1,12 +1,18 @@
-# SUBMIT — everything left, in order
+# SUBMIT — historical submission checklist
 
-Ten steps, five of them yours. Deadline **2026-09-07 20:00 UTC**.
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
+The former checklist targeted **2026-09-07 20:00 UTC**. Submission was not pursued.
 
 Absolute path to this folder:
 `/Users/andrewhendel/CascadeProjects/tinytapeout1/SUBMIT/`
 
-The design is finished and verified. Nothing in this list is engineering. It is
-a license, a visibility switch, a login, a card, and a board.
+This checklist recorded the intended administrative steps after pre-silicon
+checks. It is retained for history, not as a current readiness assessment.
 
 ---
 

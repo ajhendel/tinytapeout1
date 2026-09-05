@@ -1,5 +1,11 @@
 # TT_LOGISTICS — shuttle facts (checked 2026-08-26, deadline resolved 2026-08-28)
 
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
 ## Currently open shuttles
 
 **SKY26c closes 2026-09-07 at 20:00 UTC.** Resolved 2026-08-28 and no longer TBD.

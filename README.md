@@ -1,32 +1,65 @@
-# tinytapeout1
+# Evolvable electrical-realization fabric
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22261255.svg)](https://doi.org/10.5281/zenodo.22261255)
 
-> **Status:** Complete and verified pre-silicon design, published as a research
-> artifact. It was not submitted for fabrication and is not actively maintained.
-> The physical-design and simulation results below have not been validated on
-> manufactured silicon.
+> **Status** — Archived pre-silicon ASIC design, with recorded simulation and
+> physical-design checks. It was not submitted for fabrication. There are no
+> manufactured-silicon measurements, and no active development or submission plan.
 
-An open-silicon experimental platform on Tiny Tapeout. One chip: a configurable fabric where the configuration selects things an FPGA bitstream cannot touch (which prefabricated drive variant of a standard cell drives a node, how much load hangs on it, whether a fault is inserted, where a signal comes from), and the instruments needed to make measurements of it mean anything (fixed reference paths, ring oscillators, and a time-to-digital converter on the die).
+This repository contains a SKY130 design developed for Tiny Tapeout. Its
+20-site configurable fabric selects among prefabricated standard-cell drive
+variants, loads, routes, and inserted faults. The design also includes reference
+paths, ring oscillators, and a time-to-digital converter intended for measuring
+the fabric if manufactured.
 
-It is an instrument, not a demonstration. Nothing on it is claimed to be fast or efficient; the point is to find out how far the open sky130 models are from the silicon they describe, on circuits chosen by a search running against the physical die, with the predictions committed publicly before the chip exists.
+The proposed experiment was to compare model predictions with measurements
+while searching configurations on a physical die. That experiment was not
+performed. The archive preserves the design, host software, simulation work,
+physical-design evidence, and proposed measurement protocols. It establishes
+neither measured silicon behavior nor a performance advantage over other systems.
 
-The thesis in one line. An open-PDK ASIC lets a search process select electrical realizations beneath the FPGA programming abstraction, lets physical dynamics act as the computer instead of clocked Boolean logic, and lets every pre-silicon prediction be checked publicly against the manufactured die.
+## Recorded engineering results
 
-Start with [PLAN.md](PLAN.md). Everything in `docs/` supports it.
+The README's 2026-08-28 build summary recorded 20 sites on 6x2 tiles,
+63,627 µm² of standard cells, 28.2 percent utilization, zero reported DRC and
+antenna violations, clean LVS, setup slack +5.60 ns, and hold slack +0.108 ns.
+It also recorded passing precheck and gate-level tests, 21 cocotb tests, and
+66 harness tests, plus structural-netlist, constraint, and TDC checks.
 
-- [PLAN.md](PLAN.md) — the plan, architecture, phases, risks
-- [docs/FUNCTIONS.md](docs/FUNCTIONS.md) — what the fabric can compute or solve, and applications
-- [docs/PRIOR_ART.md](docs/PRIOR_ART.md) — enumeration checklist; no novelty claim is written until its row here is closed
-- [docs/THROUGHPUT.md](docs/THROUGHPUT.md) — evolution feasibility math (genome size, trials per second)
-- [docs/MEASUREMENT_PROTOCOL.md](docs/MEASUREMENT_PROTOCOL.md) — the inference chain, which instrument answers which question, and the four-stage experiment order
-- [docs/EXPERIMENT_MATRIX.md](docs/EXPERIMENT_MATRIX.md) — the fixed list of studies, committed before fabrication, including the ones deliberately absent
-- [docs/AREA_GATE.md](docs/AREA_GATE.md) — what the flow actually said, at every size, and why the chip ships at 20 sites
-- [docs/CONSTANTS.md](docs/CONSTANTS.md) — the numbers, generated from the RTL; CI fails if they drift
-- [docs/TT_LOGISTICS.md](docs/TT_LOGISTICS.md) — shuttle facts, pricing, deadlines, sources
-- [TODO.md](TODO.md) — phase 0 checklist, in order
+These are historical results from the documented tool flow, not measurements
+from fabricated hardware. Build-specific records can differ; consult the
+commit and build identities in [HANDOFF.md](HANDOFF.md) and
+[SUBMIT/STATE.md](SUBMIT/STATE.md) when using a particular result. The September
+2026 documentation cleanup did not rerun or independently audit those checks.
 
-Status (2026-08-28). RTL frozen at 20 sites on 6x2 tiles and built: 63,627 um2 of standard cells, 28.2 percent utilization, DRC 0, LVS clean, antenna 0, setup slack +5.60 ns, hold slack +0.108 ns, precheck and gate-level test passing. 21 cocotb tests and 66 harness tests pass; the structural netlist, constraint, TDC range, TDC race and stop-selector checks pass and were each sabotage-tested. Three rounds of review each found a real defect and each was found by reading what the build itself reported rather than by a test failing. See the Status section of [HANDOFF.md](HANDOFF.md), which is the live record, and [docs/EXPERIMENT_MATRIX.md](docs/EXPERIMENT_MATRIX.md) for what the chip is for.
+## Reuse and documentation
+
+- [src/](src/) contains the RTL and standard-cell instantiations.
+- [harness/README.md](harness/README.md) describes the host software and protocol.
+- [docs/info.md](docs/info.md) describes the design and interface.
+- [docs/AREA_GATE.md](docs/AREA_GATE.md) records the physical-design iterations
+  and the decision to use 20 sites.
+- [docs/CONSTANTS.md](docs/CONSTANTS.md) records constants derived from the RTL.
+- [docs/PRIOR_ART.md](docs/PRIOR_ART.md) records the prior-art investigation and
+  claim limitations; it is not a certification of novelty.
+- [docs/MEASUREMENT_PROTOCOL.md](docs/MEASUREMENT_PROTOCOL.md) and
+  [docs/EXPERIMENT_MATRIX.md](docs/EXPERIMENT_MATRIX.md) preserve proposed silicon
+  experiments, which were not performed.
+
+[PLAN.md](PLAN.md), [TODO.md](TODO.md), [HANDOFF.md](HANDOFF.md), and
+[SUBMIT/](SUBMIT/) preserve development and submission history. Their tasks,
+deadlines, future-tense statements, and proposed purchases are historical,
+not current instructions. The same applies to shuttle information in
+[docs/TT_LOGISTICS.md](docs/TT_LOGISTICS.md) and proposals in
+[docs/FUNCTIONS.md](docs/FUNCTIONS.md). The latter includes ideas explicitly
+excluded from this design, including a coupled-oscillator optimizer.
+The [predictions/](predictions/) files remain archived predictions without a
+silicon comparison.
+
+Reuse is welcome under [Apache-2.0](LICENSE), without an ongoing support
+commitment. Physical reproduction requires the documented external EDA tools
+and PDK. Historical successful flow checks do not guarantee a new fabrication
+submission will pass a different flow or shuttle's requirements.
 
 ## Citation
 
@@ -38,3 +71,7 @@ To cite this exact release:
 
 The DOI for all versions is
 [10.5281/zenodo.22261254](https://doi.org/10.5281/zenodo.22261254).
+
+The DOI identifies the unchanged v0.1.0 archive. Scope clarifications on the
+main branch were added afterward; the archived tag was not moved. Author
+identifier — [Andrew Hendel, ORCID 0009-0000-9877-3623](https://orcid.org/0009-0000-9877-3623).

@@ -1,5 +1,11 @@
 # TODO — phase 0, in order
 
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
 Gate: nothing in phase 2 (RTL) starts until items 1–4 are done, because each can reshape the architecture.
 
 1. [x] **Prior-art sweep** (done 2026-08-26) — work docs/PRIOR_ART.md rows 1, 2, 3, 8, 9 to CLOSED (the rows the tapeout-one papers depend on). Rows 4–7 to PARTIAL-with-queries-logged.

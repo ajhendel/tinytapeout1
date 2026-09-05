@@ -1,5 +1,11 @@
 # EXPERIMENT MATRIX
 
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
 The fixed list of studies this chip will run, written before fabrication.
 
 ## Why this is fixed in advance

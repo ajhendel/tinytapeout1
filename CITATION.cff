@@ -5,6 +5,7 @@ type: software
 authors:
   - family-names: Hendel
     given-names: Andrew
+    orcid: "https://orcid.org/0009-0000-9877-3623"
 version: 0.1.0
 date-released: 2026-09-02
 doi: 10.5281/zenodo.22261255

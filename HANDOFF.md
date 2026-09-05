@@ -1,6 +1,12 @@
 # HANDOFF — implementation brief for a fresh Claude session
 
-You are picking up a planned but unimplemented project. This brief is self-contained; do not assume any conversation history. Read PLAN.md, then docs/, then this file's work packages. The repo is https://github.com/ajhendel/tinytapeout1 (private, ajhendel), local checkout /Users/andrewhendel/CascadeProjects/tinytapeout1.
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
+The following brief is retained from the development phase and is not an instruction to resume work. This brief is self-contained; do not assume any conversation history. Read PLAN.md, then docs/, then this file's work packages. The repo is https://github.com/ajhendel/tinytapeout1 (now public, ajhendel), local checkout /Users/andrewhendel/CascadeProjects/tinytapeout1.
 
 ## What this project is
 One Tiny Tapeout chip (sky130, target shuttle SKY26c or the next sky shuttle) that is a physical laboratory. Two halves. (1) An evolvable fabric whose configuration selects the ELECTRICAL realization of logic (drive strength, cell variant, node loading, inserted faults, feedback edges), searched in-loop against the physical die. (2) A physics-as-computer patch (coupled ring oscillators with configurable coupling = small Ising-style optimizer; jittery oscillators sampled = probabilistic bits). Plus a thin calibration strip of fixed reference macros. The bar for every headline experiment: impossible on an FPGA and unsettleable by simulation alone. FPGA-doable work is pilot + control arm, never the justification for fabrication. Full rationale, settled design decisions, and killed claims are in PLAN.md section 2 — do not re-litigate them.

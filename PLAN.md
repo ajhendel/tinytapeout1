@@ -1,6 +1,12 @@
 # PLAN
 
-Last updated 2026-08-26 (WP1 sweep folded in). This document is the source of truth for what we are building and why. It records the conclusions of the design discussion that produced this repo, including the claims that were narrowed or killed along the way, so we do not re-argue them.
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
+Last updated 2026-08-26 (WP1 sweep folded in). This document preserves the original design rationale and plan. It records the conclusions of the design discussion that produced this repo, including the claims that were narrowed or killed along the way, so we do not re-argue them.
 
 ## 1. Mission
 

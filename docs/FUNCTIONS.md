@@ -1,5 +1,11 @@
 # FUNCTIONS — what this fabric can compute or solve, and why anyone would care
 
+> **Historical document** — This page preserves development plans or records.
+> The design was not submitted for fabrication, no silicon experiments were
+> performed, and no submission or development work is currently planned.
+> Tasks, deadlines, and future-tense statements below are historical.
+> See the repository README for the final project status.
+
 **NONE OF TIER A IS ON TAPEOUT ONE. READ THIS BEFORE QUOTING ANYTHING BELOW.**
 
 This file is the program's map of what an evolvable electrical-realization fabric could be aimed at. It is not a description of the chip being submitted. Tapeout one carries 20 serial configurable sites and the instruments needed to measure them, and no analog patch: no coupled-oscillator optimizer, no p-bit array, no analog constraint relaxation. Two separate things put them off it. The area went to the instruments instead, which is recorded in docs/AREA_GATE.md, and the coupled-oscillator optimization framing was withdrawn on prior art, which is recorded in docs/PRIOR_ART.md row 3. The single feedback edge this chip does have is a feedback edge. It is not a small coupled-oscillator optimizer and must not be written about as one: there is no controllable coupling, no phase readout, no locking guarantee and no independent enable per oscillator.
